@@ -10,10 +10,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAppStore } from "@/lib/store";
 
+
 const schema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(1, "Password is required"),
-  rememberMe: z.boolean().default(false),
+  rememberMe: z.boolean().optional(),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -27,6 +28,7 @@ export default function PatientLoginPage({ onLoginSuccess, onSwitchToDoctor }: P
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState("");
 
+
   const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { email: "", password: "", rememberMe: false },
@@ -34,10 +36,10 @@ export default function PatientLoginPage({ onLoginSuccess, onSwitchToDoctor }: P
 
   const rememberMe = watch("rememberMe");
 
-  const onSubmit = async (data: FormValues) => {
+  const onSubmit: import("react-hook-form").SubmitHandler<FormValues> = async (data) => {
     setLoginError("");
     await new Promise((r) => setTimeout(r, 600));
-    const success = login(data.email, data.password, data.rememberMe);
+    const success = login(data.email, data.password, data.rememberMe ?? false);
     if (success) {
       onLoginSuccess();
     } else {

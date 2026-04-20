@@ -651,7 +651,7 @@ export default function DoctorProfilePage() {
                 ))}
               </div>
 
-              <Alert variant="information" size="compact">
+              <Alert variant="info" size="compact">
                 <AlertDescription>
                   Account creation and role changes are managed by your system administrator.
                 </AlertDescription>
@@ -855,39 +855,43 @@ export default function DoctorProfilePage() {
                     description: "MedKit platform announcements and feature updates",
                   },
                 ] as const
-              ).map(({ key, label, description, locked }) => (
-                <div
-                  key={key}
-                  className="flex items-center justify-between py-3.5 border-b border-border last:border-0"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0">
-                      {notif[key] ? (
-                        <Bell className="w-4 h-4 text-primary" />
-                      ) : (
-                        <BellOff className="w-4 h-4 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                        {label}
-                        {locked && (
-                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                            Required
-                          </Badge>
+              ).map((item) => {
+                const { key, label, description } = item;
+                const locked = 'locked' in item ? item.locked : false;
+                return (
+                  <div
+                    key={key}
+                    className="flex items-center justify-between py-3.5 border-b border-border last:border-0"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+                        {notif[key] ? (
+                          <Bell className="w-4 h-4 text-primary" />
+                        ) : (
+                          <BellOff className="w-4 h-4 text-muted-foreground" />
                         )}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{description}</p>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                          {label}
+                          {locked ? (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                              Required
+                            </Badge>
+                          ) : null}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{description}</p>
+                      </div>
                     </div>
+                    <Switch
+                      checked={notif[key]}
+                      disabled={locked}
+                      onCheckedChange={(v) => setNotif((p) => ({ ...p, [key]: v }))}
+                      className="ml-4 shrink-0"
+                    />
                   </div>
-                  <Switch
-                    checked={notif[key]}
-                    disabled={locked}
-                    onCheckedChange={(v) => setNotif((p) => ({ ...p, [key]: v }))}
-                    className="ml-4 shrink-0"
-                  />
-                </div>
-              ))}
+                );
+              })}
             </CardContent>
           </Card>
 

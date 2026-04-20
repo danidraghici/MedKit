@@ -35,6 +35,7 @@ export type DrugFrequency =
   | "Three times daily"
   | "Four times daily"
   | "Every 4 hours"
+  | "Every 5 minutes"
   | "Every 6 hours"
   | "Every 8 hours"
   | "Every 12 hours"

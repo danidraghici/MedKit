@@ -271,9 +271,13 @@ export default function ChatbotPage({ onNavigate }: ChatbotPageProps) {
       patientId: selectedPatientId,
       date: new Date().toISOString().split("T")[0],
       doctor: user?.name ?? "Unknown",
+      visitType: "Telemedicine",
+      chiefComplaint: "AI-assisted consultation",
       diagnosis: "AI Kidney Stone Decision Support Consultation",
       symptoms: "See attached chatbot consultation transcript",
       treatment: `AI-generated clinical assessment attached. See full consultation below:\n\n${conversationText.slice(0, 2000)}`,
+      prescribedDrugs: [],
+      urgency: "Routine",
       attachments: [],
     });
 
