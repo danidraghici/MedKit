@@ -548,9 +548,9 @@ CREATE TABLE audit_logs (
     user_agent           NVARCHAR(MAX)     NULL,
     metadata             NVARCHAR(MAX)     NULL,       -- extra context: page, filters, session id
     performed_at         DATETIMEOFFSET(7) NOT NULL DEFAULT SYSDATETIMEOFFSET(),
-    CONSTRAINT PK_audit_logs        PRIMARY KEY (id),
-    CONSTRAINT FK_audit_logs_user   FOREIGN KEY (performed_by_user_id)
-        REFERENCES users(id) ON DELETE SET NULL
+    CONSTRAINT PK_audit_logs PRIMARY KEY (id)
+    -- No FK on performed_by_user_id: audit rows are historical records and must
+    -- survive user deletion. The INSTEAD OF triggers below require no cascades.
 );
 
 CREATE INDEX IX_audit_logs_performed_by_user_id ON audit_logs (performed_by_user_id);
@@ -558,6 +558,32 @@ CREATE INDEX IX_audit_logs_entity               ON audit_logs (entity_type, enti
 CREATE INDEX IX_audit_logs_performed_at         ON audit_logs (performed_at);
 CREATE INDEX IX_audit_logs_action               ON audit_logs (action);
 CREATE INDEX IX_audit_logs_entity_action_date   ON audit_logs (entity_type, action, performed_at);
+GO
+
+-- INSTEAD OF triggers block DELETE and UPDATE on audit_logs for ALL users,
+-- including sysadmin connections from SSMS. DENY alone would not stop sysadmin.
+IF OBJECT_ID('trg_protect_audit_logs_delete', 'TR') IS NOT NULL DROP TRIGGER trg_protect_audit_logs_delete;
+GO
+CREATE TRIGGER trg_protect_audit_logs_delete
+ON audit_logs
+INSTEAD OF DELETE
+AS
+BEGIN
+    RAISERROR('audit_logs rows are immutable and cannot be deleted.', 16, 1);
+    ROLLBACK;
+END;
+GO
+
+IF OBJECT_ID('trg_protect_audit_logs_update', 'TR') IS NOT NULL DROP TRIGGER trg_protect_audit_logs_update;
+GO
+CREATE TRIGGER trg_protect_audit_logs_update
+ON audit_logs
+INSTEAD OF UPDATE
+AS
+BEGIN
+    RAISERROR('audit_logs rows are immutable and cannot be updated.', 16, 1);
+    ROLLBACK;
+END;
 GO
 
 
@@ -583,7 +609,9 @@ GO
 -- =============================================================================
 
 -- ─── doctors ────────────────────────────────────────────────────────────────
-CREATE OR ALTER TRIGGER trg_audit_doctors
+IF OBJECT_ID('trg_audit_doctors', 'TR') IS NOT NULL DROP TRIGGER trg_audit_doctors;
+GO
+CREATE TRIGGER trg_audit_doctors
 ON doctors
 AFTER INSERT, UPDATE, DELETE
 AS
@@ -625,7 +653,9 @@ END;
 GO
 
 -- ─── patients ────────────────────────────────────────────────────────────────
-CREATE OR ALTER TRIGGER trg_audit_patients
+IF OBJECT_ID('trg_audit_patients', 'TR') IS NOT NULL DROP TRIGGER trg_audit_patients;
+GO
+CREATE TRIGGER trg_audit_patients
 ON patients
 AFTER INSERT, UPDATE, DELETE
 AS
@@ -667,7 +697,9 @@ END;
 GO
 
 -- ─── users (password_hash excluded from audit to prevent credential logging) ─
-CREATE OR ALTER TRIGGER trg_audit_users
+IF OBJECT_ID('trg_audit_users', 'TR') IS NOT NULL DROP TRIGGER trg_audit_users;
+GO
+CREATE TRIGGER trg_audit_users
 ON users
 AFTER INSERT, UPDATE, DELETE
 AS
@@ -712,7 +744,9 @@ END;
 GO
 
 -- ─── medical_records ─────────────────────────────────────────────────────────
-CREATE OR ALTER TRIGGER trg_audit_medical_records
+IF OBJECT_ID('trg_audit_medical_records', 'TR') IS NOT NULL DROP TRIGGER trg_audit_medical_records;
+GO
+CREATE TRIGGER trg_audit_medical_records
 ON medical_records
 AFTER INSERT, UPDATE, DELETE
 AS
@@ -754,7 +788,9 @@ END;
 GO
 
 -- ─── vital_signs ─────────────────────────────────────────────────────────────
-CREATE OR ALTER TRIGGER trg_audit_vital_signs
+IF OBJECT_ID('trg_audit_vital_signs', 'TR') IS NOT NULL DROP TRIGGER trg_audit_vital_signs;
+GO
+CREATE TRIGGER trg_audit_vital_signs
 ON vital_signs
 AFTER INSERT, UPDATE, DELETE
 AS
@@ -796,7 +832,9 @@ END;
 GO
 
 -- ─── prescribed_drugs ────────────────────────────────────────────────────────
-CREATE OR ALTER TRIGGER trg_audit_prescribed_drugs
+IF OBJECT_ID('trg_audit_prescribed_drugs', 'TR') IS NOT NULL DROP TRIGGER trg_audit_prescribed_drugs;
+GO
+CREATE TRIGGER trg_audit_prescribed_drugs
 ON prescribed_drugs
 AFTER INSERT, UPDATE, DELETE
 AS
@@ -838,7 +876,9 @@ END;
 GO
 
 -- ─── attachments ─────────────────────────────────────────────────────────────
-CREATE OR ALTER TRIGGER trg_audit_attachments
+IF OBJECT_ID('trg_audit_attachments', 'TR') IS NOT NULL DROP TRIGGER trg_audit_attachments;
+GO
+CREATE TRIGGER trg_audit_attachments
 ON attachments
 AFTER INSERT, UPDATE, DELETE
 AS
@@ -880,7 +920,9 @@ END;
 GO
 
 -- ─── lab_results ─────────────────────────────────────────────────────────────
-CREATE OR ALTER TRIGGER trg_audit_lab_results
+IF OBJECT_ID('trg_audit_lab_results', 'TR') IS NOT NULL DROP TRIGGER trg_audit_lab_results;
+GO
+CREATE TRIGGER trg_audit_lab_results
 ON lab_results
 AFTER INSERT, UPDATE, DELETE
 AS
@@ -922,7 +964,9 @@ END;
 GO
 
 -- ─── lab_ai_insights ─────────────────────────────────────────────────────────
-CREATE OR ALTER TRIGGER trg_audit_lab_ai_insights
+IF OBJECT_ID('trg_audit_lab_ai_insights', 'TR') IS NOT NULL DROP TRIGGER trg_audit_lab_ai_insights;
+GO
+CREATE TRIGGER trg_audit_lab_ai_insights
 ON lab_ai_insights
 AFTER INSERT, UPDATE, DELETE
 AS
@@ -964,7 +1008,9 @@ END;
 GO
 
 -- ─── notes ───────────────────────────────────────────────────────────────────
-CREATE OR ALTER TRIGGER trg_audit_notes
+IF OBJECT_ID('trg_audit_notes', 'TR') IS NOT NULL DROP TRIGGER trg_audit_notes;
+GO
+CREATE TRIGGER trg_audit_notes
 ON notes
 AFTER INSERT, UPDATE, DELETE
 AS
@@ -1006,7 +1052,9 @@ END;
 GO
 
 -- ─── appointments ────────────────────────────────────────────────────────────
-CREATE OR ALTER TRIGGER trg_audit_appointments
+IF OBJECT_ID('trg_audit_appointments', 'TR') IS NOT NULL DROP TRIGGER trg_audit_appointments;
+GO
+CREATE TRIGGER trg_audit_appointments
 ON appointments
 AFTER INSERT, UPDATE, DELETE
 AS
@@ -1048,7 +1096,9 @@ END;
 GO
 
 -- ─── appointment_requests ─────────────────────────────────────────────────────
-CREATE OR ALTER TRIGGER trg_audit_appointment_requests
+IF OBJECT_ID('trg_audit_appointment_requests', 'TR') IS NOT NULL DROP TRIGGER trg_audit_appointment_requests;
+GO
+CREATE TRIGGER trg_audit_appointment_requests
 ON appointment_requests
 AFTER INSERT, UPDATE, DELETE
 AS
@@ -1090,7 +1140,9 @@ END;
 GO
 
 -- ─── consultation_reminders ───────────────────────────────────────────────────
-CREATE OR ALTER TRIGGER trg_audit_consultation_reminders
+IF OBJECT_ID('trg_audit_consultation_reminders', 'TR') IS NOT NULL DROP TRIGGER trg_audit_consultation_reminders;
+GO
+CREATE TRIGGER trg_audit_consultation_reminders
 ON consultation_reminders
 AFTER INSERT, UPDATE, DELETE
 AS
@@ -1132,7 +1184,9 @@ END;
 GO
 
 -- ─── chat_sessions ────────────────────────────────────────────────────────────
-CREATE OR ALTER TRIGGER trg_audit_chat_sessions
+IF OBJECT_ID('trg_audit_chat_sessions', 'TR') IS NOT NULL DROP TRIGGER trg_audit_chat_sessions;
+GO
+CREATE TRIGGER trg_audit_chat_sessions
 ON chat_sessions
 AFTER INSERT, UPDATE, DELETE
 AS
@@ -1257,8 +1311,8 @@ WHERE  entity_type = 'patients'
 ORDER  BY performed_at DESC;
 -- Expected: one DELETE row; old_values has the deleted row, new_values is NULL
 
--- 4.6  Confirm audit_logs itself cannot be modified
--- (This is a policy enforced by the application; no DDL guard is added here
--- to keep the script portable. Add a DENY UPDATE, DELETE ON audit_logs TO
--- your application DB login to enforce it at the database level.)
+-- 4.6  Confirm audit_logs is protected against modification
+-- Try to delete a row — the INSTEAD OF trigger should raise an error:
+-- DELETE FROM audit_logs WHERE 1=1;
+-- Expected: "audit_logs rows are immutable and cannot be deleted."
 */
