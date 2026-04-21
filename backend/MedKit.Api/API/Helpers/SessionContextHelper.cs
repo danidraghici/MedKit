@@ -1,7 +1,7 @@
-using MedKit.Api.Data;
+using MedKit.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace MedKit.Api.Helpers;
+namespace MedKit.Api.API.Helpers;
 
 /// <summary>
 /// Sets SQL Server SESSION_CONTEXT(N'app_user_id') on the same connection that

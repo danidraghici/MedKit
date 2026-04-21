@@ -1,11 +1,11 @@
 using System.Security.Claims;
-using MedKit.Api.DTOs;
+using MedKit.Api.API.DTOs;
 using MedKit.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
-namespace MedKit.Api.Controllers;
+namespace MedKit.Api.API.Controllers;
 
 [ApiController]
 [Route("api/auth")]
@@ -55,7 +55,7 @@ public class AuthController(AuthService authService, IWebHostEnvironment env) : 
         };
     }
 
-    private OkObjectResult SetCookieAndRespond(Services.LoginResult result)
+    private OkObjectResult SetCookieAndRespond(LoginResult result)
     {
         SetRefreshCookie(result.RawRefreshToken, result.Remember);
         return Ok(new { result.AccessToken, result.User });

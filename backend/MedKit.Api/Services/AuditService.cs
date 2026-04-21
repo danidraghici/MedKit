@@ -1,5 +1,5 @@
-using MedKit.Api.Data;
-using MedKit.Api.Data.Entities;
+using MedKit.Api.Models;
+using MedKit.Api.Models.Entities;
 
 namespace MedKit.Api.Services;
 

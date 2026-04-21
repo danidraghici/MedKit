@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace MedKit.Api.Data.Entities;
+namespace MedKit.Api.Models.Entities;
 
 [Table("users")]
 public class UserEntity

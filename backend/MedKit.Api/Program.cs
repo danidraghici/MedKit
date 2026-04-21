@@ -1,5 +1,5 @@
 using System.Text;
-using MedKit.Api.Data;
+using MedKit.Api.Models;
 using MedKit.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;

@@ -1,7 +1,7 @@
-using MedKit.Api.Data.Entities;
+using MedKit.Api.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace MedKit.Api.Data;
+namespace MedKit.Api.Models;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {

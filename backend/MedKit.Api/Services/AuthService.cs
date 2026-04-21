@@ -1,6 +1,6 @@
-using MedKit.Api.Data;
-using MedKit.Api.DTOs;
-using MedKit.Api.Helpers;
+using MedKit.Api.API.DTOs;
+using MedKit.Api.API.Helpers;
+using MedKit.Api.Models;
 using Microsoft.EntityFrameworkCore;
 using BC = BCrypt.Net.BCrypt;
 

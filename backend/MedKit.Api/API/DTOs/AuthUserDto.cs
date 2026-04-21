@@ -1,4 +1,4 @@
-namespace MedKit.Api.DTOs;
+namespace MedKit.Api.API.DTOs;
 
 public class AuthUserDto
 {
