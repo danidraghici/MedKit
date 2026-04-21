@@ -38,8 +38,7 @@ export default function PatientLoginPage({ onLoginSuccess, onSwitchToDoctor }: P
 
   const onSubmit: import("react-hook-form").SubmitHandler<FormValues> = async (data) => {
     setLoginError("");
-    await new Promise((r) => setTimeout(r, 600));
-    const success = login(data.email, data.password, data.rememberMe ?? false);
+    const success = await login(data.email, data.password, data.rememberMe ?? false);
     if (success) {
       onLoginSuccess();
     } else {

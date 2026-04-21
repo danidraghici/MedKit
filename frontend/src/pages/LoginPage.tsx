@@ -45,8 +45,7 @@ export default function LoginPage({ onLoginSuccess, onSwitchToPatient }: LoginPa
   const onSubmit = async (data: LoginFormData) => {
     setLoginError(null);
     setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-    const success = login(data.email, data.password, data.rememberMe ?? false);
+    const success = await login(data.email, data.password, data.rememberMe ?? false);
     setIsLoading(false);
     if (success) {
       onLoginSuccess();

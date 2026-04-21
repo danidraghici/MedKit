@@ -1,1 +1,72 @@
+# ── IDE ───────────────────────────────────────────────────────────────────────
 .vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+
+# ── .NET build output ─────────────────────────────────────────────────────────
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+*.swp
+
+# .NET publish
+[Pp]ublish/
+[Pp]ublish[Oo]utput/
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# .NET user secrets (stored in %APPDATA%\Microsoft\UserSecrets, not the project)
+# The secrets.json file is never inside the repo, but the ID in .csproj is fine to commit.
+
+# MSBuild
+*.pidb
+*.svclog
+*.scc
+
+# ── ASP.NET Core ──────────────────────────────────────────────────────────────
+# Local environment overrides — never commit secrets
+appsettings.Local.json
+appsettings.*.Local.json
+*.pfx
+*.p12
+
+# ── Node / Frontend ───────────────────────────────────────────────────────────
+node_modules/
+dist/
+.cache/
+.parcel-cache/
+.turbo/
+
+# Vite
+frontend/dist/
+frontend/.vite/
+
+# Environment files — may contain API keys or secrets
+.env
+.env.local
+.env.*.local
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# ── SQL Server / Database ─────────────────────────────────────────────────────
+*.mdf
+*.ldf
+*.ndf
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini

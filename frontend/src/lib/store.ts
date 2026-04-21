@@ -4,6 +4,7 @@ import type {
   Patient, MedicalRecord, LabResult, Note, Appointment, ChatSession, ChatMessage, User,
   AppointmentRequest, LabAIInsight, ConsultationReminder, Doctor, DoctorRole,
 } from "./types";
+import { api, configureApiClient } from "./api";
 import {
   MOCK_PATIENTS,
   MOCK_MEDICAL_RECORDS,
@@ -24,8 +25,10 @@ interface AppState {
   user: User | null;
   isAuthenticated: boolean;
   rememberMe: boolean;
-  login: (email: string, password: string, remember: boolean) => boolean;
-  logout: () => void;
+  accessToken: string | null;
+  login: (email: string, password: string, remember: boolean) => Promise<boolean>;
+  logout: () => Promise<void>;
+  initAuth: () => Promise<void>;
 
   // Doctors (managed by admin)
   doctors: Doctor[];
@@ -142,18 +145,37 @@ export const useAppStore = create<AppState>()(
       user: null,
       isAuthenticated: false,
       rememberMe: false,
+      accessToken: null,
 
-      login: (email, password, remember) => {
-        const user = DEMO_USERS.find((u) => u.email.toLowerCase() === email.toLowerCase());
-        if (user && password === DEMO_PASSWORD) {
-          set({ user, isAuthenticated: true, rememberMe: remember });
+      login: async (email, password, remember) => {
+        try {
+          const data = await api.post<{ accessToken: string; user: User }>(
+            "/api/auth/login",
+            { email, password, remember }
+          );
+          set({ user: data.user, isAuthenticated: true, rememberMe: remember, accessToken: data.accessToken });
           return true;
+        } catch {
+          return false;
         }
-        return false;
       },
 
-      logout: () => {
-        set({ user: null, isAuthenticated: false });
+      logout: async () => {
+        try {
+          await api.post("/api/auth/logout");
+        } catch {
+          // Clear local state regardless of network failure
+        }
+        set({ user: null, isAuthenticated: false, accessToken: null });
+      },
+
+      initAuth: async () => {
+        try {
+          const data = await api.post<{ accessToken: string; user: User }>("/api/auth/refresh");
+          set({ user: data.user, isAuthenticated: true, accessToken: data.accessToken });
+        } catch {
+          set({ user: null, isAuthenticated: false, accessToken: null });
+        }
       },
 
       // Doctors
@@ -417,7 +439,7 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: "medkit-storage",
-      version: 3,
+      version: 4,
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as Record<string, unknown>;
         if (version < 2) {
@@ -446,9 +468,8 @@ export const useAppStore = create<AppState>()(
         return state;
       },
       partialize: (state) => ({
-        user: state.user,
-        isAuthenticated: state.isAuthenticated,
-        rememberMe: state.rememberMe,
+        // Auth state is NOT persisted — sessions are managed via httpOnly cookies.
+        // accessToken lives in memory only; user is rehydrated via initAuth() on mount.
         doctors: state.doctors,
         patients: state.patients,
         medicalRecords: state.medicalRecords,
@@ -463,3 +484,25 @@ export const useAppStore = create<AppState>()(
     }
   )
 );
+
+// Wire up the API client with the store's token getter and silent refresh function.
+// Must run after useAppStore is created.
+configureApiClient({
+  getToken: () => useAppStore.getState().accessToken,
+  refresh: async () => {
+    try {
+      const data = await fetch("/api/auth/refresh", {
+        method: "POST",
+        credentials: "include",
+      }).then((r) => {
+        if (!r.ok) throw new Error("Refresh failed");
+        return r.json() as Promise<{ accessToken: string; user: User }>;
+      });
+      useAppStore.setState({ accessToken: data.accessToken, user: data.user, isAuthenticated: true });
+      return true;
+    } catch {
+      useAppStore.setState({ accessToken: null, user: null, isAuthenticated: false });
+      return false;
+    }
+  },
+});

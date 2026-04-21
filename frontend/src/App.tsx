@@ -79,12 +79,14 @@ const patientNavigation = [
 export default function App() {
   const isAuthenticated = useAppStore((s) => s.isAuthenticated);
   const logout = useAppStore((s) => s.logout);
+  const initAuth = useAppStore((s) => s.initAuth);
   const user = useAppStore((s) => s.user);
   const patients = useAppStore((s) => s.patients);
   const getPatientReminders = useAppStore((s) => s.getPatientReminders);
 
   const [activePage, setActivePage] = useState<PageId>("dashboard");
   const [loginMode, setLoginMode] = useState<LoginMode>("doctor");
+  const [authChecked, setAuthChecked] = useState(false);
   // For patient portal: which tab is active (passed down via activePage prefix)
   const [patientTab, setPatientTab] = useState("overview");
 
@@ -125,12 +127,25 @@ export default function App() {
     ? getPatientReminders(user.patientId).length
     : 0;
 
+  // Attempt silent re-auth on mount via httpOnly refresh cookie
+  useEffect(() => {
+    initAuth().finally(() => setAuthChecked(true));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (isAuthenticated) {
       if (isPatient) setActivePage("patient-overview");
       else setActivePage("dashboard");
     }
   }, [isAuthenticated, isPatient]);
+
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <span className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   const handleNavigate = (pageId: PageId) => {
     setActivePage(pageId);
@@ -221,7 +236,7 @@ export default function App() {
                   </div>
                 )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout} className="text-destructive cursor-pointer">
+                <DropdownMenuItem onClick={() => void logout()} className="text-destructive cursor-pointer">
                   <LogOut className="w-4 h-4 mr-2" />
                   Sign out
                 </DropdownMenuItem>
