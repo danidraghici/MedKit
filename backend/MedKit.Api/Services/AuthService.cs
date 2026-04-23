@@ -58,7 +58,8 @@ public class AuthService(AppDbContext ctx, TokenService tokens, AuditService aud
                 Name = user.Name,
                 Role = user.Role,
                 PatientId = user.PatientId?.ToString(),
-                DoctorId = user.DoctorId?.ToString()
+                DoctorId = user.DoctorId?.ToString(),
+                MustChangePassword = user.MustChangePassword
             });
 
         return (result, null);
@@ -90,7 +91,8 @@ public class AuthService(AppDbContext ctx, TokenService tokens, AuditService aud
                 Name = user.Name,
                 Role = user.Role,
                 PatientId = user.PatientId?.ToString(),
-                DoctorId = user.DoctorId?.ToString()
+                DoctorId = user.DoctorId?.ToString(),
+                MustChangePassword = user.MustChangePassword
             });
     }
 
@@ -119,6 +121,7 @@ public class AuthService(AppDbContext ctx, TokenService tokens, AuditService aud
         await SessionContextHelper.SetAndExecuteAsync(ctx, userId, async () =>
         {
             user.PasswordHash = newHash;
+            user.MustChangePassword = false;
             user.UpdatedAt = DateTimeOffset.UtcNow;
             await ctx.SaveChangesAsync();
         });

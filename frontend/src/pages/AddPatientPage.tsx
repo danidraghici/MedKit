@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -25,6 +26,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CNPInput } from "@/components/ui/cnp-input";
+import { isValidCNP } from "@/lib/cnp";
 import { useAppStore } from "@/lib/store";
 import type { Patient, BloodType, Sex } from "@/lib/types";
 
@@ -32,7 +35,7 @@ const patientSchema = z.object({
   fullName: z.string().min(2, "Full name must be at least 2 characters"),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   sex: z.enum(["Male", "Female", "Other"]),
-  nationalId: z.string().min(1, "National ID is required"),
+  nationalId: z.string().refine(isValidCNP, "Enter a valid 13-digit CNP."),
   phone: z.string().min(7, "Phone number is required"),
   email: z.string().email("Enter a valid email"),
   bloodType: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "Unknown"]),
@@ -57,6 +60,7 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
     : null;
 
   const isEditing = !!editingPatient;
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const {
     register,
@@ -81,19 +85,25 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
       : {
           sex: "Male",
           bloodType: "Unknown",
+          nationalId: "",
           allergies: "",
           currentMedications: "",
         },
   });
 
   const onSubmit = async (data: PatientFormData) => {
-    await new Promise((r) => setTimeout(r, 400));
-    if (isEditing && editingPatient) {
-      updatePatient(editingPatient.id, data);
-      onNavigate(`patient-${editingPatient.id}`);
-    } else {
-      const newPatient = addPatient(data as Omit<Patient, "id" | "createdAt" | "updatedAt">);
-      onNavigate("patients");
+    setSubmitError(null);
+    try {
+      if (isEditing && editingPatient) {
+        updatePatient(editingPatient.id, data);
+        onNavigate(`patient-${editingPatient.id}`);
+      } else {
+        await addPatient(data as Omit<Patient, "id" | "createdAt" | "updatedAt">);
+        onNavigate("patients");
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to save patient. Please try again.";
+      setSubmitError(message);
     }
   };
 
@@ -180,17 +190,23 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
               </Select>
             </div>
 
-            {/* National ID */}
-            <div className="space-y-1.5">
+            {/* CNP / National ID */}
+            <div className="sm:col-span-2 space-y-1.5">
               <Label htmlFor="nationalId">
                 <ShieldCheck className="w-3.5 h-3.5 inline mr-1 opacity-60" />
-                National ID <span className="text-destructive">*</span>
+                CNP (Personal Numeric Code) <span className="text-destructive">*</span>
               </Label>
-              <Input
+              <CNPInput
                 id="nationalId"
-                placeholder="e.g. NH-78041201"
-                {...register("nationalId")}
-                className={errors.nationalId ? "border-destructive" : ""}
+                value={watch("nationalId") ?? ""}
+                onChange={(v) => setValue("nationalId", v, { shouldValidate: true })}
+                onParsed={(result) => {
+                  if (result.valid) {
+                    if (result.dateOfBirth) setValue("dateOfBirth", result.dateOfBirth, { shouldValidate: true });
+                    if (result.sex) setValue("sex", result.sex as Sex, { shouldValidate: true });
+                  }
+                }}
+                error={errors.nationalId?.message}
               />
               {errors.nationalId && (
                 <p className="text-xs text-destructive">{errors.nationalId.message}</p>
@@ -302,6 +318,13 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
             </div>
           </div>
         </div>
+
+        {/* Submit error */}
+        {submitError && (
+          <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-lg px-4 py-2.5">
+            {submitError}
+          </p>
+        )}
 
         {/* Action bar */}
         <div className="flex items-center justify-between pt-2 pb-8">

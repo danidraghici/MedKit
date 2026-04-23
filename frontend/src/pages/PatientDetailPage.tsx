@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -7,7 +7,7 @@ import {
   Plus, FileText, FlaskConical, StickyNote, ClipboardList, Clock, Stethoscope,
   Upload, X, Download, Paperclip, Edit, Trash2, Activity, Heart, Thermometer,
   Wind, Eye, Weight, ChevronDown, ChevronUp, BookOpen, UserCheck, AlertCircle,
-  CalendarDays, CheckCircle2, XCircle, MoreVertical, Pencil,
+  CalendarDays, CheckCircle2, XCircle, MoreVertical, Pencil, Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,8 +28,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAppStore } from "@/lib/store";
+import { api } from "@/lib/api";
 import { formatDate, formatDateTime, calculateAge, getInitials, formatFileSize } from "@/lib/utils";
-import type { Attachment, PrescribedDrug, RouteOfAdministration, DrugFrequency, UrgencyLevel, FollowUpType } from "@/lib/types";
+import type { Attachment, PrescribedDrug, RouteOfAdministration, DrugFrequency, UrgencyLevel, FollowUpType, Appointment } from "@/lib/types";
 
 // ─── Zod schemas ──────────────────────────────────────────────────────────────
 
@@ -374,8 +375,6 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
   const getMedicalRecords = useAppStore((s) => s.getMedicalRecords);
   const getLabResults = useAppStore((s) => s.getLabResults);
   const getNotes = useAppStore((s) => s.getNotes);
-  const getPatientAppointments = useAppStore((s) => s.getPatientAppointments);
-  const updateAppointmentStatus = useAppStore((s) => s.updateAppointmentStatus);
   const addMedicalRecord = useAppStore((s) => s.addMedicalRecord);
   const addNote = useAppStore((s) => s.addNote);
   const addLabResult = useAppStore((s) => s.addLabResult);
@@ -399,7 +398,30 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
   const medicalRecords = getMedicalRecords(patientId);
   const labResults = getLabResults(patientId);
   const notes = getNotes(patientId);
-  const patientAppointments = getPatientAppointments(patientId);
+
+  const [patientAppts, setPatientAppts] = useState<Appointment[]>([]);
+  const [patientApptLoading, setPatientApptLoading] = useState(true);
+
+  useEffect(() => {
+    setPatientApptLoading(true);
+    void api.get<Appointment[]>(`/api/appointments/patient/${patientId}`)
+      .then(setPatientAppts)
+      .catch(console.error)
+      .finally(() => setPatientApptLoading(false));
+  }, [patientId]);
+
+  const handleApptStatusChange = async (id: string, status: string) => {
+    try {
+      await api.patch(`/api/appointments/${id}/status`, { status });
+      setPatientAppts((prev) =>
+        prev.map((a) => a.id === id ? { ...a, status: status as Appointment["status"] } : a)
+      );
+    } catch (err) {
+      console.error("Failed to update appointment status:", err);
+    }
+  };
+
+  const patientAppointments = patientAppts;
 
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
@@ -1027,7 +1049,12 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
             )}
           </div>
 
-          {patientAppointments.length === 0 ? (
+          {patientApptLoading ? (
+            <div className="flex items-center justify-center py-12 text-muted-foreground">
+              <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              <span className="text-sm">Loading appointments…</span>
+            </div>
+          ) : patientAppointments.length === 0 ? (
             <Empty>
               <EmptyHeader>
                 <EmptyTitle>No appointments yet</EmptyTitle>
@@ -1114,7 +1141,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                         <DropdownMenuContent align="end">
                           {apt.status !== "Completed" && (
                             <DropdownMenuItem
-                              onClick={() => updateAppointmentStatus(apt.id, "Completed")}
+                              onClick={() => handleApptStatusChange(apt.id, "Completed")}
                             >
                               <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />
                               Mark as completed
@@ -1123,7 +1150,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                           {apt.status !== "Cancelled" && (
                             <DropdownMenuItem
                               className="text-destructive"
-                              onClick={() => updateAppointmentStatus(apt.id, "Cancelled")}
+                              onClick={() => handleApptStatusChange(apt.id, "Cancelled")}
                             >
                               <XCircle className="w-4 h-4 mr-2" />
                               Cancel appointment
@@ -1133,7 +1160,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                             <>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
-                                onClick={() => updateAppointmentStatus(apt.id, "Scheduled")}
+                                onClick={() => handleApptStatusChange(apt.id, "Scheduled")}
                               >
                                 <CalendarDays className="w-4 h-4 mr-2 text-blue-600" />
                                 Reschedule

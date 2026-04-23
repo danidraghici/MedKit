@@ -41,6 +41,7 @@ import DoctorsPage from "@/pages/DoctorsPage";
 import AddPatientPage from "@/pages/AddPatientPage";
 import AddDoctorPage from "@/pages/AddDoctorPage";
 import PatientDashboardPage from "@/pages/PatientDashboardPage";
+import ForceChangePasswordPage from "@/pages/ForceChangePasswordPage";
 
 
 type PageId = string;
@@ -153,6 +154,11 @@ export default function App() {
       setPatientTab(pageId.replace("patient-", ""));
     }
   };
+
+  // ── FORCE PASSWORD CHANGE ─────────────────────────────────────────────────
+  if (isAuthenticated && user?.mustChangePassword) {
+    return <ForceChangePasswordPage />;
+  }
 
   // ── NOT AUTHENTICATED ─────────────────────────────────────────────────────
   if (!isAuthenticated) {

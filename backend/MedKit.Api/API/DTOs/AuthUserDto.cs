@@ -8,6 +8,7 @@ public class AuthUserDto
     public string Role { get; set; } = "";
     public string? PatientId { get; set; }
     public string? DoctorId { get; set; }
+    public bool MustChangePassword { get; set; }
 }
 
 public class LoginResponse

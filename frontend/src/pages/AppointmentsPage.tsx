@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   CalendarDays,
   Plus,
@@ -11,12 +11,13 @@ import {
   MoreVertical,
   CalendarCheck,
   Filter,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -33,7 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyContent } from "@/components/ui/empty";
 import { KPI } from "@/components/ui/kpi";
-import { useAppStore } from "@/lib/store";
+import { api } from "@/lib/api";
 import { formatDate, getInitials } from "@/lib/utils";
 import type { Appointment } from "@/lib/types";
 
@@ -41,60 +42,78 @@ interface AppointmentsPageProps {
   onNavigate: (page: string) => void;
 }
 
+interface AppointmentStats {
+  totalNext30Days: number;
+  completedLast30Days: number;
+  today: number;
+  nextWeek: number;
+}
+
 const statusConfig: Record<
   Appointment["status"],
-  { label: string; icon: React.ReactNode; className: string; badge: string }
+  { label: string; icon: React.ReactNode; className: string }
 > = {
   Scheduled: {
     label: "Scheduled",
     icon: <AlertCircle className="w-3.5 h-3.5" />,
     className:
       "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800",
-    badge: "blue",
   },
   Completed: {
     label: "Completed",
     icon: <CheckCircle2 className="w-3.5 h-3.5" />,
     className:
       "text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950/30 dark:border-emerald-800",
-    badge: "emerald",
   },
   Cancelled: {
     label: "Cancelled",
     icon: <XCircle className="w-3.5 h-3.5" />,
-    className:
-      "text-muted-foreground bg-muted border-border",
-    badge: "muted",
+    className: "text-muted-foreground bg-muted border-border",
   },
 };
 
 export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) {
-  const appointments = useAppStore((s) => s.appointments);
-  const updateAppointmentStatus = useAppStore((s) => s.updateAppointmentStatus);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [stats, setStats] = useState<AppointmentStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPeriod, setFilterPeriod] = useState<string>("all");
 
-  // ── Stats ────────────────────────────────────────────────────────────────
-  const stats = useMemo(() => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [fetchedStats, fetchedAppointments] = await Promise.all([
+        api.get<AppointmentStats>("/api/appointments/stats"),
+        api.get<Appointment[]>("/api/appointments"),
+      ]);
+      setStats(fetchedStats);
+      setAppointments(fetchedAppointments);
+    } catch (err) {
+      console.error("Failed to load appointments", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-    return {
-      total: appointments.length,
-      scheduled: appointments.filter((a) => a.status === "Scheduled").length,
-      today: appointments.filter((a) => {
-        const d = new Date(a.date);
-        return d >= today && d < new Date(today.getTime() + 24 * 60 * 60 * 1000) && a.status === "Scheduled";
-      }).length,
-      thisWeek: appointments.filter((a) => {
-        const d = new Date(a.date);
-        return d >= today && d < nextWeek && a.status === "Scheduled";
-      }).length,
-    };
-  }, [appointments]);
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData]);
+
+  const handleStatusChange = async (id: string, status: "Completed" | "Cancelled") => {
+    try {
+      await api.patch(`/api/appointments/${id}/status`, { status });
+      setAppointments((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, status } : a))
+      );
+      // Refresh stats after status change
+      const updatedStats = await api.get<AppointmentStats>("/api/appointments/stats");
+      setStats(updatedStats);
+    } catch (err) {
+      console.error("Failed to update appointment status", err);
+    }
+  };
 
   // ── Filtering ────────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
@@ -152,6 +171,15 @@ export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) 
     return Array.from(map.entries());
   }, [filtered]);
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64 text-muted-foreground gap-2">
+        <Loader2 className="w-5 h-5 animate-spin" />
+        <span>Loading appointments…</span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -159,7 +187,7 @@ export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) 
         <div>
           <h1 className="text-2xl font-bold text-foreground">Appointments</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {stats.scheduled} upcoming · {stats.today} today
+            {stats?.nextWeek ?? 0} upcoming this week · {stats?.today ?? 0} today
           </p>
         </div>
         <Button onClick={() => onNavigate("create-appointment")} className="gap-2 sm:w-auto w-full">
@@ -171,29 +199,29 @@ export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) 
       {/* KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <KPI
-          label="Total"
-          value={stats.total}
-          period="All time"
+          label="Next 30 days"
+          value={stats?.totalNext30Days ?? 0}
+          period="Upcoming"
           icon={<CalendarDays className="w-7 h-7" />}
           accent="cerulean"
         />
         <KPI
-          label="Scheduled"
-          value={stats.scheduled}
-          period="Upcoming"
+          label="Completed"
+          value={stats?.completedLast30Days ?? 0}
+          period="Last 30 days"
           icon={<CalendarCheck className="w-7 h-7" />}
           accent="teal"
         />
         <KPI
           label="Today"
-          value={stats.today}
-          period="Today"
+          value={stats?.today ?? 0}
+          period="Scheduled"
           icon={<Clock className="w-7 h-7" />}
           accent="purple"
         />
         <KPI
           label="This Week"
-          value={stats.thisWeek}
+          value={stats?.nextWeek ?? 0}
           period="Next 7 days"
           icon={<Filter className="w-7 h-7" />}
           accent="orange"
@@ -367,7 +395,7 @@ export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) 
                                 <DropdownMenuSeparator />
                                 {apt.status !== "Completed" && (
                                   <DropdownMenuItem
-                                    onClick={() => updateAppointmentStatus(apt.id, "Completed")}
+                                    onClick={() => void handleStatusChange(apt.id, "Completed")}
                                   >
                                     <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />
                                     Mark as completed
@@ -376,18 +404,10 @@ export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) 
                                 {apt.status !== "Cancelled" && (
                                   <DropdownMenuItem
                                     className="text-destructive"
-                                    onClick={() => updateAppointmentStatus(apt.id, "Cancelled")}
+                                    onClick={() => void handleStatusChange(apt.id, "Cancelled")}
                                   >
                                     <XCircle className="w-4 h-4 mr-2" />
                                     Cancel appointment
-                                  </DropdownMenuItem>
-                                )}
-                                {apt.status === "Cancelled" && (
-                                  <DropdownMenuItem
-                                    onClick={() => updateAppointmentStatus(apt.id, "Scheduled")}
-                                  >
-                                    <CalendarDays className="w-4 h-4 mr-2 text-blue-600" />
-                                    Reschedule
                                   </DropdownMenuItem>
                                 )}
                               </DropdownMenuContent>
@@ -403,7 +423,6 @@ export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) 
           })}
         </div>
       )}
-
     </div>
   );
 }

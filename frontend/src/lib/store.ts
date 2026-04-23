@@ -32,6 +32,7 @@ interface AppState {
 
   // Doctors (managed by admin)
   doctors: Doctor[];
+  fetchDoctors: () => Promise<void>;
   addDoctor: (doctor: Omit<Doctor, "id" | "createdAt">) => Doctor;
   updateDoctor: (id: string, updates: Partial<Doctor>) => void;
   deleteDoctor: (id: string) => void;
@@ -39,10 +40,11 @@ interface AppState {
 
   // Patients
   patients: Patient[];
-  addPatient: (patient: Omit<Patient, "id" | "createdAt" | "updatedAt">) => Patient;
+  addPatient: (patient: Omit<Patient, "id" | "createdAt" | "updatedAt">) => Promise<Patient>;
   updatePatient: (id: string, updates: Partial<Patient>) => void;
   deletePatient: (id: string) => void;
   getPatient: (id: string) => Patient | undefined;
+  fetchPatients: () => Promise<void>;
 
   // Medical Records
   medicalRecords: MedicalRecord[];
@@ -85,42 +87,6 @@ interface AppState {
   getPatientReminders: (patientId: string) => ConsultationReminder[];
   dismissReminder: (reminderId: string) => void;
 }
-
-const INITIAL_DOCTORS: Doctor[] = [
-  {
-    id: "d001",
-    name: "Dr. Emily Carter",
-    email: "doctor@medkit.com",
-    specialty: "Nephrology",
-    licenseNumber: "MD-4821",
-    department: "Internal Medicine",
-    phone: "+1 (555) 100-0001",
-    doctorRole: "specialist_doctor",
-    createdAt: "2024-01-10T08:00:00.000Z",
-  },
-  {
-    id: "d002",
-    name: "Dr. Michael Torres",
-    email: "dr.torres@medkit.com",
-    specialty: "Urology",
-    licenseNumber: "MD-3390",
-    department: "Urology",
-    phone: "+1 (555) 100-0002",
-    doctorRole: "specialist_doctor",
-    createdAt: "2024-02-15T08:00:00.000Z",
-  },
-  {
-    id: "d003",
-    name: "Dr. Sarah Lin",
-    email: "lab@medkit.com",
-    specialty: "Clinical Pathology",
-    licenseNumber: "LAB-0012",
-    department: "Laboratory",
-    phone: "+1 (555) 100-0003",
-    doctorRole: "lab_doctor",
-    createdAt: "2024-03-01T08:00:00.000Z",
-  },
-];
 
 const DEMO_USERS: User[] = [
   { id: "u001", email: "doctor@medkit.com", name: "Dr. Emily Carter", role: "specialist_doctor", doctorId: "d001" },
@@ -179,7 +145,16 @@ export const useAppStore = create<AppState>()(
       },
 
       // Doctors
-      doctors: INITIAL_DOCTORS,
+      doctors: [],
+
+      fetchDoctors: async () => {
+        try {
+          const data = await api.get<Doctor[]>("/api/dashboard/staff");
+          set({ doctors: data });
+        } catch {
+          // silently keep whatever is in state
+        }
+      },
 
       addDoctor: (doctorData) => {
         const newDoctor: Doctor = {
@@ -208,7 +183,13 @@ export const useAppStore = create<AppState>()(
       // Patients
       patients: MOCK_PATIENTS,
 
-      addPatient: (patientData) => {
+      addPatient: async (patientData) => {
+        const { user } = get();
+        if (user?.role === "admin") {
+          const created = await api.post<Patient>("/api/patients", patientData);
+          set((state) => ({ patients: [...state.patients, created] }));
+          return created;
+        }
         const newPatient: Patient = {
           ...patientData,
           id: generateId("p"),
@@ -233,6 +214,15 @@ export const useAppStore = create<AppState>()(
 
       getPatient: (id) => {
         return get().patients.find((p) => p.id === id);
+      },
+
+      fetchPatients: async () => {
+        try {
+          const data = await api.get<Patient[]>("/api/patients");
+          set({ patients: data });
+        } catch {
+          // Silently fall back — local mock/persisted data remains in place
+        }
       },
 
       // Medical Records
@@ -439,7 +429,7 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: "medkit-storage",
-      version: 4,
+      version: 5,
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as Record<string, unknown>;
         if (version < 2) {
@@ -462,15 +452,17 @@ export const useAppStore = create<AppState>()(
             const u = state.user as Record<string, unknown>;
             if (u.role === "doctor") u.role = "specialist_doctor";
           }
-          // Seed doctors list if not present
-          state.doctors = state.doctors ?? INITIAL_DOCTORS;
+        }
+        if (version < 5) {
+          // Doctors are now fetched from the API; clear any persisted mock data
+          state.doctors = [];
         }
         return state;
       },
       partialize: (state) => ({
         // Auth state is NOT persisted — sessions are managed via httpOnly cookies.
         // accessToken lives in memory only; user is rehydrated via initAuth() on mount.
-        doctors: state.doctors,
+        // doctors are NOT persisted — they are always fetched fresh from the API.
         patients: state.patients,
         medicalRecords: state.medicalRecords,
         labResults: state.labResults,

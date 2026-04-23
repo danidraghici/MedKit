@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Search,
   UserPlus,
@@ -59,6 +59,9 @@ interface DoctorsPageProps {
 export default function DoctorsPage({ onNavigate }: DoctorsPageProps) {
   const doctors = useAppStore((s) => s.doctors);
   const deleteDoctor = useAppStore((s) => s.deleteDoctor);
+  const fetchDoctors = useAppStore((s) => s.fetchDoctors);
+
+  useEffect(() => { fetchDoctors(); }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filterRole, setFilterRole] = useState<string>("all");

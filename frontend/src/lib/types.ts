@@ -132,11 +132,13 @@ export interface Appointment {
   id: string;
   patientId: string;
   patientName: string;
+  doctorId?: string;
   date: string;
   time: string;
   type: string;
   doctor: string;
   status: "Scheduled" | "Completed" | "Cancelled";
+  notes?: string;
 }
 
 export interface ChatMessage {
@@ -165,7 +167,7 @@ export interface Doctor {
   department: string;
   phone: string;
   doctorRole: DoctorRole;
-  createdAt: string;
+  createdAt?: string;
 }
 
 export interface User {
@@ -175,6 +177,7 @@ export interface User {
   role: UserRole;
   patientId?: string; // links to Patient record when role === "patient"
   doctorId?: string;  // links to Doctor record when role is a doctor variant
+  mustChangePassword?: boolean;
 }
 
 // ─── Patient Portal ────────────────────────────────────────────────────────
@@ -225,4 +228,21 @@ export interface ConsultationReminder {
   priority: "low" | "medium" | "high";
   dismissed: boolean;
   createdAt: string;
+}
+
+export interface DashboardStats {
+  recentRecords: number;
+  upcomingAppointments: number;
+  activeDoctors: number;
+}
+
+export interface DoctorSummary {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  licenseNumber: string;
+  specialty: string;
+  department: string;
+  doctorRole: DoctorRole;
 }

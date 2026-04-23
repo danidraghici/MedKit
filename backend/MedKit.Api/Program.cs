@@ -77,6 +77,10 @@ builder.Services.AddControllers();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<PatientService>();
+builder.Services.AddScoped<DoctorService>();
+builder.Services.AddScoped<DashboardService>();
+builder.Services.AddScoped<AppointmentService>();
 
 // ── Build App ─────────────────────────────────────────────────────────────────
 var app = builder.Build();

@@ -36,5 +36,8 @@ public class UserEntity
     [Column("updated_at")]
     public DateTimeOffset UpdatedAt { get; set; }
 
+    [Column("must_change_password")]
+    public bool MustChangePassword { get; set; } = false;
+
     public List<RefreshTokenEntity> RefreshTokens { get; set; } = [];
 }

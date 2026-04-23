@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -11,6 +12,7 @@ import {
   FlaskConical,
   UserCog,
   Save,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +26,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAppStore } from "@/lib/store";
-import type { Doctor, DoctorRole } from "@/lib/types";
+import { api } from "@/lib/api";
+import type { DoctorSummary } from "@/lib/types";
 
 const doctorSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -37,6 +40,9 @@ const doctorSchema = z.object({
 });
 
 type DoctorFormData = z.infer<typeof doctorSchema>;
+
+const LAB_SPECIALTY = "Laboratory Medicine";
+const LAB_DEPARTMENT = "Laboratory";
 
 const SPECIALTIES = [
   "Cardiology", "Clinical Pathology", "Dermatology", "Emergency Medicine",
@@ -59,9 +65,9 @@ interface AddDoctorPageProps {
 }
 
 export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctorPageProps) {
-  const addDoctor = useAppStore((s) => s.addDoctor);
   const updateDoctor = useAppStore((s) => s.updateDoctor);
   const doctors = useAppStore((s) => s.doctors);
+  const fetchDoctors = useAppStore((s) => s.fetchDoctors);
 
   const editingDoctor = editingDoctorId
     ? doctors.find((d) => d.id === editingDoctorId) ?? null
@@ -69,11 +75,14 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
 
   const isEditing = !!editingDoctor;
 
+  const [serverError, setServerError] = useState<string | null>(null);
+
   const {
     register,
     handleSubmit,
     setValue,
     watch,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<DoctorFormData>({
     resolver: zodResolver(doctorSchema),
@@ -100,15 +109,48 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
 
   const selectedRole = watch("doctorRole");
 
+  // Auto-fill and lock specialty/department for Lab Doctor
+  useEffect(() => {
+    if (selectedRole === "lab_doctor") {
+      setValue("specialty", LAB_SPECIALTY, { shouldValidate: true });
+      setValue("department", LAB_DEPARTMENT, { shouldValidate: true });
+    } else {
+      // Clear only if the values are still the locked lab ones
+      if (watch("specialty") === LAB_SPECIALTY) setValue("specialty", "");
+      if (watch("department") === LAB_DEPARTMENT) setValue("department", "");
+    }
+  }, [selectedRole]);
+
   const onSubmit = async (data: DoctorFormData) => {
-    await new Promise((r) => setTimeout(r, 400));
+    setServerError(null);
+
     if (isEditing && editingDoctor) {
       updateDoctor(editingDoctor.id, data);
-    } else {
-      addDoctor(data as Omit<Doctor, "id" | "createdAt">);
+      onNavigate("doctors");
+      return;
     }
-    onNavigate("doctors");
+
+    try {
+      await api.post<DoctorSummary>("/api/doctors", data);
+      await fetchDoctors();
+      onNavigate("doctors");
+    } catch (err: unknown) {
+      const apiErr = err as { status?: number; message?: string };
+      if (apiErr.status === 409) {
+        if (apiErr.message === "email_taken") {
+          setError("email", { message: "This email is already in use." });
+        } else if (apiErr.message === "license_taken") {
+          setError("licenseNumber", { message: "This license number is already registered." });
+        } else {
+          setServerError("A conflict occurred. Please check your inputs.");
+        }
+      } else {
+        setServerError("Failed to create doctor. Please try again.");
+      }
+    }
   };
+
+  const isLabDoctor = selectedRole === "lab_doctor";
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -137,7 +179,7 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Role selection — first and most prominent */}
+        {/* Role selection */}
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-border bg-muted/30">
             <UserCog className="w-4 h-4 text-primary" />
@@ -172,7 +214,7 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
                 </p>
               </button>
 
-              {/* Lab doctor card */}
+              {/* Lab Doctor card */}
               <button
                 type="button"
                 onClick={() => setValue("doctorRole", "lab_doctor")}
@@ -201,7 +243,7 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
           </div>
         </div>
 
-        {/* Personal & professional info */}
+        {/* Professional information */}
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-border bg-muted/30">
             <Stethoscope className="w-4 h-4 text-primary" />
@@ -228,22 +270,37 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
                 <Stethoscope className="w-3.5 h-3.5 inline mr-1 opacity-60" />
                 Specialty <span className="text-destructive">*</span>
               </Label>
-              <Select
-                value={watch("specialty")}
-                onValueChange={(v) => setValue("specialty", v)}
-              >
-                <SelectTrigger className={errors.specialty ? "border-destructive" : ""}>
-                  <SelectValue placeholder="Select specialty" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SPECIALTIES.map((s) => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.specialty && (
-                <p className="text-xs text-destructive">{errors.specialty.message}</p>
+              {isLabDoctor ? (
+                <div className="relative">
+                  <Input
+                    value={LAB_SPECIALTY}
+                    disabled
+                    className="pr-8 bg-muted/50 text-muted-foreground cursor-not-allowed"
+                  />
+                  <Lock className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/60" />
+                </div>
+              ) : (
+                <Select
+                  value={watch("specialty")}
+                  onValueChange={(v) => setValue("specialty", v, { shouldValidate: true })}
+                >
+                  <SelectTrigger className={errors.specialty ? "border-destructive" : ""}>
+                    <SelectValue placeholder="Select specialty" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SPECIALTIES.map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
+              {isLabDoctor ? (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Lock className="w-3 h-3" /> Fixed for Lab Doctor role
+                </p>
+              ) : errors.specialty ? (
+                <p className="text-xs text-destructive">{errors.specialty.message}</p>
+              ) : null}
             </div>
 
             {/* Department */}
@@ -252,22 +309,37 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
                 <Building2 className="w-3.5 h-3.5 inline mr-1 opacity-60" />
                 Department <span className="text-destructive">*</span>
               </Label>
-              <Select
-                value={watch("department")}
-                onValueChange={(v) => setValue("department", v)}
-              >
-                <SelectTrigger className={errors.department ? "border-destructive" : ""}>
-                  <SelectValue placeholder="Select department" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DEPARTMENTS.map((d) => (
-                    <SelectItem key={d} value={d}>{d}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.department && (
-                <p className="text-xs text-destructive">{errors.department.message}</p>
+              {isLabDoctor ? (
+                <div className="relative">
+                  <Input
+                    value={LAB_DEPARTMENT}
+                    disabled
+                    className="pr-8 bg-muted/50 text-muted-foreground cursor-not-allowed"
+                  />
+                  <Lock className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/60" />
+                </div>
+              ) : (
+                <Select
+                  value={watch("department")}
+                  onValueChange={(v) => setValue("department", v, { shouldValidate: true })}
+                >
+                  <SelectTrigger className={errors.department ? "border-destructive" : ""}>
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DEPARTMENTS.map((d) => (
+                      <SelectItem key={d} value={d}>{d}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
+              {isLabDoctor ? (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Lock className="w-3 h-3" /> Fixed for Lab Doctor role
+                </p>
+              ) : errors.department ? (
+                <p className="text-xs text-destructive">{errors.department.message}</p>
+              ) : null}
             </div>
 
             {/* License number */}
@@ -333,6 +405,13 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
             </div>
           </div>
         </div>
+
+        {/* Server error banner */}
+        {serverError && (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {serverError}
+          </div>
+        )}
 
         {/* Action bar */}
         <div className="flex items-center justify-between pt-2 pb-8">

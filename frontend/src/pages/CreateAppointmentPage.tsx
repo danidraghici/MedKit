@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -15,10 +15,16 @@ import {
   Clock,
   Stethoscope,
   FileText,
+  Loader2,
+  Droplets,
+  Pill,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -26,13 +32,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CNPInput } from "@/components/ui/cnp-input";
+import { isValidCNP } from "@/lib/cnp";
 import { useAppStore } from "@/lib/store";
+import { api } from "@/lib/api";
 import { getInitials, calculateAge } from "@/lib/utils";
-import type { BloodType, Sex } from "@/lib/types";
+import type { BloodType, Sex, Patient, Appointment } from "@/lib/types";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -59,29 +67,31 @@ const APPOINTMENT_TIMES = [
 // ── Schemas ──────────────────────────────────────────────────────────────────
 
 const existingPatientSchema = z.object({
+  doctorId: z.string().min(1, "Please select a doctor"),
   date: z.string().min(1, "Date is required"),
   time: z.string().min(1, "Time is required"),
   type: z.string().min(1, "Appointment type is required"),
-  doctor: z.string().min(2, "Doctor name is required"),
   notes: z.string().optional(),
 });
 
 type ExistingPatientForm = z.infer<typeof existingPatientSchema>;
 
 const newPatientSchema = z.object({
+  // Patient
   fullName: z.string().min(2, "Full name must be at least 2 characters"),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   sex: z.enum(["Male", "Female", "Other"]),
-  nationalId: z.string().min(1, "National ID is required"),
+  nationalId: z.string().refine(isValidCNP, "Enter a valid 13-digit CNP."),
   phone: z.string().min(7, "Phone number is required"),
   email: z.string().email("Enter a valid email"),
   bloodType: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "Unknown"]),
   allergies: z.string(),
   currentMedications: z.string(),
+  // Appointment
+  doctorId: z.string().min(1, "Please select a doctor"),
   date: z.string().min(1, "Date is required"),
   time: z.string().min(1, "Time is required"),
   type: z.string().min(1, "Appointment type is required"),
-  doctor: z.string().min(2, "Doctor name is required"),
   notes: z.string().optional(),
 });
 
@@ -91,7 +101,6 @@ type NewPatientForm = z.infer<typeof newPatientSchema>;
 
 interface CreateAppointmentPageProps {
   onNavigate: (page: string) => void;
-  /** If set, the patient is pre-selected (coming from patient detail page) */
   preselectedPatientId?: string;
 }
 
@@ -101,10 +110,13 @@ export default function CreateAppointmentPage({
   onNavigate,
   preselectedPatientId,
 }: CreateAppointmentPageProps) {
-  const patients = useAppStore((s) => s.patients);
-  const addAppointment = useAppStore((s) => s.addAppointment);
   const addPatient = useAppStore((s) => s.addPatient);
-  const user = useAppStore((s) => s.user);
+  const doctors = useAppStore((s) => s.doctors);
+  const fetchDoctors = useAppStore((s) => s.fetchDoctors);
+
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const forceExisting = !!preselectedPatientId;
   const [tab, setTab] = useState<"existing" | "new">("existing");
@@ -114,6 +126,26 @@ export default function CreateAppointmentPage({
   const [patientSearch, setPatientSearch] = useState("");
   const [patientDropdownOpen, setPatientDropdownOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+
+  // Load patients from API and ensure doctors are present
+  useEffect(() => {
+    const load = async () => {
+      setIsLoadingData(true);
+      try {
+        const [fetchedPatients] = await Promise.all([
+          api.get<Patient[]>("/api/patients"),
+          doctors.length === 0 ? fetchDoctors() : Promise.resolve(),
+        ]);
+        setPatients(fetchedPatients);
+      } catch {
+        // silently fall back — dropdowns may be empty
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+    void load();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const selectedPatient = useMemo(
     () => patients.find((p) => p.id === selectedPatientId),
@@ -136,10 +168,10 @@ export default function CreateAppointmentPage({
   const existingForm = useForm<ExistingPatientForm>({
     resolver: zodResolver(existingPatientSchema),
     defaultValues: {
+      doctorId: doctors[0]?.id ?? "",
       date: today,
       time: "09:00",
       type: "General Consultation",
-      doctor: user?.name ?? "",
       notes: "",
     },
   });
@@ -149,64 +181,73 @@ export default function CreateAppointmentPage({
     defaultValues: {
       sex: "Male",
       bloodType: "Unknown",
+      nationalId: "",
       allergies: "",
       currentMedications: "",
+      doctorId: doctors[0]?.id ?? "",
       date: today,
       time: "09:00",
       type: "General Consultation",
-      doctor: user?.name ?? "",
       notes: "",
     },
   });
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     if (preselectedPatientId) {
       onNavigate(`patient-${preselectedPatientId}`);
     } else {
       onNavigate("appointments");
     }
-  };
+  }, [preselectedPatientId, onNavigate]);
 
   const onSubmitExisting = async (data: ExistingPatientForm) => {
     if (!selectedPatient) return;
-    await new Promise((r) => setTimeout(r, 300));
-    addAppointment({
-      patientId: selectedPatient.id,
-      patientName: selectedPatient.fullName,
-      date: data.date,
-      time: data.time,
-      type: data.type,
-      doctor: data.doctor,
-      status: "Scheduled",
-    });
-    setSubmitted(true);
-    setTimeout(() => onNavigate("appointments"), 1200);
+    setSubmitError(null);
+    try {
+      await api.post<Appointment>("/api/appointments", {
+        patientId: selectedPatient.id,
+        doctorId: data.doctorId,
+        date: data.date,
+        time: data.time,
+        type: data.type,
+        notes: data.notes ?? "",
+      });
+      setSubmitted(true);
+      setTimeout(() => onNavigate("appointments"), 1200);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to schedule appointment.";
+      setSubmitError(message);
+    }
   };
 
   const onSubmitNewPatient = async (data: NewPatientForm) => {
-    await new Promise((r) => setTimeout(r, 400));
-    const newPatient = addPatient({
-      fullName: data.fullName,
-      dateOfBirth: data.dateOfBirth,
-      sex: data.sex as Sex,
-      nationalId: data.nationalId,
-      phone: data.phone,
-      email: data.email,
-      bloodType: data.bloodType as BloodType,
-      allergies: data.allergies,
-      currentMedications: data.currentMedications,
-    });
-    addAppointment({
-      patientId: newPatient.id,
-      patientName: newPatient.fullName,
-      date: data.date,
-      time: data.time,
-      type: data.type,
-      doctor: data.doctor,
-      status: "Scheduled",
-    });
-    setSubmitted(true);
-    setTimeout(() => onNavigate("appointments"), 1200);
+    setSubmitError(null);
+    try {
+      const newPatient = await addPatient({
+        fullName: data.fullName,
+        dateOfBirth: data.dateOfBirth,
+        sex: data.sex as Sex,
+        nationalId: data.nationalId,
+        phone: data.phone,
+        email: data.email,
+        bloodType: data.bloodType as BloodType,
+        allergies: data.allergies,
+        currentMedications: data.currentMedications,
+      });
+      await api.post<Appointment>("/api/appointments", {
+        patientId: newPatient.id,
+        doctorId: data.doctorId,
+        date: data.date,
+        time: data.time,
+        type: data.type,
+        notes: data.notes ?? "",
+      });
+      setSubmitted(true);
+      setTimeout(() => onNavigate("appointments"), 1200);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to register patient or schedule appointment.";
+      setSubmitError(message);
+    }
   };
 
   // ── Success state ────────────────────────────────────────────────────────
@@ -218,6 +259,15 @@ export default function CreateAppointmentPage({
         </div>
         <h2 className="text-xl font-bold text-foreground">Appointment Scheduled!</h2>
         <p className="text-muted-foreground text-sm">Redirecting to appointments…</p>
+      </div>
+    );
+  }
+
+  if (isLoadingData) {
+    return (
+      <div className="flex items-center justify-center h-64 text-muted-foreground gap-2">
+        <Loader2 className="w-5 h-5 animate-spin" />
+        <span>Loading…</span>
       </div>
     );
   }
@@ -249,7 +299,6 @@ export default function CreateAppointmentPage({
       {/* ── Pre-selected patient flow ──────────────────────────────────────── */}
       {forceExisting && selectedPatient ? (
         <div className="space-y-6">
-          {/* Patient card */}
           <Card>
             <CardContent className="p-5">
               <div className="flex items-center gap-4">
@@ -273,7 +322,6 @@ export default function CreateAppointmentPage({
             </CardContent>
           </Card>
 
-          {/* Appointment form */}
           <Card>
             <CardHeader className="pb-4">
               <CardTitle className="text-base flex items-center gap-2">
@@ -285,10 +333,12 @@ export default function CreateAppointmentPage({
               <form onSubmit={existingForm.handleSubmit(onSubmitExisting)} className="space-y-5">
                 <AppointmentFields
                   form={existingForm}
+                  doctors={doctors}
                   isSubmitting={existingForm.formState.isSubmitting}
                   onCancel={handleBack}
                   canSubmit
                 />
+                {submitError && <ErrorBanner message={submitError} />}
               </form>
             </CardContent>
           </Card>
@@ -309,7 +359,6 @@ export default function CreateAppointmentPage({
 
           {/* ── Existing patient tab ─────────────────────────────────────── */}
           <TabsContent value="existing" className="mt-6 space-y-5">
-            {/* Patient picker */}
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -318,7 +367,6 @@ export default function CreateAppointmentPage({
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {/* Dropdown picker */}
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium">
                     Patient <span className="text-destructive">*</span>
@@ -339,7 +387,7 @@ export default function CreateAppointmentPage({
                           <div className="text-left">
                             <span className="font-medium block leading-tight">{selectedPatient.fullName}</span>
                             <span className="text-muted-foreground text-xs">
-                              {calculateAge(selectedPatient.dateOfBirth)} yrs · {selectedPatient.sex} · ID: {selectedPatient.nationalId}
+                              {calculateAge(selectedPatient.dateOfBirth)} yrs · {selectedPatient.sex} · CNP: {selectedPatient.nationalId}
                             </span>
                           </div>
                         </div>
@@ -358,7 +406,7 @@ export default function CreateAppointmentPage({
                               autoFocus
                               value={patientSearch}
                               onChange={(e) => setPatientSearch(e.target.value)}
-                              placeholder="Search name, ID, phone, email…"
+                              placeholder="Search name, CNP, phone, email…"
                               className="w-full text-sm pl-8 pr-3 py-1.5 bg-transparent outline-none"
                             />
                           </div>
@@ -386,7 +434,7 @@ export default function CreateAppointmentPage({
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium truncate">{p.fullName}</p>
                                   <p className="text-xs text-muted-foreground">
-                                    {calculateAge(p.dateOfBirth)} yrs · {p.sex} · ID: {p.nationalId}
+                                    {calculateAge(p.dateOfBirth)} yrs · {p.sex} · CNP: {p.nationalId}
                                   </p>
                                 </div>
                                 {selectedPatientId === p.id && (
@@ -401,18 +449,16 @@ export default function CreateAppointmentPage({
                   </div>
                 </div>
 
-                {/* Selected patient info strip */}
                 {selectedPatient && (
                   <div className="flex flex-wrap gap-3 p-3 rounded-xl bg-muted/40 border border-border text-xs text-muted-foreground">
                     <span className="flex items-center gap-1.5"><Phone className="w-3 h-3" />{selectedPatient.phone}</span>
                     <span className="flex items-center gap-1.5"><Mail className="w-3 h-3" />{selectedPatient.email}</span>
-                    <span className="flex items-center gap-1.5"><User className="w-3 h-3" />{selectedPatient.bloodType}</span>
+                    <span className="flex items-center gap-1.5"><Droplets className="w-3 h-3" />{selectedPatient.bloodType}</span>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Appointment details */}
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -424,11 +470,13 @@ export default function CreateAppointmentPage({
                 <form onSubmit={existingForm.handleSubmit(onSubmitExisting)} className="space-y-5">
                   <AppointmentFields
                     form={existingForm}
+                    doctors={doctors}
                     isSubmitting={existingForm.formState.isSubmitting}
                     onCancel={handleBack}
                     canSubmit={!!selectedPatient}
                     submitLabel={selectedPatient ? "Schedule Appointment" : "Select a patient first"}
                   />
+                  {submitError && <ErrorBanner message={submitError} />}
                 </form>
               </CardContent>
             </Card>
@@ -437,7 +485,6 @@ export default function CreateAppointmentPage({
           {/* ── New patient tab ────────────────────────────────────────────── */}
           <TabsContent value="new" className="mt-6">
             <form onSubmit={newPatientForm.handleSubmit(onSubmitNewPatient)} className="space-y-5">
-              {/* Info banner */}
               <div className="rounded-xl bg-blue-50 border border-blue-200 dark:bg-blue-950/20 dark:border-blue-800 p-4">
                 <p className="text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
                   <UserPlus className="w-4 h-4 shrink-0" />
@@ -445,107 +492,194 @@ export default function CreateAppointmentPage({
                 </p>
               </div>
 
-              {/* Patient information */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <User className="w-4 h-4 text-primary" />
-                    Patient Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="sm:col-span-2 space-y-1.5">
-                      <Label className="text-xs">Full name <span className="text-destructive">*</span></Label>
-                      <Input placeholder="e.g. Jane Smith" {...newPatientForm.register("fullName")} />
-                      {newPatientForm.formState.errors.fullName && (
-                        <p className="text-xs text-destructive">{newPatientForm.formState.errors.fullName.message}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Date of birth <span className="text-destructive">*</span></Label>
-                      <Input type="date" {...newPatientForm.register("dateOfBirth")} />
-                      {newPatientForm.formState.errors.dateOfBirth && (
-                        <p className="text-xs text-destructive">{newPatientForm.formState.errors.dateOfBirth.message}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Sex <span className="text-destructive">*</span></Label>
-                      <Select defaultValue="Male" onValueChange={(v) => newPatientForm.setValue("sex", v as Sex)}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Male">Male</SelectItem>
-                          <SelectItem value="Female">Female</SelectItem>
-                          <SelectItem value="Other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">National ID <span className="text-destructive">*</span></Label>
-                      <Input placeholder="e.g. NH-78041201" {...newPatientForm.register("nationalId")} />
-                      {newPatientForm.formState.errors.nationalId && (
-                        <p className="text-xs text-destructive">{newPatientForm.formState.errors.nationalId.message}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Blood type <span className="text-destructive">*</span></Label>
-                      <Select defaultValue="Unknown" onValueChange={(v) => newPatientForm.setValue("bloodType", v as BloodType)}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {(["A+","A-","B+","B-","AB+","AB-","O+","O-","Unknown"] as BloodType[]).map((bt) => (
-                            <SelectItem key={bt} value={bt}>{bt}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Phone <span className="text-destructive">*</span></Label>
-                      <Input type="tel" placeholder="+1 (555) 000-0000" {...newPatientForm.register("phone")} />
-                      {newPatientForm.formState.errors.phone && (
-                        <p className="text-xs text-destructive">{newPatientForm.formState.errors.phone.message}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Email <span className="text-destructive">*</span></Label>
-                      <Input type="email" placeholder="patient@email.com" {...newPatientForm.register("email")} />
-                      {newPatientForm.formState.errors.email && (
-                        <p className="text-xs text-destructive">{newPatientForm.formState.errors.email.message}</p>
-                      )}
-                    </div>
-
-                    <div className="sm:col-span-2 space-y-1.5">
-                      <Label className="text-xs">Allergies</Label>
-                      <Input placeholder="e.g. Penicillin, None known" {...newPatientForm.register("allergies")} />
-                    </div>
-
-                    <div className="sm:col-span-2 space-y-1.5">
-                      <Label className="text-xs">Current medications</Label>
-                      <Input placeholder="e.g. Metformin 500mg, None" {...newPatientForm.register("currentMedications")} />
-                    </div>
+              {/* Personal information */}
+              <div className="bg-card border border-border rounded-xl overflow-hidden">
+                <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-border bg-muted/30">
+                  <User className="w-4 h-4 text-primary" />
+                  <h2 className="text-sm font-semibold">Personal Information</h2>
+                </div>
+                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div className="sm:col-span-2 space-y-1.5">
+                    <Label htmlFor="fullName">Full name <span className="text-destructive">*</span></Label>
+                    <Input
+                      id="fullName"
+                      placeholder="e.g. Jane Elizabeth Smith"
+                      {...newPatientForm.register("fullName")}
+                      className={newPatientForm.formState.errors.fullName ? "border-destructive" : ""}
+                    />
+                    {newPatientForm.formState.errors.fullName && (
+                      <p className="text-xs text-destructive">{newPatientForm.formState.errors.fullName.message}</p>
+                    )}
                   </div>
-                </CardContent>
-              </Card>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="dateOfBirth">
+                      <CalendarDays className="w-3.5 h-3.5 inline mr-1 opacity-60" />
+                      Date of birth <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="dateOfBirth"
+                      type="date"
+                      {...newPatientForm.register("dateOfBirth")}
+                      className={newPatientForm.formState.errors.dateOfBirth ? "border-destructive" : ""}
+                    />
+                    {newPatientForm.formState.errors.dateOfBirth && (
+                      <p className="text-xs text-destructive">{newPatientForm.formState.errors.dateOfBirth.message}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Sex <span className="text-destructive">*</span></Label>
+                    <Select
+                      value={newPatientForm.watch("sex")}
+                      onValueChange={(v) => newPatientForm.setValue("sex", v as Sex)}
+                    >
+                      <SelectTrigger className={newPatientForm.formState.errors.sex ? "border-destructive" : ""}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Male">Male</SelectItem>
+                        <SelectItem value="Female">Female</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="sm:col-span-2 space-y-1.5">
+                    <Label htmlFor="nationalId">
+                      <ShieldCheck className="w-3.5 h-3.5 inline mr-1 opacity-60" />
+                      CNP (Personal Numeric Code) <span className="text-destructive">*</span>
+                    </Label>
+                    <CNPInput
+                      id="nationalId"
+                      value={newPatientForm.watch("nationalId") ?? ""}
+                      onChange={(v) => newPatientForm.setValue("nationalId", v, { shouldValidate: true })}
+                      onParsed={(result) => {
+                        if (result.valid) {
+                          if (result.dateOfBirth) newPatientForm.setValue("dateOfBirth", result.dateOfBirth, { shouldValidate: true });
+                          if (result.sex) newPatientForm.setValue("sex", result.sex as Sex, { shouldValidate: true });
+                        }
+                      }}
+                      error={newPatientForm.formState.errors.nationalId?.message}
+                    />
+                    {newPatientForm.formState.errors.nationalId && (
+                      <p className="text-xs text-destructive">{newPatientForm.formState.errors.nationalId.message}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>
+                      <Droplets className="w-3.5 h-3.5 inline mr-1 opacity-60" />
+                      Blood type <span className="text-destructive">*</span>
+                    </Label>
+                    <Select
+                      value={newPatientForm.watch("bloodType")}
+                      onValueChange={(v) => newPatientForm.setValue("bloodType", v as BloodType)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "Unknown"] as BloodType[]).map((bt) => (
+                          <SelectItem key={bt} value={bt}>{bt}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contact information */}
+              <div className="bg-card border border-border rounded-xl overflow-hidden">
+                <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-border bg-muted/30">
+                  <Phone className="w-4 h-4 text-primary" />
+                  <h2 className="text-sm font-semibold">Contact Information</h2>
+                </div>
+                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="phone">
+                      <Phone className="w-3.5 h-3.5 inline mr-1 opacity-60" />
+                      Phone number <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="+40 700 000 000"
+                      {...newPatientForm.register("phone")}
+                      className={newPatientForm.formState.errors.phone ? "border-destructive" : ""}
+                    />
+                    {newPatientForm.formState.errors.phone && (
+                      <p className="text-xs text-destructive">{newPatientForm.formState.errors.phone.message}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="email">
+                      <Mail className="w-3.5 h-3.5 inline mr-1 opacity-60" />
+                      Email address <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="patient@email.com"
+                      {...newPatientForm.register("email")}
+                      className={newPatientForm.formState.errors.email ? "border-destructive" : ""}
+                    />
+                    {newPatientForm.formState.errors.email && (
+                      <p className="text-xs text-destructive">{newPatientForm.formState.errors.email.message}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Medical information */}
+              <div className="bg-card border border-border rounded-xl overflow-hidden">
+                <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-border bg-muted/30">
+                  <FileText className="w-4 h-4 text-primary" />
+                  <h2 className="text-sm font-semibold">Medical Information</h2>
+                  <Badge variant="outline" className="ml-auto text-[10px]">Optional</Badge>
+                </div>
+                <div className="p-5 space-y-5">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="allergies">
+                      <ShieldCheck className="w-3.5 h-3.5 inline mr-1 opacity-60" />
+                      Known allergies
+                    </Label>
+                    <Textarea
+                      id="allergies"
+                      placeholder="e.g. Penicillin, Sulfonamides — or enter 'None known'"
+                      rows={3}
+                      {...newPatientForm.register("allergies")}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="currentMedications">
+                      <Pill className="w-3.5 h-3.5 inline mr-1 opacity-60" />
+                      Current medications
+                    </Label>
+                    <Textarea
+                      id="currentMedications"
+                      placeholder="e.g. Lisinopril 10mg daily — or 'None'"
+                      rows={3}
+                      {...newPatientForm.register("currentMedications")}
+                    />
+                  </div>
+                </div>
+              </div>
 
               {/* Appointment details */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-primary" />
-                    Appointment Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <NewPatientAptFields form={newPatientForm} />
-                </CardContent>
-              </Card>
+              <div className="bg-card border border-border rounded-xl overflow-hidden">
+                <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-border bg-muted/30">
+                  <Clock className="w-4 h-4 text-primary" />
+                  <h2 className="text-sm font-semibold">Appointment Details</h2>
+                </div>
+                <div className="p-5">
+                  <NewPatientAptFields form={newPatientForm} doctors={doctors} />
+                </div>
+              </div>
 
-              {/* Actions */}
+              {submitError && <ErrorBanner message={submitError} />}
+
               <div className="flex justify-end gap-3 pt-2 pb-6">
                 <Button type="button" variant="outline" onClick={handleBack}>Cancel</Button>
                 <Button type="submit" disabled={newPatientForm.formState.isSubmitting} className="gap-2 min-w-[180px]">
@@ -561,16 +695,58 @@ export default function CreateAppointmentPage({
   );
 }
 
-// ── Shared appointment fields component ──────────────────────────────────────
+// ── Shared doctor + appointment fields ───────────────────────────────────────
+
+type DoctorItem = { id: string; name: string; specialty: string };
+
+function DoctorSelect({
+  value,
+  onChange,
+  doctors,
+  error,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  doctors: DoctorItem[];
+  error?: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs font-medium">
+        <Stethoscope className="w-3.5 h-3.5 inline mr-1 opacity-60" />
+        Doctor <span className="text-destructive">*</span>
+      </Label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className={error ? "border-destructive" : ""}>
+          <SelectValue placeholder="Select a doctor…" />
+        </SelectTrigger>
+        <SelectContent>
+          {doctors.length === 0 ? (
+            <SelectItem value="_none" disabled>No doctors available</SelectItem>
+          ) : (
+            doctors.map((d) => (
+              <SelectItem key={d.id} value={d.id}>
+                {d.name} — {d.specialty}
+              </SelectItem>
+            ))
+          )}
+        </SelectContent>
+      </Select>
+      {error && <p className="text-xs text-destructive">{error}</p>}
+    </div>
+  );
+}
 
 function AppointmentFields({
   form,
+  doctors,
   isSubmitting,
   onCancel,
   canSubmit,
   submitLabel,
 }: {
   form: ReturnType<typeof useForm<ExistingPatientForm>>;
+  doctors: DoctorItem[];
   isSubmitting: boolean;
   onCancel: () => void;
   canSubmit: boolean;
@@ -618,23 +794,19 @@ function AppointmentFields({
         )}
       </div>
 
-      <div className="space-y-1.5">
-        <Label className="text-xs font-medium">Doctor <span className="text-destructive">*</span></Label>
-        <div className="relative">
-          <Stethoscope className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Dr. Name" {...form.register("doctor")} />
-        </div>
-        {form.formState.errors.doctor && (
-          <p className="text-xs text-destructive">{form.formState.errors.doctor.message}</p>
-        )}
-      </div>
+      <DoctorSelect
+        value={form.watch("doctorId")}
+        onChange={(v) => form.setValue("doctorId", v, { shouldValidate: true })}
+        doctors={doctors}
+        error={form.formState.errors.doctorId?.message}
+      />
 
       <div className="space-y-1.5">
-        <Label className="text-xs font-medium">Notes / Reason <span className="text-muted-foreground font-normal">(optional)</span></Label>
-        <div className="relative">
-          <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input className="pl-9" placeholder="e.g. Follow-up after emergency visit" {...form.register("notes")} />
-        </div>
+        <Label className="text-xs font-medium">
+          <FileText className="w-3.5 h-3.5 inline mr-1 opacity-60" />
+          Reason / Notes <span className="text-muted-foreground font-normal">(optional)</span>
+        </Label>
+        <Input placeholder="e.g. Follow-up after emergency visit" {...form.register("notes")} />
       </div>
 
       <div className="flex justify-end gap-3 pt-2">
@@ -648,9 +820,13 @@ function AppointmentFields({
   );
 }
 
-// ── Appointment fields for new-patient form ───────────────────────────────────
-
-function NewPatientAptFields({ form }: { form: ReturnType<typeof useForm<NewPatientForm>> }) {
+function NewPatientAptFields({
+  form,
+  doctors,
+}: {
+  form: ReturnType<typeof useForm<NewPatientForm>>;
+  doctors: DoctorItem[];
+}) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -690,24 +866,28 @@ function NewPatientAptFields({ form }: { form: ReturnType<typeof useForm<NewPati
         )}
       </div>
 
-      <div className="space-y-1.5">
-        <Label className="text-xs font-medium">Doctor <span className="text-destructive">*</span></Label>
-        <div className="relative">
-          <Stethoscope className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Dr. Name" {...form.register("doctor")} />
-        </div>
-        {form.formState.errors.doctor && (
-          <p className="text-xs text-destructive">{form.formState.errors.doctor.message}</p>
-        )}
-      </div>
+      <DoctorSelect
+        value={form.watch("doctorId")}
+        onChange={(v) => form.setValue("doctorId", v, { shouldValidate: true })}
+        doctors={doctors}
+        error={form.formState.errors.doctorId?.message}
+      />
 
       <div className="space-y-1.5">
-        <Label className="text-xs font-medium">Notes / Reason <span className="text-muted-foreground font-normal">(optional)</span></Label>
-        <div className="relative">
-          <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input className="pl-9" placeholder="e.g. First consultation" {...form.register("notes")} />
-        </div>
+        <Label className="text-xs font-medium">
+          <FileText className="w-3.5 h-3.5 inline mr-1 opacity-60" />
+          Reason / Notes <span className="text-muted-foreground font-normal">(optional)</span>
+        </Label>
+        <Input placeholder="e.g. First consultation" {...form.register("notes")} />
       </div>
     </div>
+  );
+}
+
+function ErrorBanner({ message }: { message: string }) {
+  return (
+    <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-lg px-4 py-2.5">
+      {message}
+    </p>
   );
 }

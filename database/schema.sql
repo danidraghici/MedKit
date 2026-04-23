@@ -103,11 +103,12 @@ CREATE TABLE users (
     role          NVARCHAR(50)      NOT NULL
         CONSTRAINT CK_users_role
             CHECK (role IN ('specialist_doctor', 'lab_doctor', 'admin', 'patient')),
-    is_active     BIT               NOT NULL DEFAULT 1,
-    doctor_id     UNIQUEIDENTIFIER  NULL,
-    patient_id    UNIQUEIDENTIFIER  NULL,
-    created_at    DATETIMEOFFSET(7) NOT NULL DEFAULT SYSDATETIMEOFFSET(),
-    updated_at    DATETIMEOFFSET(7) NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+    is_active             BIT               NOT NULL DEFAULT 1,
+    must_change_password  BIT               NOT NULL DEFAULT 0,
+    doctor_id             UNIQUEIDENTIFIER  NULL,
+    patient_id            UNIQUEIDENTIFIER  NULL,
+    created_at            DATETIMEOFFSET(7) NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+    updated_at            DATETIMEOFFSET(7) NOT NULL DEFAULT SYSDATETIMEOFFSET(),
     CONSTRAINT PK_users             PRIMARY KEY (id),
     CONSTRAINT UQ_users_email       UNIQUE (email),
     CONSTRAINT FK_users_doctor      FOREIGN KEY (doctor_id)
@@ -410,6 +411,7 @@ CREATE TABLE appointments (
     appointment_date       DATE              NOT NULL,
     appointment_time       NVARCHAR(20)      NOT NULL,   -- "09:00", "14:30"
     type                   NVARCHAR(100)     NOT NULL,
+    notes                  NVARCHAR(MAX)     NULL,
     status                 NVARCHAR(50)      NOT NULL DEFAULT 'Scheduled'
         CONSTRAINT CK_appointments_status
             CHECK (status IN ('Scheduled', 'Completed', 'Cancelled')),

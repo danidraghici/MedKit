@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Search,
   UserPlus,
@@ -43,6 +43,13 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
   const patients = useAppStore((s) => s.patients);
   const deletePatient = useAppStore((s) => s.deletePatient);
   const user = useAppStore((s) => s.user);
+  const fetchPatients = useAppStore((s) => s.fetchPatients);
+
+  useEffect(() => {
+    if (user?.role === "admin") {
+      void fetchPatients();
+    }
+  }, [user?.role, fetchPatients]);
 
   // Lab doctors cannot add/edit/delete patients
   const canManagePatients = user?.role === "admin" || user?.role === "specialist_doctor";
@@ -84,7 +91,7 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
 
   const bloodTypeColors: Record<string, string> = {
     "A+": "info", "A-": "cerulean", "B+": "teal", "B-": "eagle",
-    "AB+": "purple", "AB-": "violet", "O+": "orange", "O-": "brick", "Unknown": "default",
+    "AB+": "purple", "AB-": "violet", "O+": "orange", "O-": "brick", "Nespecificat": "default",
   };
 
   return (
@@ -92,15 +99,15 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Patients</h1>
+          <h1 className="text-2xl font-bold text-foreground">Pacienti</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {patients.length} registered patients
+            {patients.length} pacienti inrecistrati
           </p>
         </div>
         {canManagePatients && (
           <Button onClick={() => onNavigate("add-patient")} className="gap-2 sm:w-auto w-full">
             <UserPlus className="w-4 h-4" />
-            Add Patient
+            Adauga Pacient
           </Button>
         )}
       </div>
@@ -110,7 +117,7 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search by name, ID, email or phone..."
+            placeholder="Cauta dupa CNP, nume, email, telefon..."
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
             className="pl-9"
@@ -121,19 +128,19 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
             <SelectValue placeholder="Sex" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All sexes</SelectItem>
-            <SelectItem value="Male">Male</SelectItem>
-            <SelectItem value="Female">Female</SelectItem>
-            <SelectItem value="Other">Other</SelectItem>
+            <SelectItem value="all">Toate</SelectItem>
+            <SelectItem value="Male">Masculin</SelectItem>
+            <SelectItem value="Female">Feminin</SelectItem>
+            <SelectItem value="Other">Altul</SelectItem>
           </SelectContent>
         </Select>
         <Select value={filterBloodType} onValueChange={(v) => { setFilterBloodType(v); setCurrentPage(1); }}>
           <SelectTrigger className="w-full sm:w-36">
-            <SelectValue placeholder="Blood type" />
+            <SelectValue placeholder="Grupa Sanguina" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All types</SelectItem>
-            {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "Unknown"].map((bt) => (
+            <SelectItem value="all">Toate</SelectItem>
+            {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "Nespecificat"].map((bt) => (
               <SelectItem key={bt} value={bt}>{bt}</SelectItem>
             ))}
           </SelectContent>
@@ -144,7 +151,7 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
       {paginatedPatients.length === 0 ? (
         <Empty>
           <EmptyHeader>
-            <EmptyTitle>No patients found</EmptyTitle>
+            <EmptyTitle>Niciun pacient gasit</EmptyTitle>
             <EmptyDescription>
               {searchQuery
                 ? "Try a different search term or clear filters."

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -35,6 +35,7 @@ import {
   AlertTriangle,
   Activity,
   ClipboardList,
+  Loader2,
 } from "lucide-react";
 import { KPI } from "@/components/ui/kpi";
 import { Button } from "@/components/ui/button";
@@ -74,8 +75,9 @@ import {
   EmptyContent,
 } from "@/components/ui/empty";
 import { useAppStore } from "@/lib/store";
+import { api } from "@/lib/api";
 import { formatDate, calculateAge, getInitials } from "@/lib/utils";
-import type { Patient, BloodType, Sex, Doctor, DoctorRole, Appointment } from "@/lib/types";
+import type { Patient, BloodType, Sex, Doctor, DoctorRole, Appointment, DashboardStats, DoctorSummary } from "@/lib/types";
 
 // ─── Patient form schema ──────────────────────────────────────────────────────
 const patientSchema = z.object({
@@ -162,12 +164,36 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
   const medicalRecords = useAppStore((s) => s.medicalRecords);
   const labResults = useAppStore((s) => s.labResults);
   const appointments = useAppStore((s) => s.appointments);
-  const updateAppointmentStatus = useAppStore((s) => s.updateAppointmentStatus);
   const doctors = useAppStore((s) => s.doctors);
   const addDoctor = useAppStore((s) => s.addDoctor);
   const updateDoctor = useAppStore((s) => s.updateDoctor);
   const deleteDoctor = useAppStore((s) => s.deleteDoctor);
   const user = useAppStore((s) => s.user);
+  const fetchPatients = useAppStore((s) => s.fetchPatients);
+
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [staffList, setStaffList] = useState<DoctorSummary[] | null>(null);
+  const [staffLoading, setStaffLoading] = useState(false);
+  const [dashboardAppts, setDashboardAppts] = useState<Appointment[]>([]);
+  const [apptLoading, setApptLoading] = useState(false);
+
+  useEffect(() => {
+    if (user?.role === "admin") {
+      void fetchPatients();
+      void api.get<DashboardStats>("/api/dashboard/stats").then(setDashboardStats).catch(console.error);
+      setStaffLoading(true);
+      void api.get<DoctorSummary[]>("/api/dashboard/staff")
+        .then((data) => { setStaffList(data); setStaffLoading(false); })
+        .catch((err) => { console.error("GET /api/dashboard/staff failed:", err); setStaffLoading(false); });
+    }
+    if (user?.role !== "lab_doctor" && user?.role != null) {
+      setApptLoading(true);
+      void api.get<Appointment[]>("/api/appointments")
+        .then(setDashboardAppts)
+        .catch(console.error)
+        .finally(() => setApptLoading(false));
+    }
+  }, [user?.role, fetchPatients]);
 
   const isAdmin = user?.role === "admin";
   const isLabDoctor = user?.role === "lab_doctor";
@@ -338,8 +364,8 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
   const [doctorSearch, setDoctorSearch] = useState("");
   const [filterDoctorRole, setFilterDoctorRole] = useState("all");
   const [isDoctorModalOpen, setIsDoctorModalOpen] = useState(false);
-  const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null);
-  const [deleteDoctorConfirm, setDeleteDoctorConfirm] = useState<Doctor | null>(
+  const [editingDoctor, setEditingDoctor] = useState<DoctorSummary | null>(null);
+  const [deleteDoctorConfirm, setDeleteDoctorConfirm] = useState<DoctorSummary | null>(
     null
   );
 
@@ -349,7 +375,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
   });
 
   const filteredDoctors = useMemo(() => {
-    let list = [...doctors];
+    let list: DoctorSummary[] = [...(staffList ?? doctors)];
     if (doctorSearch) {
       const q = doctorSearch.toLowerCase();
       list = list.filter(
@@ -363,7 +389,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
     if (filterDoctorRole !== "all")
       list = list.filter((d) => d.doctorRole === filterDoctorRole);
     return list;
-  }, [doctors, doctorSearch, filterDoctorRole]);
+  }, [staffList, doctors, doctorSearch, filterDoctorRole]);
 
   const openAddDoctor = () => {
     setEditingDoctor(null);
@@ -371,7 +397,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
     setIsDoctorModalOpen(true);
   };
 
-  const openEditDoctor = (d: Doctor) => {
+  const openEditDoctor = (d: DoctorSummary) => {
     setEditingDoctor(d);
     doctorForm.reset({
       name: d.name,
@@ -401,16 +427,27 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
   // ────────────────────────────────────────────────────────────────────────────
   const [apptSearch, setApptSearch] = useState("");
   const [apptFilterStatus, setApptFilterStatus] = useState("all");
-  const [apptFilterPeriod, setApptFilterPeriod] = useState("all");
+  const [apptFilterPeriod, setApptFilterPeriod] = useState("today");
+
+  const handleApptStatusChange = async (id: string, status: string) => {
+    try {
+      await api.patch(`/api/appointments/${id}/status`, { status });
+      setDashboardAppts((prev) =>
+        prev.map((a) => a.id === id ? { ...a, status: status as Appointment["status"] } : a)
+      );
+    } catch (err) {
+      console.error("Failed to update appointment status:", err);
+    }
+  };
 
   const apptStats = useMemo(() => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
     return {
-      total: appointments.length,
-      scheduled: appointments.filter((a) => a.status === "Scheduled").length,
-      today: appointments.filter((a) => {
+      total: dashboardAppts.length,
+      scheduled: dashboardAppts.filter((a) => a.status === "Scheduled").length,
+      today: dashboardAppts.filter((a) => {
         const d = new Date(a.date);
         return (
           d >= today &&
@@ -418,17 +455,17 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
           a.status === "Scheduled"
         );
       }).length,
-      thisWeek: appointments.filter((a) => {
+      thisWeek: dashboardAppts.filter((a) => {
         const d = new Date(a.date);
         return d >= today && d < nextWeek && a.status === "Scheduled";
       }).length,
     };
-  }, [appointments]);
+  }, [dashboardAppts]);
 
   const filteredAppointments = useMemo(() => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    let list = [...appointments];
+    let list = [...dashboardAppts];
     if (apptSearch) {
       const q = apptSearch.toLowerCase();
       list = list.filter(
@@ -461,7 +498,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
       return da >= nowTs ? -1 : 1;
     });
     return list;
-  }, [appointments, apptSearch, apptFilterStatus, apptFilterPeriod]);
+  }, [dashboardAppts, apptSearch, apptFilterStatus, apptFilterPeriod]);
 
   const groupedAppointments = useMemo(() => {
     const map = new Map<string, Appointment[]>();
@@ -551,22 +588,22 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
           />
           <KPI
             label="Recent Records"
-            value={stats.recentRecords}
+            value={dashboardStats?.recentRecords ?? stats.recentRecords}
             period="Last 30 days"
             icon={<FileText className="w-7 h-7" />}
             accent="teal"
           />
           <KPI
             label="Upcoming Appointments"
-            value={stats.upcomingAppointments}
-            period="Scheduled"
+            value={dashboardStats?.upcomingAppointments ?? stats.upcomingAppointments}
+            period="Next 30 days"
             icon={<CalendarDays className="w-7 h-7" />}
             accent="purple"
           />
           {isAdmin && (
             <KPI
               label="Doctors"
-              value={doctors.length}
+              value={dashboardStats?.activeDoctors ?? doctors.length}
               period="Active staff"
               icon={<Stethoscope className="w-7 h-7" />}
               accent="orange"
@@ -611,7 +648,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 variant="secondary"
                 className="ml-1 text-[10px] px-1.5 py-0"
               >
-                {doctors.length}
+                {dashboardStats?.activeDoctors ?? doctors.length}
               </Badge>
             </TabsTrigger>
           )}
@@ -975,13 +1012,13 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                   </Button>
                 </CardHeader>
                 <CardContent className="space-y-2 pt-0">
-                  {doctors.length === 0 ? (
+                  {(staffList ?? doctors).length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <Stethoscope className="w-8 h-8 mx-auto mb-2 opacity-40" />
                       <p className="text-sm">No doctors registered</p>
                     </div>
                   ) : (
-                    doctors.slice(0, 5).map((d) => {
+                    (staffList ?? doctors).slice(0, 5).map((d) => {
                       const cfg = roleConfig[d.doctorRole];
                       return (
                         <div
@@ -1465,7 +1502,12 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
             </div>
 
             {/* Appointment list */}
-            {filteredAppointments.length === 0 ? (
+            {apptLoading ? (
+              <div className="flex items-center justify-center py-16 text-muted-foreground">
+                <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                <span className="text-sm">Loading appointments…</span>
+              </div>
+            ) : filteredAppointments.length === 0 ? (
               <Empty>
                 <EmptyHeader>
                   <EmptyTitle>No appointments found</EmptyTitle>
@@ -1613,10 +1655,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                                       {apt.status !== "Completed" && (
                                         <DropdownMenuItem
                                           onClick={() =>
-                                            updateAppointmentStatus(
-                                              apt.id,
-                                              "Completed"
-                                            )
+                                            handleApptStatusChange(apt.id, "Completed")
                                           }
                                         >
                                           <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />
@@ -1627,10 +1666,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                                         <DropdownMenuItem
                                           className="text-destructive"
                                           onClick={() =>
-                                            updateAppointmentStatus(
-                                              apt.id,
-                                              "Cancelled"
-                                            )
+                                            handleApptStatusChange(apt.id, "Cancelled")
                                           }
                                         >
                                           <XCircle className="w-4 h-4 mr-2" />
@@ -1640,10 +1676,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                                       {apt.status === "Cancelled" && (
                                         <DropdownMenuItem
                                           onClick={() =>
-                                            updateAppointmentStatus(
-                                              apt.id,
-                                              "Scheduled"
-                                            )
+                                            handleApptStatusChange(apt.id, "Scheduled")
                                           }
                                         >
                                           <CalendarDays className="w-4 h-4 mr-2 text-blue-600" />
@@ -1674,8 +1707,9 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
               <div>
                 <h2 className="text-lg font-semibold">Medical Staff</h2>
                 <p className="text-sm text-muted-foreground">
-                  {filteredDoctors.length} doctor
-                  {filteredDoctors.length !== 1 ? "s" : ""} registered
+                  {staffLoading
+                    ? "Loading from database…"
+                    : `${filteredDoctors.length} doctor${filteredDoctors.length !== 1 ? "s" : ""} registered${staffList === null ? " (offline)" : ""}`}
                 </p>
               </div>
               <Button onClick={() => onNavigate("add-doctor")} className="gap-2 sm:w-auto w-full">
@@ -1700,7 +1734,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                     {cfg.icon}
                     <span className="font-semibold text-sm">{cfg.label}</span>
                     <Badge variant="outline" className="ml-auto text-[10px]">
-                      {doctors.filter((d) => d.doctorRole === role).length}
+                      {(staffList ?? doctors).filter((d) => d.doctorRole === role).length}
                     </Badge>
                   </div>
                   <p className="text-xs opacity-80">{cfg.description}</p>
