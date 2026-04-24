@@ -40,4 +40,5 @@ public class UserEntity
     public bool MustChangePassword { get; set; } = false;
 
     public List<RefreshTokenEntity> RefreshTokens { get; set; } = [];
+    public UserProfileEntity? Profile { get; set; }
 }

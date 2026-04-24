@@ -18,7 +18,7 @@ public record RefreshResult(
     bool Remember,
     AuthUserDto User);
 
-public class AuthService(AppDbContext ctx, TokenService tokens, AuditService audit)
+public class AuthService(AppDbContext ctx, TokenService tokens, AuditService audit, UserProfileService profileService)
 {
     // Dummy hash used when the user doesn't exist — keeps bcrypt comparison time constant
     // to prevent email enumeration via timing.
@@ -46,6 +46,7 @@ public class AuthService(AppDbContext ctx, TokenService tokens, AuditService aud
 
         var accessToken = tokens.GenerateAccessToken(user.Id, user.Email, user.Role);
         await audit.LogLoginAsync(user.Id, "success", ipAddress, userAgent);
+        await profileService.UpdateLastLoginAsync(user.Id);
 
         var result = new LoginResult(
             AccessToken: accessToken,

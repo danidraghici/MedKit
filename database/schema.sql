@@ -144,6 +144,50 @@ CREATE INDEX IX_users_patient_id ON users (patient_id);
 GO
 
 -- -----------------------------------------------------------------------------
+-- 3b. user_profiles
+--     Extended profile data for all users (1-to-1 with users).
+--     Admin users store their custom fields here; doctors share specialty/dept
+--     with their doctors row but may override display values here.
+-- -----------------------------------------------------------------------------
+CREATE TABLE user_profiles (
+    user_id          UNIQUEIDENTIFIER  NOT NULL,
+    phone            NVARCHAR(50)      NULL,
+    specialty        NVARCHAR(255)     NULL,
+    license_number   NVARCHAR(100)     NULL,
+    department       NVARCHAR(255)     NULL,
+    hospital         NVARCHAR(255)     NULL,
+    location         NVARCHAR(255)     NULL,
+    bio              NVARCHAR(MAX)     NULL,
+    years_experience NVARCHAR(10)      NULL,
+    languages        NVARCHAR(500)     NULL,
+    last_login_at    DATETIMEOFFSET(7) NULL,
+    updated_at       DATETIMEOFFSET(7) NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+    CONSTRAINT PK_user_profiles      PRIMARY KEY (user_id),
+    CONSTRAINT FK_user_profiles_user FOREIGN KEY (user_id)
+        REFERENCES users(id) ON DELETE CASCADE
+);
+GO
+
+-- -----------------------------------------------------------------------------
+-- 3c. notification_rules
+--     Admin-defined notification rules, each targeting a specific audience.
+-- -----------------------------------------------------------------------------
+CREATE TABLE notification_rules (
+    id               UNIQUEIDENTIFIER  NOT NULL DEFAULT NEWID(),
+    title            NVARCHAR(255)     NOT NULL,
+    description      NVARCHAR(MAX)     NULL,
+    target_audience  NVARCHAR(50)      NOT NULL, -- 'patients', 'doctors', 'admins', 'all'
+    is_active        BIT               NOT NULL  DEFAULT 1,
+    created_by       UNIQUEIDENTIFIER  NOT NULL,
+    created_at       DATETIMEOFFSET(7) NOT NULL  DEFAULT SYSDATETIMEOFFSET(),
+    updated_at       DATETIMEOFFSET(7) NOT NULL  DEFAULT SYSDATETIMEOFFSET(),
+    CONSTRAINT PK_notification_rules      PRIMARY KEY (id),
+    CONSTRAINT FK_notification_rules_user FOREIGN KEY (created_by)
+        REFERENCES users(id) ON DELETE NO ACTION
+);
+GO
+
+-- -----------------------------------------------------------------------------
 -- 4. medical_records
 --    One row per patient visit. Append-only in clinical practice:
 --    corrections go through the audit log or a new amendment record.

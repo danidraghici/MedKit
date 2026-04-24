@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -28,6 +28,7 @@ import {
   Activity,
   Users,
   Lock,
+  Plus,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,9 @@ import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useAppStore } from "@/lib/store";
+import { api } from "@/lib/api";
 import { getInitials } from "@/lib/utils";
 
 // ─── Zod schemas ────────────────────────────────────────────────────────────
@@ -49,11 +52,11 @@ import { getInitials } from "@/lib/utils";
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
-  phone: z.string().min(7, "Phone number is too short"),
-  specialty: z.string().min(2, "Specialty is required"),
-  licenseNumber: z.string().min(4, "License number is required"),
-  department: z.string().min(2, "Department is required"),
-  hospital: z.string().min(2, "Hospital / clinic name is required"),
+  phone: z.string().optional(),
+  specialty: z.string().optional(),
+  licenseNumber: z.string().optional(),
+  department: z.string().optional(),
+  hospital: z.string().optional(),
   location: z.string().optional(),
   bio: z.string().max(500, "Bio must be under 500 characters").optional(),
   yearsExperience: z.string().optional(),
@@ -79,76 +82,38 @@ const passwordSchema = z
 type ProfileFormValues = z.infer<typeof profileSchema>;
 type PasswordFormValues = z.infer<typeof passwordSchema>;
 
-// ─── Static doctor extended data (per logged-in user id) ────────────────────
+// ─── API response type ───────────────────────────────────────────────────────
 
-const DOCTOR_EXTENDED: Record<
-  string,
-  {
-    specialty: string;
-    licenseNumber: string;
-    department: string;
-    hospital: string;
-    location: string;
-    bio: string;
-    yearsExperience: string;
-    languages: string;
-    phone: string;
-    joinedDate: string;
-    lastLogin: string;
-    consultations: number;
-    patientsManaged: number;
-    recordsCreated: number;
-  }
-> = {
-  u001: {
-    specialty: "Nephrology",
-    licenseNumber: "MD-NEP-10293",
-    department: "Nephrology & Urology",
-    hospital: "St. Mary's Medical Center",
-    location: "Boston, MA, USA",
-    bio: "Board-certified nephrologist with a special interest in kidney stone disease, chronic kidney disease management, and renal transplantation. Passionate about integrating clinical decision support tools into everyday practice.",
-    yearsExperience: "14",
-    languages: "English, Spanish",
-    phone: "+1 (617) 555-0142",
-    joinedDate: "2019-03-15",
-    lastLogin: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-    consultations: 1842,
-    patientsManaged: 312,
-    recordsCreated: 2940,
-  },
-  u002: {
-    specialty: "Administration",
-    licenseNumber: "ADM-00021",
-    department: "Medical Administration",
-    hospital: "St. Mary's Medical Center",
-    location: "Boston, MA, USA",
-    bio: "System administrator responsible for managing user accounts, access permissions, and compliance monitoring.",
-    yearsExperience: "8",
-    languages: "English",
-    phone: "+1 (617) 555-0199",
-    joinedDate: "2020-01-10",
-    lastLogin: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-    consultations: 0,
-    patientsManaged: 0,
-    recordsCreated: 0,
-  },
-  u003: {
-    specialty: "Internal Medicine",
-    licenseNumber: "MD-INT-87654",
-    department: "Internal Medicine",
-    hospital: "Boston General Hospital",
-    location: "Cambridge, MA, USA",
-    bio: "Internal medicine physician focused on preventive care, chronic disease management, and evidence-based medicine. Active clinical researcher with publications in hypertension and diabetes.",
-    yearsExperience: "11",
-    languages: "English, Portuguese",
-    phone: "+1 (617) 555-0177",
-    joinedDate: "2021-06-01",
-    lastLogin: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-    consultations: 1203,
-    patientsManaged: 198,
-    recordsCreated: 1760,
-  },
-};
+interface UserProfileDto {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  phone: string | null;
+  specialty: string | null;
+  licenseNumber: string | null;
+  department: string | null;
+  hospital: string | null;
+  location: string | null;
+  bio: string | null;
+  yearsExperience: string | null;
+  languages: string | null;
+  joinedDate: string;
+  lastLoginAt: string | null;
+}
+
+// ─── Notification rules (admin) ──────────────────────────────────────────────
+
+interface NotificationRuleDto {
+  id: string;
+  title: string;
+  description: string | null;
+  targetAudience: "patients" | "doctors" | "admins" | "all";
+  isActive: boolean;
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 // ─── Notifications config ────────────────────────────────────────────────────
 
@@ -180,11 +145,20 @@ function formatJoinDate(iso: string): string {
 export default function DoctorProfilePage() {
   const user = useAppStore((s) => s.user);
 
-  const ext = DOCTOR_EXTENDED[user?.id ?? "u001"] ?? DOCTOR_EXTENDED["u001"];
+  // Profile data fetched from API
+  const [profile, setProfile] = useState<UserProfileDto | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
 
   // Profile editing state
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
+
+  // Credentials editing state (local mirror for the credentials tab inputs)
+  const [credSpecialty, setCredSpecialty] = useState("");
+  const [credLicense, setCredLicense] = useState("");
+  const [credDepartment, setCredDepartment] = useState("");
+  const [credHospital, setCredHospital] = useState("");
+  const [credSaved, setCredSaved] = useState(false);
 
   // Password state
   const [pwSaved, setPwSaved] = useState(false);
@@ -204,8 +178,107 @@ export default function DoctorProfilePage() {
   });
   const [notifSaved, setNotifSaved] = useState(false);
 
-  // Local editable extended data
-  const [extData, setExtData] = useState(ext);
+  // Notification rules state (admin only)
+  const [rules, setRules] = useState<NotificationRuleDto[]>([]);
+  const [rulesLoading, setRulesLoading] = useState(true);
+  const [ruleDialogOpen, setRuleDialogOpen] = useState(false);
+  const [editingRule, setEditingRule] = useState<NotificationRuleDto | null>(null);
+  const [ruleTitle, setRuleTitle] = useState("");
+  const [ruleDesc, setRuleDesc] = useState("");
+  const [ruleAudience, setRuleAudience] = useState("all");
+  const [ruleActive, setRuleActive] = useState(true);
+  const [ruleSaving, setRuleSaving] = useState(false);
+
+  // ── Fetch profile on mount ─────────────────────────────────────────────────
+  useEffect(() => {
+    api.get<UserProfileDto>("/api/users/me")
+      .then((data) => {
+        setProfile(data);
+        setCredSpecialty(data.specialty ?? "");
+        setCredLicense(data.licenseNumber ?? "");
+        setCredDepartment(data.department ?? "");
+        setCredHospital(data.hospital ?? "");
+        profileForm.reset({
+          name: data.name,
+          email: data.email,
+          phone: data.phone ?? "",
+          specialty: data.specialty ?? "",
+          licenseNumber: data.licenseNumber ?? "",
+          department: data.department ?? "",
+          hospital: data.hospital ?? "",
+          location: data.location ?? "",
+          bio: data.bio ?? "",
+          yearsExperience: data.yearsExperience ?? "",
+          languages: data.languages ?? "",
+        });
+      })
+      .catch(() => {/* silently keep null */})
+      .finally(() => setProfileLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Fetch notification rules on mount (admin only) ────────────────────────
+  useEffect(() => {
+    if (user?.role !== "admin") { setRulesLoading(false); return; }
+    api.get<NotificationRuleDto[]>("/api/notification-rules")
+      .then(setRules)
+      .catch(() => {})
+      .finally(() => setRulesLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Notification rule dialog helpers ──────────────────────────────────────
+  const openCreateDialog = () => {
+    setEditingRule(null);
+    setRuleTitle(""); setRuleDesc(""); setRuleAudience("all"); setRuleActive(true);
+    setRuleDialogOpen(true);
+  };
+
+  const openEditDialog = (rule: NotificationRuleDto) => {
+    setEditingRule(rule);
+    setRuleTitle(rule.title);
+    setRuleDesc(rule.description ?? "");
+    setRuleAudience(rule.targetAudience);
+    setRuleActive(rule.isActive);
+    setRuleDialogOpen(true);
+  };
+
+  const saveRule = async () => {
+    if (!ruleTitle.trim()) return;
+    setRuleSaving(true);
+    try {
+      const body = {
+        title: ruleTitle.trim(),
+        description: ruleDesc.trim() || null,
+        targetAudience: ruleAudience,
+        isActive: ruleActive,
+      };
+      if (editingRule) {
+        const updated = await api.put<NotificationRuleDto>(
+          `/api/notification-rules/${editingRule.id}`, body
+        );
+        setRules((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+      } else {
+        const created = await api.post<NotificationRuleDto>("/api/notification-rules", body);
+        setRules((prev) => [created, ...prev]);
+      }
+      setRuleDialogOpen(false);
+    } catch {
+      // keep dialog open on error
+    } finally {
+      setRuleSaving(false);
+    }
+  };
+
+  const audienceBadge = (audience: string) => {
+    const variantMap: Record<string, "info" | "warning" | "secondary" | "success"> = {
+      patients: "info",
+      doctors: "warning",
+      admins: "secondary",
+      all: "success",
+    };
+    return <Badge variant={variantMap[audience] ?? "secondary"}>{audience}</Badge>;
+  };
 
   // ── Profile form ────────────────────────────────────────────────────────
   const profileForm = useForm<ProfileFormValues>({
@@ -213,31 +286,40 @@ export default function DoctorProfilePage() {
     defaultValues: {
       name: user?.name ?? "",
       email: user?.email ?? "",
-      phone: extData.phone,
-      specialty: extData.specialty,
-      licenseNumber: extData.licenseNumber,
-      department: extData.department,
-      hospital: extData.hospital,
-      location: extData.location,
-      bio: extData.bio,
-      yearsExperience: extData.yearsExperience,
-      languages: extData.languages,
+      phone: "",
+      specialty: "",
+      licenseNumber: "",
+      department: "",
+      hospital: "",
+      location: "",
+      bio: "",
+      yearsExperience: "",
+      languages: "",
     },
   });
 
-  const onSaveProfile = (values: ProfileFormValues) => {
-    setExtData((prev) => ({
-      ...prev,
-      phone: values.phone,
-      specialty: values.specialty,
-      licenseNumber: values.licenseNumber,
-      department: values.department,
-      hospital: values.hospital,
-      location: values.location ?? prev.location,
-      bio: values.bio ?? prev.bio,
-      yearsExperience: values.yearsExperience ?? prev.yearsExperience,
-      languages: values.languages ?? prev.languages,
-    }));
+  const onSaveProfile = async (values: ProfileFormValues) => {
+    try {
+      const updated = await api.put<UserProfileDto>("/api/users/me", {
+        name: values.name,
+        phone: values.phone,
+        specialty: values.specialty,
+        licenseNumber: values.licenseNumber,
+        department: values.department,
+        hospital: values.hospital,
+        location: values.location,
+        bio: values.bio,
+        yearsExperience: values.yearsExperience,
+        languages: values.languages,
+      });
+      setProfile(updated);
+      setCredSpecialty(updated.specialty ?? "");
+      setCredLicense(updated.licenseNumber ?? "");
+      setCredDepartment(updated.department ?? "");
+      setCredHospital(updated.hospital ?? "");
+    } catch {
+      // keep existing profile, show generic error if desired
+    }
     setIsEditingProfile(false);
     setProfileSaved(true);
     setTimeout(() => setProfileSaved(false), 3500);
@@ -253,15 +335,43 @@ export default function DoctorProfilePage() {
     resolver: zodResolver(passwordSchema),
   });
 
-  const onChangePassword = (values: PasswordFormValues) => {
-    if (values.currentPassword !== "MedKit2025!") {
-      setPwError("Current password is incorrect.");
-      return;
+  const onChangePassword = async (values: PasswordFormValues) => {
+    try {
+      await api.post("/api/auth/change-password", {
+        currentPassword: values.currentPassword,
+        newPassword: values.newPassword,
+      });
+      setPwError("");
+      passwordForm.reset();
+      setPwSaved(true);
+      setTimeout(() => setPwSaved(false), 3500);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Current password is incorrect.";
+      setPwError(message);
     }
-    setPwError("");
-    passwordForm.reset();
-    setPwSaved(true);
-    setTimeout(() => setPwSaved(false), 3500);
+  };
+
+  // ── Credentials save ──────────────────────────────────────────────────────
+  const saveCredentials = async () => {
+    try {
+      const updated = await api.put<UserProfileDto>("/api/users/me", {
+        name: profile?.name ?? user?.name ?? "",
+        phone: profile?.phone,
+        specialty: credSpecialty,
+        licenseNumber: credLicense,
+        department: credDepartment,
+        hospital: credHospital,
+        location: profile?.location,
+        bio: profile?.bio,
+        yearsExperience: profile?.yearsExperience,
+        languages: profile?.languages,
+      });
+      setProfile(updated);
+    } catch {
+      // silently keep current values
+    }
+    setCredSaved(true);
+    setTimeout(() => setCredSaved(false), 3500);
   };
 
   // ── Notifications save ────────────────────────────────────────────────────
@@ -277,6 +387,17 @@ export default function DoctorProfilePage() {
     ) : (
       <Badge variant="info">Physician</Badge>
     );
+
+  if (profileLoading) {
+    return (
+      <div className="space-y-6 max-w-5xl mx-auto">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">My Profile</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Loading profile…</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -296,7 +417,7 @@ export default function DoctorProfilePage() {
             <div className="relative shrink-0">
               <Avatar className="w-20 h-20 text-2xl">
                 <AvatarFallback className="bg-primary/10 text-primary font-bold text-2xl">
-                  {getInitials(user?.name ?? "DR")}
+                  {getInitials(profile?.name ?? user?.name ?? "DR")}
                 </AvatarFallback>
               </Avatar>
               <span className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-green-500 border-2 border-background" />
@@ -305,28 +426,28 @@ export default function DoctorProfilePage() {
             {/* Name & meta */}
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1">
-                <h2 className="text-xl font-bold text-foreground">{user?.name}</h2>
+                <h2 className="text-xl font-bold text-foreground">{profile?.name ?? user?.name}</h2>
                 {roleBadge}
               </div>
               <p className="text-sm text-muted-foreground mb-3">
-                {extData.specialty} · {extData.hospital}
+                {profile?.specialty ?? "—"} · {profile?.hospital ?? "—"}
               </p>
               <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1.5">
                   <Mail className="w-3.5 h-3.5" />
-                  {user?.email}
+                  {profile?.email ?? user?.email}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Phone className="w-3.5 h-3.5" />
-                  {extData.phone}
+                  {profile?.phone ?? "—"}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <MapPin className="w-3.5 h-3.5" />
-                  {extData.location}
+                  {profile?.location ?? "—"}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5" />
-                  Member since {formatJoinDate(extData.joinedDate)}
+                  Member since {profile?.joinedDate ? formatJoinDate(profile.joinedDate) : "—"}
                 </span>
               </div>
             </div>
@@ -334,7 +455,9 @@ export default function DoctorProfilePage() {
             {/* Last login */}
             <div className="text-right shrink-0 hidden sm:block">
               <p className="text-xs text-muted-foreground">Last login</p>
-              <p className="text-sm font-medium text-foreground">{formatTimeAgo(extData.lastLogin)}</p>
+              <p className="text-sm font-medium text-foreground">
+                {profile?.lastLoginAt ? formatTimeAgo(profile.lastLoginAt) : "Unknown"}
+              </p>
             </div>
           </div>
         </CardContent>
@@ -344,9 +467,9 @@ export default function DoctorProfilePage() {
       {user?.role !== "admin" && (
         <div className="grid grid-cols-3 gap-4">
           {[
-            { icon: Activity, label: "Consultations", value: extData.consultations.toLocaleString(), accent: "bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400" },
-            { icon: Users, label: "Patients managed", value: extData.patientsManaged.toLocaleString(), accent: "bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400" },
-            { icon: FileText, label: "Records created", value: extData.recordsCreated.toLocaleString(), accent: "bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400" },
+            { icon: Activity, label: "Consultations", value: "—", accent: "bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400" },
+            { icon: Users, label: "Patients managed", value: "—", accent: "bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400" },
+            { icon: FileText, label: "Records created", value: "—", accent: "bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400" },
           ].map(({ icon: Icon, label, value, accent }) => (
             <Card key={label}>
               <CardContent className="pt-5 pb-4 flex items-center gap-3">
@@ -370,10 +493,12 @@ export default function DoctorProfilePage() {
             <User className="w-4 h-4 mr-1.5" />
             Profile
           </TabsTrigger>
-          <TabsTrigger value="credentials">
-            <Shield className="w-4 h-4 mr-1.5" />
-            Credentials
-          </TabsTrigger>
+          {user?.role !== "admin" && (
+            <TabsTrigger value="credentials">
+              <Shield className="w-4 h-4 mr-1.5" />
+              Credentials
+            </TabsTrigger>
+          )}
           <TabsTrigger value="security">
             <KeyRound className="w-4 h-4 mr-1.5" />
             Security
@@ -420,13 +545,13 @@ export default function DoctorProfilePage() {
                 /* ── Read-only view ─── */
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                   {[
-                    { icon: User, label: "Full name", value: user?.name ?? "" },
-                    { icon: Mail, label: "Email address", value: user?.email ?? "" },
-                    { icon: Phone, label: "Phone number", value: extData.phone },
-                    { icon: MapPin, label: "Location", value: extData.location },
-                    { icon: Building2, label: "Hospital / clinic", value: extData.hospital },
-                    { icon: Clock, label: "Years of experience", value: `${extData.yearsExperience} years` },
-                    { icon: BookOpen, label: "Languages spoken", value: extData.languages },
+                    { icon: User, label: "Full name", value: profile?.name ?? user?.name ?? "" },
+                    { icon: Mail, label: "Email address", value: profile?.email ?? user?.email ?? "" },
+                    { icon: Phone, label: "Phone number", value: profile?.phone ?? "—" },
+                    { icon: MapPin, label: "Location", value: profile?.location ?? "—" },
+                    { icon: Building2, label: "Hospital / clinic", value: profile?.hospital ?? "—" },
+                    { icon: Clock, label: "Years of experience", value: profile?.yearsExperience ? `${profile.yearsExperience} years` : "—" },
+                    { icon: BookOpen, label: "Languages spoken", value: profile?.languages ?? "—" },
                   ].map(({ icon: Icon, label, value }) => (
                     <div key={label} className="flex items-start gap-3">
                       <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
@@ -439,14 +564,14 @@ export default function DoctorProfilePage() {
                     </div>
                   ))}
 
-                  {extData.bio && (
+                  {profile?.bio && (
                     <div className="sm:col-span-2 flex items-start gap-3">
                       <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
                         <FileText className="w-4 h-4 text-muted-foreground" />
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Bio</p>
-                        <p className="text-sm text-foreground leading-relaxed">{extData.bio}</p>
+                        <p className="text-sm text-foreground leading-relaxed">{profile.bio}</p>
                       </div>
                     </div>
                   )}
@@ -501,7 +626,7 @@ export default function DoctorProfilePage() {
                   <div className="space-y-1.5">
                     <Label htmlFor="yearsExperience">Years of experience</Label>
                     <Select
-                      defaultValue={extData.yearsExperience}
+                      defaultValue={profile?.yearsExperience ?? ""}
                       onValueChange={(v) => profileForm.setValue("yearsExperience", v)}
                     >
                       <SelectTrigger>
@@ -543,7 +668,7 @@ export default function DoctorProfilePage() {
         </TabsContent>
 
         {/* ══ TAB: Credentials ══════════════════════════════════════════ */}
-        <TabsContent value="credentials" className="space-y-4">
+        {user?.role !== "admin" && <TabsContent value="credentials" className="space-y-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <CardTitle className="text-base">Medical Credentials</CardTitle>
@@ -555,10 +680,10 @@ export default function DoctorProfilePage() {
             <CardContent className="space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                 {[
-                  { icon: Stethoscope, label: "Medical specialty", value: extData.specialty },
-                  { icon: Shield, label: "License number", value: extData.licenseNumber },
-                  { icon: Building2, label: "Department", value: extData.department },
-                  { icon: Award, label: "Years of experience", value: `${extData.yearsExperience} years` },
+                  { icon: Stethoscope, label: "Medical specialty", value: credSpecialty || "—" },
+                  { icon: Shield, label: "License number", value: credLicense || "—" },
+                  { icon: Building2, label: "Department", value: credDepartment || "—" },
+                  { icon: Award, label: "Years of experience", value: profile?.yearsExperience ? `${profile.yearsExperience} years` : "—" },
                 ].map(({ icon: Icon, label, value }) => (
                   <div key={label} className="flex items-start gap-3">
                     <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0">
@@ -579,29 +704,29 @@ export default function DoctorProfilePage() {
                 <div className="space-y-1.5">
                   <Label>Specialty</Label>
                   <Input
-                    value={extData.specialty}
-                    onChange={(e) => setExtData((p) => ({ ...p, specialty: e.target.value }))}
+                    value={credSpecialty}
+                    onChange={(e) => setCredSpecialty(e.target.value)}
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label>License number</Label>
                   <Input
-                    value={extData.licenseNumber}
-                    onChange={(e) => setExtData((p) => ({ ...p, licenseNumber: e.target.value }))}
+                    value={credLicense}
+                    onChange={(e) => setCredLicense(e.target.value)}
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Department</Label>
                   <Input
-                    value={extData.department}
-                    onChange={(e) => setExtData((p) => ({ ...p, department: e.target.value }))}
+                    value={credDepartment}
+                    onChange={(e) => setCredDepartment(e.target.value)}
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Hospital / clinic</Label>
                   <Input
-                    value={extData.hospital}
-                    onChange={(e) => setExtData((p) => ({ ...p, hospital: e.target.value }))}
+                    value={credHospital}
+                    onChange={(e) => setCredHospital(e.target.value)}
                   />
                 </div>
               </div>
@@ -609,10 +734,7 @@ export default function DoctorProfilePage() {
               <div className="flex justify-end">
                 <Button
                   size="sm"
-                  onClick={() => {
-                    setProfileSaved(true);
-                    setTimeout(() => setProfileSaved(false), 3500);
-                  }}
+                  onClick={saveCredentials}
                   className="gap-1.5"
                 >
                   <Save className="w-3.5 h-3.5" />
@@ -620,7 +742,7 @@ export default function DoctorProfilePage() {
                 </Button>
               </div>
 
-              {profileSaved && (
+              {credSaved && (
                 <Alert variant="success">
                   <CheckCircle2 className="w-4 h-4" />
                   <AlertDescription>Credentials updated successfully.</AlertDescription>
@@ -637,9 +759,9 @@ export default function DoctorProfilePage() {
             <CardContent className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {[
-                  { label: "Role", value: user?.role === "admin" ? "Administrator" : "Physician", icon: Shield },
+                  { label: "Role", value: "Physician", icon: Shield },
                   { label: "Account status", value: "Active", icon: CheckCircle2 },
-                  { label: "Last login", value: formatTimeAgo(extData.lastLogin), icon: Clock },
+                  { label: "Last login", value: profile?.lastLoginAt ? formatTimeAgo(profile.lastLoginAt) : "Unknown", icon: Clock },
                 ].map(({ label, value, icon: Icon }) => (
                   <div key={label} className="rounded-lg border border-border bg-muted/30 p-3">
                     <div className="flex items-center gap-2 mb-1">
@@ -658,7 +780,7 @@ export default function DoctorProfilePage() {
               </Alert>
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent>}
 
         {/* ══ TAB: Security ══════════════════════════════════════════════ */}
         <TabsContent value="security" className="space-y-4">
@@ -729,9 +851,7 @@ export default function DoctorProfilePage() {
                     </button>
                   </div>
                   {passwordForm.formState.errors.newPassword && (
-                    <p className="text-xs text-destructive">
-                      {passwordForm.formState.errors.newPassword.message}
-                    </p>
+                    <p className="text-xs text-destructive">{passwordForm.formState.errors.newPassword.message}</p>
                   )}
                   <ul className="text-xs text-muted-foreground space-y-0.5 mt-1 ml-1">
                     <li>• Minimum 8 characters</li>
@@ -806,6 +926,110 @@ export default function DoctorProfilePage() {
 
         {/* ══ TAB: Notifications ════════════════════════════════════════ */}
         <TabsContent value="notifications" className="space-y-4">
+
+          {/* ── Admin: notification rules management ── */}
+          {user?.role === "admin" && (
+            <>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-3">
+                  <CardTitle className="text-base">Notification Rules</CardTitle>
+                  <Button size="sm" onClick={openCreateDialog} className="gap-1.5">
+                    <Plus className="w-3.5 h-3.5" />
+                    New rule
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {rulesLoading ? (
+                    <p className="text-sm text-muted-foreground">Loading…</p>
+                  ) : rules.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No notification rules yet. Create one to get started.</p>
+                  ) : (
+                    <div className="divide-y divide-border">
+                      {rules.map((rule) => (
+                        <div key={rule.id} className="flex items-center justify-between py-3 gap-4">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-foreground">{rule.title}</p>
+                            {rule.description && (
+                              <p className="text-xs text-muted-foreground truncate">{rule.description}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {audienceBadge(rule.targetAudience)}
+                            <Badge variant={rule.isActive ? "success" : "secondary"}>
+                              {rule.isActive ? "Active" : "Inactive"}
+                            </Badge>
+                            <Button variant="ghost" size="icon" onClick={() => openEditDialog(rule)}>
+                              <Edit3 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Dialog open={ruleDialogOpen} onOpenChange={setRuleDialogOpen}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{editingRule ? "Edit rule" : "New notification rule"}</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-2">
+                    <div className="space-y-1.5">
+                      <Label>Title</Label>
+                      <Input
+                        value={ruleTitle}
+                        onChange={(e) => setRuleTitle(e.target.value)}
+                        placeholder="e.g. New appointment booked"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>
+                        Description{" "}
+                        <span className="text-muted-foreground font-normal">(optional)</span>
+                      </Label>
+                      <Textarea
+                        rows={3}
+                        value={ruleDesc}
+                        onChange={(e) => setRuleDesc(e.target.value)}
+                        placeholder="Describe when this notification fires…"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Target audience</Label>
+                      <Select value={ruleAudience} onValueChange={setRuleAudience}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All users</SelectItem>
+                          <SelectItem value="patients">Patients</SelectItem>
+                          <SelectItem value="doctors">Doctors</SelectItem>
+                          <SelectItem value="admins">Admins</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label>Active</Label>
+                      <Switch checked={ruleActive} onCheckedChange={setRuleActive} />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setRuleDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={saveRule} disabled={!ruleTitle.trim() || ruleSaving}>
+                      {ruleSaving ? "Saving…" : "Save rule"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </>
+          )}
+
+          {/* ── Non-admin: personal notification preferences ── */}
+          {user?.role !== "admin" && (
+          <>
           {notifSaved && (
             <Alert variant="success">
               <CheckCircle2 className="w-4 h-4" />
@@ -901,6 +1125,8 @@ export default function DoctorProfilePage() {
               Save preferences
             </Button>
           </div>
+          </>
+          )}
         </TabsContent>
       </Tabs>
     </div>
