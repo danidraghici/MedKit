@@ -763,7 +763,8 @@ function AppointmentFields({
   const [selectedDeptId, setSelectedDeptId] = useState("");
   const filteredDoctors = selectedDeptId
     ? allDoctors.filter((d) => d.departmentId === selectedDeptId)
-    : allDoctors;
+    : [];
+  const selectedDoctorId = form.watch("doctorId");
 
   return (
     <div className="space-y-5">
@@ -793,24 +794,9 @@ function AppointmentFields({
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-xs font-medium">Appointment type <span className="text-destructive">*</span></Label>
-        <Select defaultValue={form.getValues("type") || "General Consultation"} onValueChange={(v) => form.setValue("type", v)}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {APPOINTMENT_TYPES.map((t) => (
-              <SelectItem key={t} value={t}>{t}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {form.formState.errors.type && (
-          <p className="text-xs text-destructive">{form.formState.errors.type.message}</p>
-        )}
-      </div>
-
-      <div className="space-y-1.5">
         <Label className="text-xs font-medium">
           <Building2 className="w-3.5 h-3.5 inline mr-1 opacity-60" />
-          Department <span className="text-destructive">*</span>
+          Specialty <span className="text-destructive">*</span>
         </Label>
         <Select
           value={selectedDeptId}
@@ -820,7 +806,7 @@ function AppointmentFields({
           }}
         >
           <SelectTrigger>
-            <SelectValue placeholder="Select a department…" />
+            <SelectValue placeholder="Select a specialty…" />
           </SelectTrigger>
           <SelectContent>
             {departments.map((d) => (
@@ -830,12 +816,31 @@ function AppointmentFields({
         </Select>
       </div>
 
-      <DoctorSelect
-        value={form.watch("doctorId")}
-        onChange={(v) => form.setValue("doctorId", v, { shouldValidate: true })}
-        doctors={filteredDoctors}
-        error={form.formState.errors.doctorId?.message}
-      />
+      {selectedDeptId && (
+        <DoctorSelect
+          value={form.watch("doctorId")}
+          onChange={(v) => form.setValue("doctorId", v, { shouldValidate: true })}
+          doctors={filteredDoctors}
+          error={form.formState.errors.doctorId?.message}
+        />
+      )}
+
+      {selectedDoctorId && (
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium">Appointment type <span className="text-destructive">*</span></Label>
+          <Select defaultValue={form.getValues("type") || "General Consultation"} onValueChange={(v) => form.setValue("type", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {APPOINTMENT_TYPES.map((t) => (
+                <SelectItem key={t} value={t}>{t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {form.formState.errors.type && (
+            <p className="text-xs text-destructive">{form.formState.errors.type.message}</p>
+          )}
+        </div>
+      )}
 
       <div className="space-y-1.5">
         <Label className="text-xs font-medium">
@@ -868,7 +873,8 @@ function NewPatientAptFields({
   const [selectedDeptId, setSelectedDeptId] = useState("");
   const filteredDoctors = selectedDeptId
     ? allDoctors.filter((d) => d.departmentId === selectedDeptId)
-    : allDoctors;
+    : [];
+  const selectedDoctorId = form.watch("doctorId");
 
   return (
     <div className="space-y-4">
@@ -895,24 +901,9 @@ function NewPatientAptFields({
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-xs font-medium">Appointment type <span className="text-destructive">*</span></Label>
-        <Select defaultValue={form.getValues("type") || "General Consultation"} onValueChange={(v) => form.setValue("type", v)}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {APPOINTMENT_TYPES.map((t) => (
-              <SelectItem key={t} value={t}>{t}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {form.formState.errors.type && (
-          <p className="text-xs text-destructive">{form.formState.errors.type.message}</p>
-        )}
-      </div>
-
-      <div className="space-y-1.5">
         <Label className="text-xs font-medium">
           <Building2 className="w-3.5 h-3.5 inline mr-1 opacity-60" />
-          Department <span className="text-destructive">*</span>
+          Specialty <span className="text-destructive">*</span>
         </Label>
         <Select
           value={selectedDeptId}
@@ -922,7 +913,7 @@ function NewPatientAptFields({
           }}
         >
           <SelectTrigger>
-            <SelectValue placeholder="Select a department…" />
+            <SelectValue placeholder="Select a specialty…" />
           </SelectTrigger>
           <SelectContent>
             {departments.map((d) => (
@@ -932,12 +923,31 @@ function NewPatientAptFields({
         </Select>
       </div>
 
-      <DoctorSelect
-        value={form.watch("doctorId")}
-        onChange={(v) => form.setValue("doctorId", v, { shouldValidate: true })}
-        doctors={filteredDoctors}
-        error={form.formState.errors.doctorId?.message}
-      />
+      {selectedDeptId && (
+        <DoctorSelect
+          value={form.watch("doctorId")}
+          onChange={(v) => form.setValue("doctorId", v, { shouldValidate: true })}
+          doctors={filteredDoctors}
+          error={form.formState.errors.doctorId?.message}
+        />
+      )}
+
+      {selectedDoctorId && (
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium">Appointment type <span className="text-destructive">*</span></Label>
+          <Select defaultValue={form.getValues("type") || "General Consultation"} onValueChange={(v) => form.setValue("type", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {APPOINTMENT_TYPES.map((t) => (
+                <SelectItem key={t} value={t}>{t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {form.formState.errors.type && (
+            <p className="text-xs text-destructive">{form.formState.errors.type.message}</p>
+          )}
+        </div>
+      )}
 
       <div className="space-y-1.5">
         <Label className="text-xs font-medium">

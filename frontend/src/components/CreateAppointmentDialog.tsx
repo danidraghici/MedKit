@@ -585,7 +585,8 @@ function AppointmentFields({
 }) {
   const filteredDoctors = selectedDeptId
     ? doctors.filter((d) => d.departmentId === selectedDeptId)
-    : doctors;
+    : [];
+  const selectedDoctor = form.watch("doctor");
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -618,30 +619,12 @@ function AppointmentFields({
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-xs">Appointment type <span className="text-destructive">*</span></Label>
-          <Select
-            defaultValue={form.getValues("type") || "General Consultation"}
-            onValueChange={(v) => form.setValue("type", v)}
-          >
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {APPOINTMENT_TYPES.map((t) => (
-                <SelectItem key={t} value={t}>{t}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {form.formState.errors.type && (
-            <p className="text-xs text-destructive">{form.formState.errors.type.message}</p>
-          )}
-        </div>
-
-        <div className="space-y-1.5">
           <Label className="text-xs">
             <Building2 className="w-3 h-3 inline mr-1 opacity-60" />
-            Department <span className="text-destructive">*</span>
+            Specialty <span className="text-destructive">*</span>
           </Label>
           <Select value={selectedDeptId} onValueChange={onDeptChange}>
-            <SelectTrigger><SelectValue placeholder="Select a department…" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder="Select a specialty…" /></SelectTrigger>
             <SelectContent>
               {departments.map((d) => (
                 <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
@@ -650,36 +633,56 @@ function AppointmentFields({
           </Select>
         </div>
 
-        <div className="space-y-1.5">
-          <Label className="text-xs">
-            <Stethoscope className="w-3 h-3 inline mr-1 opacity-60" />
-            Doctor <span className="text-destructive">*</span>
-          </Label>
-          <Select
-            value={form.watch("doctor")}
-            onValueChange={(v) => form.setValue("doctor", v, { shouldValidate: true })}
-          >
-            <SelectTrigger className={form.formState.errors.doctor ? "border-destructive" : ""}>
-              <SelectValue placeholder="Select a doctor…" />
-            </SelectTrigger>
-            <SelectContent>
-              {filteredDoctors.length === 0 ? (
-                <SelectItem value="_none" disabled>
-                  {selectedDeptId ? "No doctors in this department" : "Select a department first"}
-                </SelectItem>
-              ) : (
-                filteredDoctors.map((d) => (
-                  <SelectItem key={d.id} value={d.name}>
-                    {d.name} — {d.specialty}
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
-          {form.formState.errors.doctor && (
-            <p className="text-xs text-destructive">{form.formState.errors.doctor.message}</p>
-          )}
-        </div>
+        {selectedDeptId && (
+          <div className="space-y-1.5">
+            <Label className="text-xs">
+              <Stethoscope className="w-3 h-3 inline mr-1 opacity-60" />
+              Doctor <span className="text-destructive">*</span>
+            </Label>
+            <Select
+              value={form.watch("doctor")}
+              onValueChange={(v) => form.setValue("doctor", v, { shouldValidate: true })}
+            >
+              <SelectTrigger className={form.formState.errors.doctor ? "border-destructive" : ""}>
+                <SelectValue placeholder="Select a doctor…" />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredDoctors.length === 0 ? (
+                  <SelectItem value="_none" disabled>No doctors in this department</SelectItem>
+                ) : (
+                  filteredDoctors.map((d) => (
+                    <SelectItem key={d.id} value={d.name}>
+                      {d.name} — {d.specialty}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+            {form.formState.errors.doctor && (
+              <p className="text-xs text-destructive">{form.formState.errors.doctor.message}</p>
+            )}
+          </div>
+        )}
+
+        {selectedDoctor && (
+          <div className="space-y-1.5">
+            <Label className="text-xs">Appointment type <span className="text-destructive">*</span></Label>
+            <Select
+              defaultValue={form.getValues("type") || "General Consultation"}
+              onValueChange={(v) => form.setValue("type", v)}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {APPOINTMENT_TYPES.map((t) => (
+                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {form.formState.errors.type && (
+              <p className="text-xs text-destructive">{form.formState.errors.type.message}</p>
+            )}
+          </div>
+        )}
 
         <div className="space-y-1.5">
           <Label className="text-xs">Notes / Reason (optional)</Label>
@@ -714,7 +717,8 @@ function NewPatientAptFields({
 }) {
   const filteredDoctors = selectedDeptId
     ? doctors.filter((d) => d.departmentId === selectedDeptId)
-    : doctors;
+    : [];
+  const selectedDoctor = form.watch("doctor");
 
   return (
     <div className="space-y-3">
@@ -743,27 +747,12 @@ function NewPatientAptFields({
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-xs">Appointment type <span className="text-destructive">*</span></Label>
-        <Select
-          defaultValue={form.getValues("type") || "General Consultation"}
-          onValueChange={(v) => form.setValue("type", v)}
-        >
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {APPOINTMENT_TYPES.map((t) => (
-              <SelectItem key={t} value={t}>{t}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-1.5">
         <Label className="text-xs">
           <Building2 className="w-3 h-3 inline mr-1 opacity-60" />
-          Department <span className="text-destructive">*</span>
+          Specialty <span className="text-destructive">*</span>
         </Label>
         <Select value={selectedDeptId} onValueChange={onDeptChange}>
-          <SelectTrigger><SelectValue placeholder="Select a department…" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder="Select a specialty…" /></SelectTrigger>
           <SelectContent>
             {departments.map((d) => (
               <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
@@ -772,36 +761,53 @@ function NewPatientAptFields({
         </Select>
       </div>
 
-      <div className="space-y-1.5">
-        <Label className="text-xs">
-          <Stethoscope className="w-3 h-3 inline mr-1 opacity-60" />
-          Doctor <span className="text-destructive">*</span>
-        </Label>
-        <Select
-          value={form.watch("doctor")}
-          onValueChange={(v) => form.setValue("doctor", v, { shouldValidate: true })}
-        >
-          <SelectTrigger className={form.formState.errors.doctor ? "border-destructive" : ""}>
-            <SelectValue placeholder="Select a doctor…" />
-          </SelectTrigger>
-          <SelectContent>
-            {filteredDoctors.length === 0 ? (
-              <SelectItem value="_none" disabled>
-                {selectedDeptId ? "No doctors in this department" : "Select a department first"}
-              </SelectItem>
-            ) : (
-              filteredDoctors.map((d) => (
-                <SelectItem key={d.id} value={d.name}>
-                  {d.name} — {d.specialty}
-                </SelectItem>
-              ))
-            )}
-          </SelectContent>
-        </Select>
-        {form.formState.errors.doctor && (
-          <p className="text-xs text-destructive">{form.formState.errors.doctor.message}</p>
-        )}
-      </div>
+      {selectedDeptId && (
+        <div className="space-y-1.5">
+          <Label className="text-xs">
+            <Stethoscope className="w-3 h-3 inline mr-1 opacity-60" />
+            Doctor <span className="text-destructive">*</span>
+          </Label>
+          <Select
+            value={form.watch("doctor")}
+            onValueChange={(v) => form.setValue("doctor", v, { shouldValidate: true })}
+          >
+            <SelectTrigger className={form.formState.errors.doctor ? "border-destructive" : ""}>
+              <SelectValue placeholder="Select a doctor…" />
+            </SelectTrigger>
+            <SelectContent>
+              {filteredDoctors.length === 0 ? (
+                <SelectItem value="_none" disabled>No doctors in this department</SelectItem>
+              ) : (
+                filteredDoctors.map((d) => (
+                  <SelectItem key={d.id} value={d.name}>
+                    {d.name} — {d.specialty}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+          {form.formState.errors.doctor && (
+            <p className="text-xs text-destructive">{form.formState.errors.doctor.message}</p>
+          )}
+        </div>
+      )}
+
+      {selectedDoctor && (
+        <div className="space-y-1.5">
+          <Label className="text-xs">Appointment type <span className="text-destructive">*</span></Label>
+          <Select
+            defaultValue={form.getValues("type") || "General Consultation"}
+            onValueChange={(v) => form.setValue("type", v)}
+          >
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {APPOINTMENT_TYPES.map((t) => (
+                <SelectItem key={t} value={t}>{t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <div className="space-y-1.5">
         <Label className="text-xs">Notes / Reason (optional)</Label>

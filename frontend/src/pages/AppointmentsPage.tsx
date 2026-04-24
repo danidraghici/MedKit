@@ -392,23 +392,34 @@ export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) 
                                   <User className="w-4 h-4 mr-2" />
                                   View patient record
                                 </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                {apt.status !== "Completed" && (
-                                  <DropdownMenuItem
-                                    onClick={() => void handleStatusChange(apt.id, "Completed")}
-                                  >
-                                    <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />
-                                    Mark as completed
-                                  </DropdownMenuItem>
+                                {apt.status === "Scheduled" && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() => void handleStatusChange(apt.id, "Completed")}
+                                    >
+                                      <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />
+                                      Mark as completed
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      className="text-destructive"
+                                      onClick={() => void handleStatusChange(apt.id, "Cancelled")}
+                                    >
+                                      <XCircle className="w-4 h-4 mr-2" />
+                                      Cancel appointment
+                                    </DropdownMenuItem>
+                                  </>
                                 )}
-                                {apt.status !== "Cancelled" && (
-                                  <DropdownMenuItem
-                                    className="text-destructive"
-                                    onClick={() => void handleStatusChange(apt.id, "Cancelled")}
-                                  >
-                                    <XCircle className="w-4 h-4 mr-2" />
-                                    Cancel appointment
-                                  </DropdownMenuItem>
+                                {apt.status === "Cancelled" && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() => onNavigate("create-appointment")}
+                                    >
+                                      <CalendarDays className="w-4 h-4 mr-2 text-blue-600" />
+                                      Reschedule
+                                    </DropdownMenuItem>
+                                  </>
                                 )}
                               </DropdownMenuContent>
                             </DropdownMenu>
