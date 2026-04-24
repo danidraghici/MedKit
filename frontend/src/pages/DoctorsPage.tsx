@@ -71,7 +71,7 @@ export default function DoctorsPage({ onNavigate }: DoctorsPageProps) {
 
   // ── Derived departments for the filter dropdown ───────────────────────────
   const allDepartments = useMemo(() => {
-    const depts = Array.from(new Set(doctors.map((d) => d.department))).sort();
+    const depts = Array.from(new Set(doctors.map((d) => d.department).filter(Boolean))).sort();
     return depts;
   }, [doctors]);
 

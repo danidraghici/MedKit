@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type {
   Patient, MedicalRecord, LabResult, Note, Appointment, ChatSession, ChatMessage, User,
-  AppointmentRequest, LabAIInsight, ConsultationReminder, Doctor, DoctorRole,
+  AppointmentRequest, LabAIInsight, ConsultationReminder, Doctor, DoctorRole, Department,
 } from "./types";
 import { api, configureApiClient } from "./api";
 import {
@@ -37,6 +37,12 @@ interface AppState {
   updateDoctor: (id: string, updates: Partial<Doctor>) => void;
   deleteDoctor: (id: string) => void;
   getDoctor: (id: string) => Doctor | undefined;
+
+  // Departments (managed by admin)
+  departments: Department[];
+  fetchDepartments: () => Promise<void>;
+  addDepartmentLocal: (dept: Department) => void;
+  updateDepartmentLocal: (id: string, updates: Partial<Department>) => void;
 
   // Patients
   patients: Patient[];
@@ -142,6 +148,30 @@ export const useAppStore = create<AppState>()(
         } catch {
           set({ user: null, isAuthenticated: false, accessToken: null });
         }
+      },
+
+      // Departments
+      departments: [],
+
+      fetchDepartments: async () => {
+        try {
+          const data = await api.get<Department[]>("/api/departments");
+          set({ departments: data });
+        } catch {
+          // silently keep existing state
+        }
+      },
+
+      addDepartmentLocal: (dept) => {
+        set((state) => ({ departments: [...state.departments, dept] }));
+      },
+
+      updateDepartmentLocal: (id, updates) => {
+        set((state) => ({
+          departments: state.departments.map((d) =>
+            d.id === id ? { ...d, ...updates } : d
+          ),
+        }));
       },
 
       // Doctors
@@ -429,7 +459,7 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: "medkit-storage",
-      version: 5,
+      version: 6,
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as Record<string, unknown>;
         if (version < 2) {
@@ -456,6 +486,9 @@ export const useAppStore = create<AppState>()(
         if (version < 5) {
           // Doctors are now fetched from the API; clear any persisted mock data
           state.doctors = [];
+        }
+        if (version < 6) {
+          state.departments = [];
         }
         return state;
       },

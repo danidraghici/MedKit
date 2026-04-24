@@ -1651,37 +1651,41 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                                         <User className="w-4 h-4 mr-2" />
                                         View patient record
                                       </DropdownMenuItem>
-                                      <DropdownMenuSeparator />
                                       {apt.status !== "Completed" && (
-                                        <DropdownMenuItem
-                                          onClick={() =>
-                                            handleApptStatusChange(apt.id, "Completed")
-                                          }
-                                        >
-                                          <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />
-                                          Mark as completed
-                                        </DropdownMenuItem>
-                                      )}
-                                      {apt.status !== "Cancelled" && (
-                                        <DropdownMenuItem
-                                          className="text-destructive"
-                                          onClick={() =>
-                                            handleApptStatusChange(apt.id, "Cancelled")
-                                          }
-                                        >
-                                          <XCircle className="w-4 h-4 mr-2" />
-                                          Cancel appointment
-                                        </DropdownMenuItem>
-                                      )}
-                                      {apt.status === "Cancelled" && (
-                                        <DropdownMenuItem
-                                          onClick={() =>
-                                            handleApptStatusChange(apt.id, "Scheduled")
-                                          }
-                                        >
-                                          <CalendarDays className="w-4 h-4 mr-2 text-blue-600" />
-                                          Reschedule
-                                        </DropdownMenuItem>
+                                        <>
+                                          <DropdownMenuSeparator />
+                                          {apt.status === "Scheduled" && (
+                                            <DropdownMenuItem
+                                              onClick={() =>
+                                                handleApptStatusChange(apt.id, "Completed")
+                                              }
+                                            >
+                                              <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />
+                                              Mark as completed
+                                            </DropdownMenuItem>
+                                          )}
+                                          {apt.status === "Scheduled" && (
+                                            <DropdownMenuItem
+                                              className="text-destructive"
+                                              onClick={() =>
+                                                handleApptStatusChange(apt.id, "Cancelled")
+                                              }
+                                            >
+                                              <XCircle className="w-4 h-4 mr-2" />
+                                              Cancel appointment
+                                            </DropdownMenuItem>
+                                          )}
+                                          {apt.status === "Cancelled" && (
+                                            <DropdownMenuItem
+                                              onClick={() =>
+                                                handleApptStatusChange(apt.id, "Scheduled")
+                                              }
+                                            >
+                                              <CalendarDays className="w-4 h-4 mr-2 text-blue-600" />
+                                              Reschedule
+                                            </DropdownMenuItem>
+                                          )}
+                                        </>
                                       )}
                                     </DropdownMenuContent>
                                   </DropdownMenu>

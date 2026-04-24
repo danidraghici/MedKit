@@ -35,14 +35,13 @@ const doctorSchema = z.object({
   phone: z.string().min(7, "Phone number is required"),
   specialty: z.string().min(2, "Specialty is required"),
   licenseNumber: z.string().min(2, "License number is required"),
-  department: z.string().min(2, "Department is required"),
+  departmentId: z.string().min(1, "Select a department"),
   doctorRole: z.enum(["specialist_doctor", "lab_doctor"]),
 });
 
 type DoctorFormData = z.infer<typeof doctorSchema>;
 
 const LAB_SPECIALTY = "Laboratory Medicine";
-const LAB_DEPARTMENT = "Laboratory";
 
 const SPECIALTIES = [
   "Cardiology", "Clinical Pathology", "Dermatology", "Emergency Medicine",
@@ -50,13 +49,6 @@ const SPECIALTIES = [
   "Hematology", "Internal Medicine", "Laboratory Medicine", "Microbiology",
   "Nephrology", "Neurology", "Oncology", "Orthopedics", "Pediatrics",
   "Psychiatry", "Pulmonology", "Radiology", "Urology", "Other",
-];
-
-const DEPARTMENTS = [
-  "Cardiology", "Emergency", "Endocrinology", "Gastroenterology",
-  "General Medicine", "Internal Medicine", "Laboratory", "Neurology",
-  "Oncology", "Orthopedics", "Pediatrics", "Psychiatry", "Radiology",
-  "Surgery", "Urology", "Other",
 ];
 
 interface AddDoctorPageProps {
@@ -68,6 +60,8 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
   const updateDoctor = useAppStore((s) => s.updateDoctor);
   const doctors = useAppStore((s) => s.doctors);
   const fetchDoctors = useAppStore((s) => s.fetchDoctors);
+  const departments = useAppStore((s) => s.departments);
+  const fetchDepartments = useAppStore((s) => s.fetchDepartments);
 
   const editingDoctor = editingDoctorId
     ? doctors.find((d) => d.id === editingDoctorId) ?? null
@@ -76,6 +70,14 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
   const isEditing = !!editingDoctor;
 
   const [serverError, setServerError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchDepartments();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const labDept = departments.find(
+    (d) => d.name.toLowerCase() === "laboratory"
+  );
 
   const {
     register,
@@ -93,7 +95,7 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
           phone: editingDoctor.phone,
           specialty: editingDoctor.specialty,
           licenseNumber: editingDoctor.licenseNumber,
-          department: editingDoctor.department,
+          departmentId: editingDoctor.departmentId,
           doctorRole: editingDoctor.doctorRole,
         }
       : {
@@ -102,55 +104,57 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
           email: "",
           phone: "",
           specialty: "",
-          department: "",
+          departmentId: "",
           licenseNumber: "",
         },
   });
 
   const selectedRole = watch("doctorRole");
+  const isLabDoctor = selectedRole === "lab_doctor";
 
   // Auto-fill and lock specialty/department for Lab Doctor
   useEffect(() => {
     if (selectedRole === "lab_doctor") {
       setValue("specialty", LAB_SPECIALTY, { shouldValidate: true });
-      setValue("department", LAB_DEPARTMENT, { shouldValidate: true });
+      if (labDept) {
+        setValue("departmentId", labDept.id, { shouldValidate: true });
+      }
     } else {
-      // Clear only if the values are still the locked lab ones
       if (watch("specialty") === LAB_SPECIALTY) setValue("specialty", "");
-      if (watch("department") === LAB_DEPARTMENT) setValue("department", "");
+      if (labDept && watch("departmentId") === labDept.id) setValue("departmentId", "");
     }
-  }, [selectedRole]);
+  }, [selectedRole, labDept?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onSubmit = async (data: DoctorFormData) => {
     setServerError(null);
 
-    if (isEditing && editingDoctor) {
-      updateDoctor(editingDoctor.id, data);
-      onNavigate("doctors");
-      return;
-    }
-
     try {
-      await api.post<DoctorSummary>("/api/doctors", data);
+      if (isEditing && editingDoctor) {
+        const updated = await api.put<DoctorSummary>(`/api/doctors/${editingDoctor.id}`, data);
+        updateDoctor(editingDoctor.id, updated);
+      } else {
+        await api.post<DoctorSummary>("/api/doctors", data);
+      }
       await fetchDoctors();
       onNavigate("doctors");
     } catch (err: unknown) {
-      const apiErr = err as { status?: number; message?: string };
+      const apiErr = err as { status?: number; payload?: { error?: string } };
       if (apiErr.status === 409) {
-        if (apiErr.message === "email_taken") {
+        const errCode = apiErr.payload?.error;
+        if (errCode === "email_taken") {
           setError("email", { message: "This email is already in use." });
-        } else if (apiErr.message === "license_taken") {
+        } else if (errCode === "license_taken") {
           setError("licenseNumber", { message: "This license number is already registered." });
         } else {
           setServerError("A conflict occurred. Please check your inputs.");
         }
+      } else if (apiErr.status === 400 && apiErr.payload?.error === "department_not_found") {
+        setError("departmentId", { message: "Selected department no longer exists." });
       } else {
-        setServerError("Failed to create doctor. Please try again.");
+        setServerError(isEditing ? "Failed to update doctor. Please try again." : "Failed to create doctor. Please try again.");
       }
     }
   };
-
-  const isLabDoctor = selectedRole === "lab_doctor";
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -312,7 +316,7 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
               {isLabDoctor ? (
                 <div className="relative">
                   <Input
-                    value={LAB_DEPARTMENT}
+                    value={labDept?.name ?? "Laboratory"}
                     disabled
                     className="pr-8 bg-muted/50 text-muted-foreground cursor-not-allowed"
                   />
@@ -320,15 +324,15 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
                 </div>
               ) : (
                 <Select
-                  value={watch("department")}
-                  onValueChange={(v) => setValue("department", v, { shouldValidate: true })}
+                  value={watch("departmentId")}
+                  onValueChange={(v) => setValue("departmentId", v, { shouldValidate: true })}
                 >
-                  <SelectTrigger className={errors.department ? "border-destructive" : ""}>
+                  <SelectTrigger className={errors.departmentId ? "border-destructive" : ""}>
                     <SelectValue placeholder="Select department" />
                   </SelectTrigger>
                   <SelectContent>
-                    {DEPARTMENTS.map((d) => (
-                      <SelectItem key={d} value={d}>{d}</SelectItem>
+                    {departments.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -337,8 +341,8 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <Lock className="w-3 h-3" /> Fixed for Lab Doctor role
                 </p>
-              ) : errors.department ? (
-                <p className="text-xs text-destructive">{errors.department.message}</p>
+              ) : errors.departmentId ? (
+                <p className="text-xs text-destructive">{errors.departmentId.message}</p>
               ) : null}
             </div>
 

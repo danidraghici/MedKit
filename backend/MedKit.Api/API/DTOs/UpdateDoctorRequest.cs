@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace MedKit.Api.API.DTOs;
 
-public class CreateDoctorRequest
+public class UpdateDoctorRequest
 {
     [Required] public string Name { get; set; } = "";
     [Required, EmailAddress] public string Email { get; set; } = "";

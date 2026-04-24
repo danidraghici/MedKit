@@ -30,6 +30,7 @@ public class DashboardService(AppDbContext db)
     public async Task<List<DoctorSummaryDto>> GetStaffAsync()
     {
         return await db.Doctors
+            .Include(d => d.DepartmentNav)
             .OrderBy(d => d.Name)
             .Select(d => new DoctorSummaryDto(
                 d.Id.ToString(),
@@ -38,7 +39,8 @@ public class DashboardService(AppDbContext db)
                 d.Phone,
                 d.LicenseNumber,
                 d.Specialty,
-                d.Department,
+                d.DepartmentId.HasValue ? d.DepartmentId.Value.ToString() : "",
+                d.DepartmentNav != null ? d.DepartmentNav.Name : "",
                 d.DoctorRole))
             .ToListAsync();
     }

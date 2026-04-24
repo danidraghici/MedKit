@@ -158,12 +158,21 @@ export interface ChatSession {
 export type DoctorRole = "specialist_doctor" | "lab_doctor";
 export type UserRole = "specialist_doctor" | "lab_doctor" | "admin" | "patient";
 
+export interface Department {
+  id: string;
+  name: string;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Doctor {
   id: string;
   name: string;
   email: string;
   specialty: string;
   licenseNumber: string;
+  departmentId: string;
   department: string;
   phone: string;
   doctorRole: DoctorRole;
@@ -243,6 +252,7 @@ export interface DoctorSummary {
   phone: string;
   licenseNumber: string;
   specialty: string;
+  departmentId: string;
   department: string;
   doctorRole: DoctorRole;
 }

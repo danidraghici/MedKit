@@ -203,7 +203,7 @@ export default function CreateAppointmentDialog({
   const onSubmitNewPatient = async (data: NewPatientAptForm) => {
     await new Promise((r) => setTimeout(r, 500));
     // First create the patient
-    const newPatient = addPatient({
+    const newPatient = await addPatient({
       fullName: data.fullName,
       dateOfBirth: data.dateOfBirth,
       sex: data.sex as Sex,

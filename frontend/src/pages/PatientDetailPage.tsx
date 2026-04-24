@@ -1128,47 +1128,46 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                       </div>
 
                       {/* Actions */}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                          >
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {apt.status !== "Completed" && (
-                            <DropdownMenuItem
-                              onClick={() => handleApptStatusChange(apt.id, "Completed")}
+                      {apt.status !== "Completed" && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                             >
-                              <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />
-                              Mark as completed
-                            </DropdownMenuItem>
-                          )}
-                          {apt.status !== "Cancelled" && (
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => handleApptStatusChange(apt.id, "Cancelled")}
-                            >
-                              <XCircle className="w-4 h-4 mr-2" />
-                              Cancel appointment
-                            </DropdownMenuItem>
-                          )}
-                          {apt.status === "Cancelled" && (
-                            <>
-                              <DropdownMenuSeparator />
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {apt.status === "Scheduled" && (
+                              <DropdownMenuItem
+                                onClick={() => handleApptStatusChange(apt.id, "Completed")}
+                              >
+                                <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />
+                                Mark as completed
+                              </DropdownMenuItem>
+                            )}
+                            {apt.status === "Scheduled" && (
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() => handleApptStatusChange(apt.id, "Cancelled")}
+                              >
+                                <XCircle className="w-4 h-4 mr-2" />
+                                Cancel appointment
+                              </DropdownMenuItem>
+                            )}
+                            {apt.status === "Cancelled" && (
                               <DropdownMenuItem
                                 onClick={() => handleApptStatusChange(apt.id, "Scheduled")}
                               >
                                 <CalendarDays className="w-4 h-4 mr-2 text-blue-600" />
                                 Reschedule
                               </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </div>
                   </div>
                 );

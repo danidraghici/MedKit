@@ -14,6 +14,7 @@ import {
   Bell,
   Stethoscope,
   UserCog,
+  Building2,
 } from "lucide-react";
 import { PrimaryTemplate } from "@/components/blocks/primary-template";
 import { Button } from "@/components/ui/button";
@@ -42,7 +43,7 @@ import AddPatientPage from "@/pages/AddPatientPage";
 import AddDoctorPage from "@/pages/AddDoctorPage";
 import PatientDashboardPage from "@/pages/PatientDashboardPage";
 import ForceChangePasswordPage from "@/pages/ForceChangePasswordPage";
-
+import DepartmentsPage from "@/pages/DepartmentsPage";
 
 type PageId = string;
 type LoginMode = "doctor" | "patient";
@@ -67,6 +68,7 @@ const adminNavigation = [
   { id: "patients", label: "Patients", icon: Users },
   { id: "appointments", label: "Appointments", icon: Calendar },
   { id: "doctors", label: "Doctors", icon: UserCog },
+  { id: "departments", label: "Departments", icon: Building2 },
   { id: "profile", label: "My Profile", icon: UserCircle },
 ];
 
@@ -274,6 +276,7 @@ export default function App() {
     if (activePage === "doctors") return [{ label: "Doctors" }];
     if (activePage === "add-doctor") return [{ label: "Doctors" }, { label: "Add New Doctor" }];
     if (activePage.startsWith("edit-doctor-")) return [{ label: "Doctors" }, { label: "Edit Doctor" }];
+    if (activePage === "departments") return [{ label: "Departments" }];
     if (activePage === "profile") return [{ label: "My Profile" }];
     if (activePage.startsWith("create-appointment-patient-")) {
       const id = activePage.replace("create-appointment-patient-", "");
@@ -303,6 +306,7 @@ export default function App() {
   const renderPage = () => {
     if (activePage === "dashboard") return <DashboardPage onNavigate={handleNavigate} />;
     if (activePage === "doctors" && isAdmin) return <DoctorsPage onNavigate={handleNavigate} />;
+    if (activePage === "departments" && isAdmin) return <DepartmentsPage />;
     if (activePage === "add-doctor" && isAdmin) return <AddDoctorPage onNavigate={handleNavigate} />;
     if (activePage.startsWith("edit-doctor-") && isAdmin) return <AddDoctorPage onNavigate={handleNavigate} editingDoctorId={activePage.replace("edit-doctor-", "")} />;
     if (activePage === "patients") return <PatientsPage onNavigate={handleNavigate} />;

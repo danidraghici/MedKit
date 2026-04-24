@@ -15,8 +15,11 @@ public class DoctorEntity
     [Column("specialty")]
     public string Specialty { get; set; } = "";
 
-    [Column("department")]
-    public string Department { get; set; } = "";
+    [Column("department_id")]
+    public Guid? DepartmentId { get; set; }
+
+    [ForeignKey(nameof(DepartmentId))]
+    public DepartmentEntity? DepartmentNav { get; set; }
 
     [Column("email")]
     public string Email { get; set; } = "";

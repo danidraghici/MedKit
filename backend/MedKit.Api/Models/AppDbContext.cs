@@ -12,6 +12,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<MedicalRecordEntity> MedicalRecords => Set<MedicalRecordEntity>();
     public DbSet<AppointmentEntity> Appointments => Set<AppointmentEntity>();
     public DbSet<DoctorEntity> Doctors => Set<DoctorEntity>();
+    public DbSet<DepartmentEntity> Departments => Set<DepartmentEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -60,10 +61,21 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.ToTable(t => t.UseSqlOutputClause(false));
         });
 
+        modelBuilder.Entity<DepartmentEntity>(e =>
+        {
+            // departments has audit trigger — OUTPUT clause is forbidden on triggered tables
+            e.ToTable(t => t.UseSqlOutputClause(false));
+        });
+
         modelBuilder.Entity<DoctorEntity>(e =>
         {
             // doctors has audit trigger — OUTPUT clause is forbidden on triggered tables
             e.ToTable(t => t.UseSqlOutputClause(false));
+
+            e.HasOne(d => d.DepartmentNav)
+             .WithMany()
+             .HasForeignKey(d => d.DepartmentId)
+             .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

@@ -7,12 +7,19 @@ using Microsoft.AspNetCore.Mvc;
 namespace MedKit.Api.API.Controllers;
 
 [ApiController]
-[Route("api/doctors")]
+[Route("api/departments")]
 [Authorize(Roles = "admin")]
-public class DoctorController(DoctorService doctorService) : ControllerBase
+public class DepartmentController(DepartmentService departmentService) : ControllerBase
 {
+    [HttpGet]
+    public async Task<IActionResult> GetAll()
+    {
+        var departments = await departmentService.GetAllAsync();
+        return Ok(departments);
+    }
+
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateDoctorRequest request)
+    public async Task<IActionResult> Create([FromBody] CreateDepartmentRequest request)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
@@ -20,20 +27,18 @@ public class DoctorController(DoctorService doctorService) : ControllerBase
         if (!Guid.TryParse(userIdClaim, out var adminUserId))
             return Unauthorized();
 
-        var (dto, error) = await doctorService.CreateAsync(request, adminUserId);
+        var (dto, error) = await departmentService.CreateAsync(request, adminUserId);
 
         return error switch
         {
-            "email_taken"          => Conflict(new { error = "email_taken" }),
-            "license_taken"        => Conflict(new { error = "license_taken" }),
-            "department_not_found" => BadRequest(new { error = "department_not_found" }),
+            "name_taken"          => Conflict(new { error = "name_taken" }),
             null when dto is not null => Ok(dto),
             _ => StatusCode(500, new { error = "Unexpected error." })
         };
     }
 
     [HttpPut("{id:guid}")]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateDoctorRequest request)
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateDepartmentRequest request)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
@@ -41,14 +46,12 @@ public class DoctorController(DoctorService doctorService) : ControllerBase
         if (!Guid.TryParse(userIdClaim, out var adminUserId))
             return Unauthorized();
 
-        var (dto, error) = await doctorService.UpdateAsync(id, request, adminUserId);
+        var (dto, error) = await departmentService.UpdateAsync(id, request, adminUserId);
 
         return error switch
         {
-            "not_found"            => NotFound(new { error = "not_found" }),
-            "email_taken"          => Conflict(new { error = "email_taken" }),
-            "license_taken"        => Conflict(new { error = "license_taken" }),
-            "department_not_found" => BadRequest(new { error = "department_not_found" }),
+            "not_found"           => NotFound(new { error = "Department not found." }),
+            "name_taken"          => Conflict(new { error = "name_taken" }),
             null when dto is not null => Ok(dto),
             _ => StatusCode(500, new { error = "Unexpected error." })
         };

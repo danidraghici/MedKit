@@ -29,6 +29,24 @@ GO
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
+-- 0. departments
+--    Master list of hospital departments.
+--    Created before doctors so doctors can FK into it.
+-- -----------------------------------------------------------------------------
+CREATE TABLE departments (
+    id          UNIQUEIDENTIFIER  NOT NULL DEFAULT NEWSEQUENTIALID(),
+    name        NVARCHAR(255)     NOT NULL,
+    description NVARCHAR(MAX)     NULL,
+    created_at  DATETIMEOFFSET(7) NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+    updated_at  DATETIMEOFFSET(7) NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+    CONSTRAINT PK_departments      PRIMARY KEY (id),
+    CONSTRAINT UQ_departments_name UNIQUE (name)
+);
+
+CREATE INDEX IX_departments_name ON departments (name);
+GO
+
+-- -----------------------------------------------------------------------------
 -- 1. doctors
 --    Profiles for specialist and lab doctors.
 --    Created before users so users can FK into it.
@@ -39,7 +57,8 @@ CREATE TABLE doctors (
     email          NVARCHAR(255)     NOT NULL,
     specialty      NVARCHAR(255)     NOT NULL,
     license_number NVARCHAR(100)     NOT NULL,
-    department     NVARCHAR(255)     NOT NULL,
+    department     NVARCHAR(255)     NULL,
+    department_id  UNIQUEIDENTIFIER  NULL,
     phone          NVARCHAR(50)      NOT NULL,
     doctor_role    NVARCHAR(50)      NOT NULL
         CONSTRAINT CK_doctors_doctor_role
@@ -48,12 +67,14 @@ CREATE TABLE doctors (
     updated_at     DATETIMEOFFSET(7) NOT NULL DEFAULT SYSDATETIMEOFFSET(),
     CONSTRAINT PK_doctors                   PRIMARY KEY (id),
     CONSTRAINT UQ_doctors_email             UNIQUE (email),
-    CONSTRAINT UQ_doctors_license_number    UNIQUE (license_number)
+    CONSTRAINT UQ_doctors_license_number    UNIQUE (license_number),
+    CONSTRAINT FK_doctors_department        FOREIGN KEY (department_id)
+        REFERENCES departments(id) ON DELETE SET NULL
 );
 
-CREATE INDEX IX_doctors_doctor_role ON doctors (doctor_role);
-CREATE INDEX IX_doctors_specialty   ON doctors (specialty);
-CREATE INDEX IX_doctors_department  ON doctors (department);
+CREATE INDEX IX_doctors_doctor_role  ON doctors (doctor_role);
+CREATE INDEX IX_doctors_specialty    ON doctors (specialty);
+CREATE INDEX IX_doctors_department_id ON doctors (department_id);
 GO
 
 -- -----------------------------------------------------------------------------
@@ -419,7 +440,6 @@ CREATE TABLE appointments (
     created_at             DATETIMEOFFSET(7) NOT NULL DEFAULT SYSDATETIMEOFFSET(),
     updated_at             DATETIMEOFFSET(7) NOT NULL DEFAULT SYSDATETIMEOFFSET(),
     CONSTRAINT PK_appointments              PRIMARY KEY (id),
-    CONSTRAINT UQ_appointments_request      UNIQUE (appointment_request_id),
     CONSTRAINT FK_appointments_patient      FOREIGN KEY (patient_id)
         REFERENCES patients(id),
     CONSTRAINT FK_appointments_doctor       FOREIGN KEY (doctor_id)
@@ -428,6 +448,7 @@ CREATE TABLE appointments (
         REFERENCES appointment_requests(id) ON DELETE SET NULL
 );
 
+CREATE UNIQUE INDEX UQ_appointments_request    ON appointments (appointment_request_id) WHERE appointment_request_id IS NOT NULL;
 CREATE INDEX IX_appointments_patient_id       ON appointments (patient_id);
 CREATE INDEX IX_appointments_doctor_id        ON appointments (doctor_id);
 CREATE INDEX IX_appointments_appointment_date ON appointments (appointment_date);
@@ -609,6 +630,50 @@ GO
 -- chat_messages and audit_logs have no trigger (chat history is not individually
 -- audited; audit_logs is insert-only by design).
 -- =============================================================================
+
+-- ─── departments ─────────────────────────────────────────────────────────────
+IF OBJECT_ID('trg_audit_departments', 'TR') IS NOT NULL DROP TRIGGER trg_audit_departments;
+GO
+CREATE TRIGGER trg_audit_departments
+ON departments
+AFTER INSERT, UPDATE, DELETE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @action       NVARCHAR(10);
+    DECLARE @performed_by UNIQUEIDENTIFIER;
+
+    IF   EXISTS(SELECT 1 FROM inserted) AND EXISTS(SELECT 1 FROM deleted) SET @action = 'UPDATE';
+    ELSE IF EXISTS(SELECT 1 FROM inserted)                                 SET @action = 'INSERT';
+    ELSE                                                                   SET @action = 'DELETE';
+
+    SET @performed_by = TRY_CAST(
+        CAST(SESSION_CONTEXT(N'app_user_id') AS NVARCHAR(36)) AS UNIQUEIDENTIFIER
+    );
+
+    IF @action IN ('INSERT', 'UPDATE')
+        INSERT INTO audit_logs (performed_by_user_id, action, entity_type, entity_id, old_values, new_values)
+        SELECT
+            @performed_by,
+            @action,
+            'departments',
+            i.id,
+            CASE WHEN @action = 'UPDATE'
+                 THEN (SELECT TOP 1 * FROM deleted  WHERE id = i.id FOR JSON AUTO, WITHOUT_ARRAY_WRAPPER)
+                 ELSE NULL
+            END,
+            (SELECT TOP 1 * FROM inserted WHERE id = i.id FOR JSON AUTO, WITHOUT_ARRAY_WRAPPER)
+        FROM inserted i;
+    ELSE
+        INSERT INTO audit_logs (performed_by_user_id, action, entity_type, entity_id, old_values, new_values)
+        SELECT
+            @performed_by, 'DELETE', 'departments', d.id,
+            (SELECT TOP 1 * FROM deleted WHERE id = d.id FOR JSON AUTO, WITHOUT_ARRAY_WRAPPER),
+            NULL
+        FROM deleted d;
+END;
+GO
 
 -- ─── doctors ────────────────────────────────────────────────────────────────
 IF OBJECT_ID('trg_audit_doctors', 'TR') IS NOT NULL DROP TRIGGER trg_audit_doctors;
