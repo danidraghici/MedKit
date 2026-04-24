@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import {
   Calendar, FlaskConical, FileText, Bell, Plus, Clock, ChevronRight,
   Heart, Pill, AlertTriangle, CheckCircle2, XCircle, Sparkles,
-  Activity, TrendingUp, ShieldCheck, X, ClipboardList, Phone,
+  Activity, TrendingUp, ShieldCheck, X, ClipboardList, Phone, Building2, Stethoscope,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -71,6 +71,10 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
   const getPatientReminders = useAppStore((s) => s.getPatientReminders);
   const dismissReminder = useAppStore((s) => s.dismissReminder);
   const addAppointmentRequest = useAppStore((s) => s.addAppointmentRequest);
+  const departments = useAppStore((s) => s.departments);
+  const fetchDepartments = useAppStore((s) => s.fetchDepartments);
+  const doctors = useAppStore((s) => s.doctors);
+  const fetchDoctors = useAppStore((s) => s.fetchDoctors);
 
   const patient = patients.find((p) => p.id === user?.patientId);
   const patientId = patient?.id ?? "";
@@ -94,6 +98,11 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
   useEffect(() => {
     if (activeTabProp) setInternalTab(activeTabProp);
   }, [activeTabProp]);
+
+  useEffect(() => {
+    if (departments.length === 0) void fetchDepartments();
+    if (doctors.length === 0) void fetchDoctors();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [apptModalOpen, setApptModalOpen] = useState(false);
   const [insightModalInsight, setInsightModalInsight] = useState<LabAIInsight | null>(null);
   const [apptSuccess, setApptSuccess] = useState(false);
@@ -104,6 +113,7 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
     date: "",
     time: "",
     reason: "",
+    preferredDepartment: "",
     preferredDoctor: "",
   });
   const [apptFormError, setApptFormError] = useState("");
@@ -129,7 +139,7 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
       reason: apptForm.reason,
       preferredDoctor: apptForm.preferredDoctor || undefined,
     });
-    setApptForm({ type: "", date: "", time: "", reason: "", preferredDoctor: "" });
+    setApptForm({ type: "", date: "", time: "", reason: "", preferredDepartment: "", preferredDoctor: "" });
     setApptModalOpen(false);
     setApptSuccess(true);
     setTimeout(() => setApptSuccess(false), 5000);
@@ -689,15 +699,43 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Preferred doctor</Label>
-                <Select value={apptForm.preferredDoctor} onValueChange={(v) => setApptForm((f) => ({ ...f, preferredDoctor: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Any available" /></SelectTrigger>
+                <Label>
+                  <Building2 className="w-3 h-3 inline mr-1 opacity-60" />
+                  Department
+                </Label>
+                <Select
+                  value={apptForm.preferredDepartment}
+                  onValueChange={(v) => setApptForm((f) => ({ ...f, preferredDepartment: v, preferredDoctor: "" }))}
+                >
+                  <SelectTrigger><SelectValue placeholder="Any department" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Dr. Emily Carter">Dr. Emily Carter</SelectItem>
-                    <SelectItem value="Dr. Michael Torres">Dr. Michael Torres</SelectItem>
+                    {departments.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>
+                <Stethoscope className="w-3 h-3 inline mr-1 opacity-60" />
+                Preferred doctor
+              </Label>
+              <Select
+                value={apptForm.preferredDoctor}
+                onValueChange={(v) => setApptForm((f) => ({ ...f, preferredDoctor: v }))}
+              >
+                <SelectTrigger><SelectValue placeholder="Any available" /></SelectTrigger>
+                <SelectContent>
+                  {(apptForm.preferredDepartment
+                    ? doctors.filter((d) => d.departmentId === apptForm.preferredDepartment)
+                    : doctors
+                  ).map((d) => (
+                    <SelectItem key={d.id} value={d.name}>{d.name} — {d.specialty}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-1.5">

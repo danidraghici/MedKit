@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Edit, Building2, FileText } from "lucide-react";
+import { Plus, Edit, Building2, FileText, ChevronRight } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -24,7 +24,11 @@ const deptSchema = z.object({
 });
 type DeptFormData = z.infer<typeof deptSchema>;
 
-export default function DepartmentsPage() {
+interface DepartmentsPageProps {
+  onNavigate: (page: string) => void;
+}
+
+export default function DepartmentsPage({ onNavigate }: DepartmentsPageProps) {
   const departments = useAppStore((s) => s.departments);
   const fetchDepartments = useAppStore((s) => s.fetchDepartments);
   const addDepartmentLocal = useAppStore((s) => s.addDepartmentLocal);
@@ -122,7 +126,8 @@ export default function DepartmentsPage() {
           {departments.map((dept) => (
             <div
               key={dept.id}
-              className="bg-card rounded-xl border border-border p-4 hover:border-primary/40 hover:shadow-md transition-all group"
+              className="bg-card rounded-xl border border-border p-4 hover:border-primary/40 hover:shadow-md transition-all group cursor-pointer"
+              onClick={() => onNavigate(`department-${dept.id}`)}
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2.5">
@@ -135,7 +140,7 @@ export default function DepartmentsPage() {
                   variant="ghost"
                   size="sm"
                   className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                  onClick={() => openEdit(dept)}
+                  onClick={(e) => { e.stopPropagation(); openEdit(dept); }}
                 >
                   <Edit className="w-4 h-4" />
                 </Button>
@@ -148,15 +153,18 @@ export default function DepartmentsPage() {
                 </div>
               )}
 
-              <div className="pt-2.5 mt-2 border-t border-border">
+              <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-border">
                 <Button
                   size="sm"
                   variant="ghost"
                   className="h-7 text-xs"
-                  onClick={() => openEdit(dept)}
+                  onClick={(e) => { e.stopPropagation(); openEdit(dept); }}
                 >
                   Edit
                 </Button>
+                <span className="flex items-center gap-1 text-xs text-muted-foreground group-hover:text-primary transition-colors">
+                  View doctors <ChevronRight className="w-3.5 h-3.5" />
+                </span>
               </div>
             </div>
           ))}

@@ -416,7 +416,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
     if (editingDoctor) {
       updateDoctor(editingDoctor.id, data);
     } else {
-      addDoctor(data);
+      addDoctor({ ...data, departmentId: "" });
     }
     setIsDoctorModalOpen(false);
     doctorForm.reset();

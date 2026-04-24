@@ -19,6 +19,7 @@ import {
   Droplets,
   Pill,
   ShieldCheck,
+  Building2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,7 +41,7 @@ import { isValidCNP } from "@/lib/cnp";
 import { useAppStore } from "@/lib/store";
 import { api } from "@/lib/api";
 import { getInitials, calculateAge } from "@/lib/utils";
-import type { BloodType, Sex, Patient, Appointment } from "@/lib/types";
+import type { BloodType, Sex, Patient, Appointment, Department } from "@/lib/types";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -113,6 +114,8 @@ export default function CreateAppointmentPage({
   const addPatient = useAppStore((s) => s.addPatient);
   const doctors = useAppStore((s) => s.doctors);
   const fetchDoctors = useAppStore((s) => s.fetchDoctors);
+  const departments = useAppStore((s) => s.departments);
+  const fetchDepartments = useAppStore((s) => s.fetchDepartments);
 
   const [patients, setPatients] = useState<Patient[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -135,6 +138,7 @@ export default function CreateAppointmentPage({
         const [fetchedPatients] = await Promise.all([
           api.get<Patient[]>("/api/patients"),
           doctors.length === 0 ? fetchDoctors() : Promise.resolve(),
+          departments.length === 0 ? fetchDepartments() : Promise.resolve(),
         ]);
         setPatients(fetchedPatients);
       } catch {
@@ -333,7 +337,8 @@ export default function CreateAppointmentPage({
               <form onSubmit={existingForm.handleSubmit(onSubmitExisting)} className="space-y-5">
                 <AppointmentFields
                   form={existingForm}
-                  doctors={doctors}
+                  departments={departments}
+                  allDoctors={doctors}
                   isSubmitting={existingForm.formState.isSubmitting}
                   onCancel={handleBack}
                   canSubmit
@@ -470,7 +475,8 @@ export default function CreateAppointmentPage({
                 <form onSubmit={existingForm.handleSubmit(onSubmitExisting)} className="space-y-5">
                   <AppointmentFields
                     form={existingForm}
-                    doctors={doctors}
+                    departments={departments}
+                    allDoctors={doctors}
                     isSubmitting={existingForm.formState.isSubmitting}
                     onCancel={handleBack}
                     canSubmit={!!selectedPatient}
@@ -674,7 +680,7 @@ export default function CreateAppointmentPage({
                   <h2 className="text-sm font-semibold">Appointment Details</h2>
                 </div>
                 <div className="p-5">
-                  <NewPatientAptFields form={newPatientForm} doctors={doctors} />
+                  <NewPatientAptFields form={newPatientForm} departments={departments} allDoctors={doctors} />
                 </div>
               </div>
 
@@ -697,7 +703,7 @@ export default function CreateAppointmentPage({
 
 // ── Shared doctor + appointment fields ───────────────────────────────────────
 
-type DoctorItem = { id: string; name: string; specialty: string };
+type DoctorItem = { id: string; name: string; specialty: string; departmentId: string };
 
 function DoctorSelect({
   value,
@@ -739,19 +745,26 @@ function DoctorSelect({
 
 function AppointmentFields({
   form,
-  doctors,
+  departments,
+  allDoctors,
   isSubmitting,
   onCancel,
   canSubmit,
   submitLabel,
 }: {
   form: ReturnType<typeof useForm<ExistingPatientForm>>;
-  doctors: DoctorItem[];
+  departments: Department[];
+  allDoctors: DoctorItem[];
   isSubmitting: boolean;
   onCancel: () => void;
   canSubmit: boolean;
   submitLabel?: string;
 }) {
+  const [selectedDeptId, setSelectedDeptId] = useState("");
+  const filteredDoctors = selectedDeptId
+    ? allDoctors.filter((d) => d.departmentId === selectedDeptId)
+    : allDoctors;
+
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -794,10 +807,33 @@ function AppointmentFields({
         )}
       </div>
 
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium">
+          <Building2 className="w-3.5 h-3.5 inline mr-1 opacity-60" />
+          Department <span className="text-destructive">*</span>
+        </Label>
+        <Select
+          value={selectedDeptId}
+          onValueChange={(v) => {
+            setSelectedDeptId(v);
+            form.setValue("doctorId", "", { shouldValidate: false });
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select a department…" />
+          </SelectTrigger>
+          <SelectContent>
+            {departments.map((d) => (
+              <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <DoctorSelect
         value={form.watch("doctorId")}
         onChange={(v) => form.setValue("doctorId", v, { shouldValidate: true })}
-        doctors={doctors}
+        doctors={filteredDoctors}
         error={form.formState.errors.doctorId?.message}
       />
 
@@ -822,11 +858,18 @@ function AppointmentFields({
 
 function NewPatientAptFields({
   form,
-  doctors,
+  departments,
+  allDoctors,
 }: {
   form: ReturnType<typeof useForm<NewPatientForm>>;
-  doctors: DoctorItem[];
+  departments: Department[];
+  allDoctors: DoctorItem[];
 }) {
+  const [selectedDeptId, setSelectedDeptId] = useState("");
+  const filteredDoctors = selectedDeptId
+    ? allDoctors.filter((d) => d.departmentId === selectedDeptId)
+    : allDoctors;
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -866,10 +909,33 @@ function NewPatientAptFields({
         )}
       </div>
 
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium">
+          <Building2 className="w-3.5 h-3.5 inline mr-1 opacity-60" />
+          Department <span className="text-destructive">*</span>
+        </Label>
+        <Select
+          value={selectedDeptId}
+          onValueChange={(v) => {
+            setSelectedDeptId(v);
+            form.setValue("doctorId", "", { shouldValidate: false });
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select a department…" />
+          </SelectTrigger>
+          <SelectContent>
+            {departments.map((d) => (
+              <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <DoctorSelect
         value={form.watch("doctorId")}
         onChange={(v) => form.setValue("doctorId", v, { shouldValidate: true })}
-        doctors={doctors}
+        doctors={filteredDoctors}
         error={form.formState.errors.doctorId?.message}
       />
 

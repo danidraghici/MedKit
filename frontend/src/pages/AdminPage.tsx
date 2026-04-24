@@ -126,7 +126,7 @@ export default function AdminPage() {
     if (editingDoctor) {
       updateDoctor(editingDoctor.id, data);
     } else {
-      addDoctor(data);
+      addDoctor({ ...data, departmentId: "" });
     }
     setIsModalOpen(false);
     reset();

@@ -44,6 +44,7 @@ import AddDoctorPage from "@/pages/AddDoctorPage";
 import PatientDashboardPage from "@/pages/PatientDashboardPage";
 import ForceChangePasswordPage from "@/pages/ForceChangePasswordPage";
 import DepartmentsPage from "@/pages/DepartmentsPage";
+import DepartmentDoctorsPage from "@/pages/DepartmentDoctorsPage";
 
 type PageId = string;
 type LoginMode = "doctor" | "patient";
@@ -85,6 +86,7 @@ export default function App() {
   const initAuth = useAppStore((s) => s.initAuth);
   const user = useAppStore((s) => s.user);
   const patients = useAppStore((s) => s.patients);
+  const departments = useAppStore((s) => s.departments);
   const getPatientReminders = useAppStore((s) => s.getPatientReminders);
 
   const [activePage, setActivePage] = useState<PageId>("dashboard");
@@ -277,6 +279,11 @@ export default function App() {
     if (activePage === "add-doctor") return [{ label: "Doctors" }, { label: "Add New Doctor" }];
     if (activePage.startsWith("edit-doctor-")) return [{ label: "Doctors" }, { label: "Edit Doctor" }];
     if (activePage === "departments") return [{ label: "Departments" }];
+    if (activePage.startsWith("department-")) {
+      const id = activePage.replace("department-", "");
+      const dept = departments.find((d) => d.id === id);
+      return [{ label: "Departments" }, { label: dept?.name ?? "Department" }];
+    }
     if (activePage === "profile") return [{ label: "My Profile" }];
     if (activePage.startsWith("create-appointment-patient-")) {
       const id = activePage.replace("create-appointment-patient-", "");
@@ -301,12 +308,19 @@ export default function App() {
       ? "appointments"
       : activePage === "add-doctor" || activePage.startsWith("edit-doctor-")
       ? "doctors"
+      : activePage.startsWith("department-")
+      ? "departments"
       : activePage;
 
   const renderPage = () => {
     if (activePage === "dashboard") return <DashboardPage onNavigate={handleNavigate} />;
     if (activePage === "doctors" && isAdmin) return <DoctorsPage onNavigate={handleNavigate} />;
-    if (activePage === "departments" && isAdmin) return <DepartmentsPage />;
+    if (activePage === "departments" && isAdmin) return <DepartmentsPage onNavigate={handleNavigate} />;
+    if (activePage.startsWith("department-") && isAdmin) {
+      const deptId = activePage.replace("department-", "");
+      const dept = departments.find((d) => d.id === deptId);
+      return <DepartmentDoctorsPage departmentId={deptId} departmentName={dept?.name ?? "Department"} onNavigate={handleNavigate} />;
+    }
     if (activePage === "add-doctor" && isAdmin) return <AddDoctorPage onNavigate={handleNavigate} />;
     if (activePage.startsWith("edit-doctor-") && isAdmin) return <AddDoctorPage onNavigate={handleNavigate} editingDoctorId={activePage.replace("edit-doctor-", "")} />;
     if (activePage === "patients") return <PatientsPage onNavigate={handleNavigate} />;

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -11,6 +11,8 @@ import {
   User,
   Phone,
   Mail,
+  Building2,
+  Stethoscope,
 } from "lucide-react";
 import {
   Dialog,
@@ -34,7 +36,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAppStore } from "@/lib/store";
 import { getInitials, calculateAge } from "@/lib/utils";
-import type { BloodType, Sex } from "@/lib/types";
+import type { BloodType, Sex, Doctor, Department } from "@/lib/types";
 
 // ── Appointment types ──────────────────────────────────────────────────────
 const APPOINTMENT_TYPES = [
@@ -109,6 +111,10 @@ export default function CreateAppointmentDialog({
   const addAppointment = useAppStore((s) => s.addAppointment);
   const addPatient = useAppStore((s) => s.addPatient);
   const user = useAppStore((s) => s.user);
+  const doctors = useAppStore((s) => s.doctors);
+  const fetchDoctors = useAppStore((s) => s.fetchDoctors);
+  const departments = useAppStore((s) => s.departments);
+  const fetchDepartments = useAppStore((s) => s.fetchDepartments);
 
   const [tab, setTab] = useState<"existing" | "new">(
     preselectedPatientId ? "existing" : "existing"
@@ -118,6 +124,15 @@ export default function CreateAppointmentDialog({
   );
   const [patientSearch, setPatientSearch] = useState("");
   const [patientDropdownOpen, setPatientDropdownOpen] = useState(false);
+  const [selectedDeptIdExisting, setSelectedDeptIdExisting] = useState("");
+  const [selectedDeptIdNew, setSelectedDeptIdNew] = useState("");
+
+  useEffect(() => {
+    if (open) {
+      if (doctors.length === 0) void fetchDoctors();
+      if (departments.length === 0) void fetchDepartments();
+    }
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const selectedPatient = useMemo(
     () => patients.find((p) => p.id === selectedPatientId),
@@ -182,6 +197,8 @@ export default function CreateAppointmentDialog({
     if (!preselectedPatientId) setSelectedPatientId(null);
     setPatientSearch("");
     setPatientDropdownOpen(false);
+    setSelectedDeptIdExisting("");
+    setSelectedDeptIdNew("");
   };
 
   const onSubmitExisting = async (data: ExistingPatientAptForm) => {
@@ -263,6 +280,13 @@ export default function CreateAppointmentDialog({
             )}
             <AppointmentFields
               form={existingForm}
+              departments={departments}
+              doctors={doctors}
+              selectedDeptId={selectedDeptIdExisting}
+              onDeptChange={(id) => {
+                setSelectedDeptIdExisting(id);
+                existingForm.setValue("doctor", "");
+              }}
               isSubmitting={existingForm.formState.isSubmitting}
               onSubmit={existingForm.handleSubmit(onSubmitExisting)}
               onCancel={handleClose}
@@ -388,6 +412,13 @@ export default function CreateAppointmentDialog({
 
               <AppointmentFields
                 form={existingForm}
+                departments={departments}
+                doctors={doctors}
+                selectedDeptId={selectedDeptIdExisting}
+                onDeptChange={(id) => {
+                  setSelectedDeptIdExisting(id);
+                  existingForm.setValue("doctor", "");
+                }}
                 isSubmitting={existingForm.formState.isSubmitting}
                 onSubmit={existingForm.handleSubmit(onSubmitExisting)}
                 onCancel={handleClose}
@@ -502,7 +533,16 @@ export default function CreateAppointmentDialog({
                   <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border pb-1.5">
                     Appointment Details
                   </h3>
-                  <NewPatientAptFields form={newPatientForm} />
+                  <NewPatientAptFields
+                    form={newPatientForm}
+                    departments={departments}
+                    doctors={doctors}
+                    selectedDeptId={selectedDeptIdNew}
+                    onDeptChange={(id) => {
+                      setSelectedDeptIdNew(id);
+                      newPatientForm.setValue("doctor", "");
+                    }}
+                  />
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
@@ -524,17 +564,29 @@ export default function CreateAppointmentDialog({
 // ── Shared appointment fields for existing-patient form ─────────────────────
 function AppointmentFields({
   form,
+  departments,
+  doctors,
+  selectedDeptId,
+  onDeptChange,
   isSubmitting,
   onSubmit,
   onCancel,
   canSubmit,
 }: {
   form: ReturnType<typeof useForm<ExistingPatientAptForm>>;
+  departments: Department[];
+  doctors: Doctor[];
+  selectedDeptId: string;
+  onDeptChange: (id: string) => void;
   isSubmitting: boolean;
   onSubmit: (e: React.FormEvent) => void;
   onCancel: () => void;
   canSubmit: boolean;
 }) {
+  const filteredDoctors = selectedDeptId
+    ? doctors.filter((d) => d.departmentId === selectedDeptId)
+    : doctors;
+
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="space-y-3">
@@ -584,8 +636,46 @@ function AppointmentFields({
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-xs">Doctor <span className="text-destructive">*</span></Label>
-          <Input placeholder="Dr. Name" {...form.register("doctor")} />
+          <Label className="text-xs">
+            <Building2 className="w-3 h-3 inline mr-1 opacity-60" />
+            Department <span className="text-destructive">*</span>
+          </Label>
+          <Select value={selectedDeptId} onValueChange={onDeptChange}>
+            <SelectTrigger><SelectValue placeholder="Select a department…" /></SelectTrigger>
+            <SelectContent>
+              {departments.map((d) => (
+                <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-xs">
+            <Stethoscope className="w-3 h-3 inline mr-1 opacity-60" />
+            Doctor <span className="text-destructive">*</span>
+          </Label>
+          <Select
+            value={form.watch("doctor")}
+            onValueChange={(v) => form.setValue("doctor", v, { shouldValidate: true })}
+          >
+            <SelectTrigger className={form.formState.errors.doctor ? "border-destructive" : ""}>
+              <SelectValue placeholder="Select a doctor…" />
+            </SelectTrigger>
+            <SelectContent>
+              {filteredDoctors.length === 0 ? (
+                <SelectItem value="_none" disabled>
+                  {selectedDeptId ? "No doctors in this department" : "Select a department first"}
+                </SelectItem>
+              ) : (
+                filteredDoctors.map((d) => (
+                  <SelectItem key={d.id} value={d.name}>
+                    {d.name} — {d.specialty}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
           {form.formState.errors.doctor && (
             <p className="text-xs text-destructive">{form.formState.errors.doctor.message}</p>
           )}
@@ -609,7 +699,23 @@ function AppointmentFields({
 }
 
 // ── Appointment fields within new-patient form ──────────────────────────────
-function NewPatientAptFields({ form }: { form: ReturnType<typeof useForm<NewPatientAptForm>> }) {
+function NewPatientAptFields({
+  form,
+  departments,
+  doctors,
+  selectedDeptId,
+  onDeptChange,
+}: {
+  form: ReturnType<typeof useForm<NewPatientAptForm>>;
+  departments: Department[];
+  doctors: Doctor[];
+  selectedDeptId: string;
+  onDeptChange: (id: string) => void;
+}) {
+  const filteredDoctors = selectedDeptId
+    ? doctors.filter((d) => d.departmentId === selectedDeptId)
+    : doctors;
+
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
@@ -652,8 +758,46 @@ function NewPatientAptFields({ form }: { form: ReturnType<typeof useForm<NewPati
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-xs">Doctor <span className="text-destructive">*</span></Label>
-        <Input placeholder="Dr. Name" {...form.register("doctor")} />
+        <Label className="text-xs">
+          <Building2 className="w-3 h-3 inline mr-1 opacity-60" />
+          Department <span className="text-destructive">*</span>
+        </Label>
+        <Select value={selectedDeptId} onValueChange={onDeptChange}>
+          <SelectTrigger><SelectValue placeholder="Select a department…" /></SelectTrigger>
+          <SelectContent>
+            {departments.map((d) => (
+              <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs">
+          <Stethoscope className="w-3 h-3 inline mr-1 opacity-60" />
+          Doctor <span className="text-destructive">*</span>
+        </Label>
+        <Select
+          value={form.watch("doctor")}
+          onValueChange={(v) => form.setValue("doctor", v, { shouldValidate: true })}
+        >
+          <SelectTrigger className={form.formState.errors.doctor ? "border-destructive" : ""}>
+            <SelectValue placeholder="Select a doctor…" />
+          </SelectTrigger>
+          <SelectContent>
+            {filteredDoctors.length === 0 ? (
+              <SelectItem value="_none" disabled>
+                {selectedDeptId ? "No doctors in this department" : "Select a department first"}
+              </SelectItem>
+            ) : (
+              filteredDoctors.map((d) => (
+                <SelectItem key={d.id} value={d.name}>
+                  {d.name} — {d.specialty}
+                </SelectItem>
+              ))
+            )}
+          </SelectContent>
+        </Select>
         {form.formState.errors.doctor && (
           <p className="text-xs text-destructive">{form.formState.errors.doctor.message}</p>
         )}
