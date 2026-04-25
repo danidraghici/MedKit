@@ -390,6 +390,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
   const [labFile, setLabFile] = useState<File | null>(null);
   const [labFileError, setLabFileError] = useState<string | null>(null);
   const [isLabUploading, setIsLabUploading] = useState(false);
+  const [isLabResultsLoading, setIsLabResultsLoading] = useState(true);
 
   const patient = getPatient(patientId);
   const medicalRecords = getMedicalRecords(patientId);
@@ -413,7 +414,8 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
   }, [patientId]);
 
   useEffect(() => {
-    void fetchLabResults(patientId);
+    setIsLabResultsLoading(true);
+    void fetchLabResults(patientId).finally(() => setIsLabResultsLoading(false));
   }, [patientId]);
 
   const handleApptStatusChange = async (id: string, status: string) => {
@@ -603,6 +605,8 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
       setIsLabModalOpen(false);
       setLabFile(null);
       toast.success("Lab result uploaded successfully.");
+      setIsLabResultsLoading(true);
+      void fetchLabResults(patientId).finally(() => setIsLabResultsLoading(false));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Upload failed.";
       toast.error(msg);
@@ -1032,7 +1036,12 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
               </Button>
             )}
           </div>
-          {labResults.length === 0 ? (
+          {isLabResultsLoading ? (
+            <div className="flex items-center justify-center py-12 text-muted-foreground">
+              <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              <span className="text-sm">Loading lab results…</span>
+            </div>
+          ) : labResults.length === 0 ? (
             <Empty>
               <EmptyHeader>
                 <EmptyTitle>No lab results</EmptyTitle>
