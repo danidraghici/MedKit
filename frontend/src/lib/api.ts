@@ -14,6 +14,21 @@ export function configureApiClient(opts: {
   refreshAccessToken = opts.refresh;
 }
 
+function httpErrorMessage(status: number): string {
+  switch (status) {
+    case 400: return "The request was invalid. Please check your input and try again.";
+    case 401: return "Your session has expired. Please log in again.";
+    case 403: return "You do not have permission to perform this action.";
+    case 404: return "The requested resource was not found.";
+    case 409: return "This action conflicts with existing data. Please refresh and try again.";
+    case 422: return "The submitted data could not be processed. Please check your input.";
+    case 429: return "Too many requests. Please wait a moment and try again.";
+    case 500: return "A server error occurred. Please try again later.";
+    case 503: return "The service is temporarily unavailable. Please try again later.";
+    default:  return "Something went wrong. Please try again.";
+  }
+}
+
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { body, ...rest } = options;
 
@@ -44,7 +59,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
   if (!response.ok) {
     const payload = await response.json().catch(() => ({})) as { error?: string };
-    const message = payload.error ?? `Request failed with status ${response.status}`;
+    const message = payload.error ?? httpErrorMessage(response.status);
     throw Object.assign(new Error(message), { status: response.status, payload });
   }
 

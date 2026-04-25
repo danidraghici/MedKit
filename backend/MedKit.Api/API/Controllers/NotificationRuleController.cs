@@ -27,7 +27,7 @@ public class NotificationRuleController(NotificationRuleService svc) : Controlle
         if (!Guid.TryParse(userIdClaim, out var userId)) return Unauthorized();
 
         var (dto, error) = await svc.CreateAsync(req, userId);
-        if (error is not null) return StatusCode(500, new { error });
+        if (error is not null) return StatusCode(500, new { error = "Unexpected error." });
 
         return Ok(dto);
     }
