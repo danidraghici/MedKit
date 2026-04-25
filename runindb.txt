@@ -1,48 +1,7 @@
--- Drop old indexes
-DROP INDEX IX_lab_results_test_date         ON lab_results;
-DROP INDEX IX_lab_results_patient_test_date ON lab_results;
-DROP INDEX IX_lab_results_status            ON lab_results;
-DROP INDEX IX_lab_results_test_name         ON lab_results;
+ALTER TABLE patients
+    ADD created_by_doctor_id UNIQUEIDENTIFIER NULL
+        CONSTRAINT FK_patients_created_by_doctor_id
+        REFERENCES doctors(id)
+        ON DELETE SET NULL;
 
--- Drop old constraints
-ALTER TABLE lab_results DROP CONSTRAINT FK_lab_results_doctor;
-ALTER TABLE lab_results DROP CONSTRAINT CK_lab_results_status;
-
--- Drop old columns
-ALTER TABLE lab_results DROP COLUMN uploaded_by_doctor_id;
-ALTER TABLE lab_results DROP COLUMN test_name;
-ALTER TABLE lab_results DROP COLUMN test_date;
-ALTER TABLE lab_results DROP COLUMN result;
-ALTER TABLE lab_results DROP COLUMN reference_range;
-ALTER TABLE lab_results DROP COLUMN unit;
-ALTER TABLE lab_results DROP COLUMN status;
-ALTER TABLE lab_results DROP COLUMN notes;
-ALTER TABLE lab_results DROP CONSTRAINT DF__lab_resul__creat__6D0D32F4;
-ALTER TABLE lab_results DROP COLUMN created_at;
-
--- Add new columns (with temporary defaults for NOT NULL, then drop them)
-ALTER TABLE lab_results ADD uploaded_by_user_id UNIQUEIDENTIFIER  NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000';
-ALTER TABLE lab_results ADD original_file_name  NVARCHAR(500)     NOT NULL DEFAULT '';
-ALTER TABLE lab_results ADD blob_name           NVARCHAR(1000)    NOT NULL DEFAULT '';
-ALTER TABLE lab_results ADD content_type        NVARCHAR(100)     NOT NULL DEFAULT '';
-ALTER TABLE lab_results ADD file_size_bytes     BIGINT            NOT NULL DEFAULT 0;
-ALTER TABLE lab_results ADD uploaded_at         DATETIMEOFFSET    NOT NULL DEFAULT SYSDATETIMEOFFSET();
-
-
-----------------------------------
-
--- Drop the auto-generated default constraint blocking the column drop
-ALTER TABLE lab_results DROP CONSTRAINT DF__lab_resul__creat__6D0D32F4;
-ALTER TABLE lab_results DROP COLUMN created_at;
-
--- Add all new columns
-ALTER TABLE lab_results ADD uploaded_by_user_id  UNIQUEIDENTIFIER  NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000';
-ALTER TABLE lab_results ADD original_file_name   NVARCHAR(500)     NOT NULL DEFAULT '';
-ALTER TABLE lab_results ADD blob_name            NVARCHAR(1000)    NOT NULL DEFAULT '';
-ALTER TABLE lab_results ADD content_type         NVARCHAR(100)     NOT NULL DEFAULT '';
-ALTER TABLE lab_results ADD file_size_bytes      BIGINT            NOT NULL DEFAULT 0;
-ALTER TABLE lab_results ADD uploaded_at          DATETIMEOFFSET    NOT NULL DEFAULT SYSDATETIMEOFFSET();
-
--- Add indexes
-CREATE INDEX IX_lab_results_patient_id  ON lab_results (patient_id);
-CREATE INDEX IX_lab_results_uploaded_at ON lab_results (uploaded_at);
+--------------------------------------------------

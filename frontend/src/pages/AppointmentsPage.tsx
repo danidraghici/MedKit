@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyContent } from "@/components/ui/empty";
 import { KPI } from "@/components/ui/kpi";
+import { useAppStore } from "@/lib/store";
 import { api } from "@/lib/api";
 import { formatDate, getInitials } from "@/lib/utils";
 import type { Appointment } from "@/lib/types";
@@ -73,6 +74,7 @@ const statusConfig: Record<
 };
 
 export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) {
+  const user = useAppStore((s) => s.user);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [stats, setStats] = useState<AppointmentStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);

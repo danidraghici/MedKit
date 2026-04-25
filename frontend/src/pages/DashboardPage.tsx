@@ -171,6 +171,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
   const deleteDoctor = useAppStore((s) => s.deleteDoctor);
   const user = useAppStore((s) => s.user);
   const fetchPatients = useAppStore((s) => s.fetchPatients);
+  const setAppointments = useAppStore((s) => s.setAppointments);
 
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [staffList, setStaffList] = useState<DoctorSummary[] | null>(null);
@@ -187,14 +188,20 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
         .then((data) => { setStaffList(data); setStaffLoading(false); })
         .catch((err) => { console.error("GET /api/dashboard/staff failed:", err); setStaffLoading(false); });
     }
+    if (user?.role === "specialist_doctor") {
+      void fetchPatients();
+    }
     if (user?.role !== "lab_doctor" && user?.role != null) {
       setApptLoading(true);
       void api.get<Appointment[]>("/api/appointments")
-        .then(setDashboardAppts)
+        .then((data) => {
+          setDashboardAppts(data);
+          setAppointments(data);
+        })
         .catch(console.error)
         .finally(() => setApptLoading(false));
     }
-  }, [user?.role, fetchPatients]);
+  }, [user?.role, fetchPatients, setAppointments]);
 
   const isAdmin = user?.role === "admin";
   const isLabDoctor = user?.role === "lab_doctor";

@@ -70,6 +70,7 @@ export type FollowUpType = "Office visit" | "Phone call" | "Lab work" | "Imaging
 export interface MedicalRecord {
   id: string;
   patientId: string;
+  doctorId: string;
   date: string;                        // ISO date string
   doctor: string;
   visitType: "In-person" | "Telemedicine" | "Emergency" | "Follow-up" | "Procedure";
@@ -96,7 +97,7 @@ export interface MedicalRecord {
   followUpType?: FollowUpType;
   referral?: string;                   // Referral to specialist
   patientEducation?: string;           // Education provided to patient
-  attachments: Attachment[];
+  attachments?: Attachment[];
   createdAt: string;
 }
 

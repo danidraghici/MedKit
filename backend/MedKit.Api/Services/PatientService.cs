@@ -31,9 +31,36 @@ public class PatientService(AppDbContext ctx)
             .ToListAsync();
     }
 
+    public async Task<List<PatientDto>> GetByDoctorAsync(Guid doctorId)
+    {
+        return await ctx.Patients
+            .Where(p =>
+                ctx.Appointments.Any(a => a.DoctorId == doctorId && a.PatientId == p.Id) ||
+                ctx.MedicalRecords.Any(mr => mr.DoctorId == doctorId && mr.PatientId == p.Id) ||
+                p.CreatedByDoctorId == doctorId)
+            .OrderBy(p => p.FullName)
+            .Select(p => new PatientDto
+            {
+                Id                 = p.Id.ToString(),
+                FullName           = p.FullName,
+                DateOfBirth        = p.DateOfBirth.ToString("yyyy-MM-dd"),
+                Sex                = p.Sex,
+                NationalId         = p.NationalId,
+                Phone              = p.Phone,
+                Email              = p.Email,
+                BloodType          = p.BloodType,
+                Allergies          = p.Allergies ?? "",
+                CurrentMedications = p.CurrentMedications ?? "",
+                CreatedAt          = p.CreatedAt.ToString("O"),
+                UpdatedAt          = p.UpdatedAt.ToString("O"),
+            })
+            .ToListAsync();
+    }
+
     public async Task<(PatientDto? Dto, string? Error)> CreateAsync(
         CreatePatientRequest request,
-        Guid adminUserId)
+        Guid actingUserId,
+        Guid? createdByDoctorId = null)
     {
         if (await ctx.Users.AnyAsync(u => u.Email == request.Email.ToLowerInvariant()))
             return (null, "email_taken");
@@ -46,18 +73,19 @@ public class PatientService(AppDbContext ctx)
 
         var patient = new PatientEntity
         {
-            Id                 = patientId,
-            FullName           = request.FullName,
-            DateOfBirth        = DateOnly.Parse(request.DateOfBirth),
-            Sex                = request.Sex,
-            NationalId         = request.NationalId,
-            Phone              = request.Phone,
-            Email              = request.Email,
-            BloodType          = request.BloodType,
-            Allergies          = string.IsNullOrEmpty(request.Allergies) ? null : request.Allergies,
-            CurrentMedications = string.IsNullOrEmpty(request.CurrentMedications) ? null : request.CurrentMedications,
-            CreatedAt          = now,
-            UpdatedAt          = now,
+            Id                   = patientId,
+            FullName             = request.FullName,
+            DateOfBirth          = DateOnly.Parse(request.DateOfBirth),
+            Sex                  = request.Sex,
+            NationalId           = request.NationalId,
+            Phone                = request.Phone,
+            Email                = request.Email,
+            BloodType            = request.BloodType,
+            Allergies            = string.IsNullOrEmpty(request.Allergies) ? null : request.Allergies,
+            CurrentMedications   = string.IsNullOrEmpty(request.CurrentMedications) ? null : request.CurrentMedications,
+            CreatedByDoctorId    = createdByDoctorId,
+            CreatedAt            = now,
+            UpdatedAt            = now,
         };
 
         var userAccount = new UserEntity
@@ -74,7 +102,7 @@ public class PatientService(AppDbContext ctx)
             UpdatedAt          = now,
         };
 
-        await SessionContextHelper.SetAndExecuteAsync(ctx, adminUserId, async () =>
+        await SessionContextHelper.SetAndExecuteAsync(ctx, actingUserId, async () =>
         {
             ctx.Patients.Add(patient);
             ctx.Users.Add(userAccount);

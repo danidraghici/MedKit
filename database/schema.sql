@@ -96,13 +96,16 @@ CREATE TABLE patients (
     blood_type          NVARCHAR(10)      NOT NULL
         CONSTRAINT CK_patients_blood_type
             CHECK (blood_type IN ('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Unknown')),
-    allergies           NVARCHAR(MAX)     NULL,
-    current_medications NVARCHAR(MAX)     NULL,
-    created_at          DATETIMEOFFSET(7) NOT NULL DEFAULT SYSDATETIMEOFFSET(),
-    updated_at          DATETIMEOFFSET(7) NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+    allergies             NVARCHAR(MAX)     NULL,
+    current_medications   NVARCHAR(MAX)     NULL,
+    created_by_doctor_id  UNIQUEIDENTIFIER  NULL,
+    created_at            DATETIMEOFFSET(7) NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+    updated_at            DATETIMEOFFSET(7) NOT NULL DEFAULT SYSDATETIMEOFFSET(),
     CONSTRAINT PK_patients              PRIMARY KEY (id),
     CONSTRAINT UQ_patients_national_id  UNIQUE (national_id),
-    CONSTRAINT UQ_patients_email        UNIQUE (email)
+    CONSTRAINT UQ_patients_email        UNIQUE (email),
+    CONSTRAINT FK_patients_created_by_doctor FOREIGN KEY (created_by_doctor_id)
+        REFERENCES doctors(id) ON DELETE SET NULL
 );
 
 CREATE INDEX IX_patients_full_name ON patients (full_name);

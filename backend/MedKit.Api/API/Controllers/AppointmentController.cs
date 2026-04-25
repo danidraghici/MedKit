@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using MedKit.Api.API.DTOs;
+using MedKit.Api.Models;
 using MedKit.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,26 +10,48 @@ namespace MedKit.Api.API.Controllers;
 [ApiController]
 [Route("api/appointments")]
 [Authorize(Roles = "admin,specialist_doctor")]
-public class AppointmentController(AppointmentService appointmentService) : ControllerBase
+public class AppointmentController(AppointmentService appointmentService, AppDbContext ctx) : ControllerBase
 {
+    private async Task<(Guid? DoctorId, IActionResult? Error)> ResolveCallerDoctorIdAsync()
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(userIdClaim, out var userId)) return (null, Unauthorized());
+
+        var role = User.FindFirstValue(ClaimTypes.Role);
+        if (role == "admin") return (null, null);
+
+        var user = await ctx.Users.FindAsync(userId);
+        if (user?.DoctorId is null) return (null, Forbid());
+        return (user.DoctorId, null);
+    }
+
     [HttpGet("stats")]
     public async Task<IActionResult> GetStats()
     {
-        var stats = await appointmentService.GetStatsAsync();
+        var (doctorId, error) = await ResolveCallerDoctorIdAsync();
+        if (error is not null) return error;
+
+        var stats = await appointmentService.GetStatsAsync(doctorId);
         return Ok(stats);
     }
 
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var appointments = await appointmentService.GetAllAsync();
+        var (doctorId, error) = await ResolveCallerDoctorIdAsync();
+        if (error is not null) return error;
+
+        var appointments = await appointmentService.GetAllAsync(doctorId);
         return Ok(appointments);
     }
 
     [HttpGet("patient/{patientId:guid}")]
     public async Task<IActionResult> GetByPatient(Guid patientId)
     {
-        var list = await appointmentService.GetByPatientAsync(patientId);
+        var (doctorId, error) = await ResolveCallerDoctorIdAsync();
+        if (error is not null) return error;
+
+        var list = await appointmentService.GetByPatientAsync(patientId, doctorId);
         return Ok(list);
     }
 

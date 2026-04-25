@@ -17,6 +17,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<NotificationRuleEntity> NotificationRules => Set<NotificationRuleEntity>();
     public DbSet<NoteEntity> Notes => Set<NoteEntity>();
     public DbSet<LabResultEntity> LabResults => Set<LabResultEntity>();
+    public DbSet<VitalSignEntity> VitalSigns => Set<VitalSignEntity>();
+    public DbSet<PrescribedDrugEntity> PrescribedDrugs => Set<PrescribedDrugEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -61,6 +63,26 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<MedicalRecordEntity>(e =>
         {
             // medical_records has audit trigger — OUTPUT clause is forbidden on triggered tables
+            e.ToTable(t => t.UseSqlOutputClause(false));
+
+            e.HasOne(r => r.VitalSign)
+             .WithOne()
+             .HasForeignKey<VitalSignEntity>(v => v.MedicalRecordId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasMany(r => r.PrescribedDrugs)
+             .WithOne()
+             .HasForeignKey(d => d.MedicalRecordId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<VitalSignEntity>(e =>
+        {
+            e.ToTable(t => t.UseSqlOutputClause(false));
+        });
+
+        modelBuilder.Entity<PrescribedDrugEntity>(e =>
+        {
             e.ToTable(t => t.UseSqlOutputClause(false));
         });
 

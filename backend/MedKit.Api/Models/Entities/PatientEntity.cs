@@ -41,4 +41,7 @@ public class PatientEntity
 
     [Column("updated_at")]
     public DateTimeOffset UpdatedAt { get; set; }
+
+    [Column("created_by_doctor_id")]
+    public Guid? CreatedByDoctorId { get; set; }
 }

@@ -28,10 +28,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { IcdSearchField } from "@/components/IcdSearchField";
+import { IcdMultiSearchField } from "@/components/IcdMultiSearchField";
 import { useAppStore } from "@/lib/store";
 import { api } from "@/lib/api";
 import { formatDate, formatDateTime, calculateAge, getInitials, formatFileSize } from "@/lib/utils";
-import type { Attachment, PrescribedDrug, RouteOfAdministration, DrugFrequency, UrgencyLevel, FollowUpType, Appointment } from "@/lib/types";
+import type { Attachment, MedicalRecord, PrescribedDrug, RouteOfAdministration, DrugFrequency, UrgencyLevel, FollowUpType, Appointment } from "@/lib/types";
 
 // ─── Zod schemas ──────────────────────────────────────────────────────────────
 
@@ -204,7 +206,7 @@ function DrugCard({ drug }: { drug: PrescribedDrug }) {
 
 // ─── VitalSignsGrid ───────────────────────────────────────────────────────────
 
-function VitalSignsGrid({ vs }: { vs: NonNullable<import("@/lib/types").MedicalRecord["vitalSigns"]> }) {
+function VitalSignsGrid({ vs }: { vs: NonNullable<MedicalRecord["vitalSigns"]> }) {
   const items = [
     { icon: <Activity className="w-3.5 h-3.5" />, label: "BP", value: vs.bloodPressure, unit: "mmHg" },
     { icon: <Heart className="w-3.5 h-3.5" />, label: "HR", value: vs.heartRate, unit: "" },
@@ -367,6 +369,8 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
   const getNotes = useAppStore((s) => s.getNotes);
   const fetchNotes = useAppStore((s) => s.fetchNotes);
   const addMedicalRecord = useAppStore((s) => s.addMedicalRecord);
+  const updateMedicalRecord = useAppStore((s) => s.updateMedicalRecord);
+  const fetchMedicalRecords = useAppStore((s) => s.fetchMedicalRecords);
   const addNote = useAppStore((s) => s.addNote);
   const updateNote = useAppStore((s) => s.updateNote);
   const deleteNote = useAppStore((s) => s.deleteNote);
@@ -391,6 +395,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
   const [labFileError, setLabFileError] = useState<string | null>(null);
   const [isLabUploading, setIsLabUploading] = useState(false);
   const [isLabResultsLoading, setIsLabResultsLoading] = useState(true);
+  const [isMedicalRecordsLoading, setIsMedicalRecordsLoading] = useState(true);
 
   const patient = getPatient(patientId);
   const medicalRecords = getMedicalRecords(patientId);
@@ -403,9 +408,18 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
   useEffect(() => {
     setPatientApptLoading(true);
     void api.get<Appointment[]>(`/api/appointments/patient/${patientId}`)
-      .then(setPatientAppts)
+      .then((apts) => {
+        setPatientAppts(apts);
+      })
       .catch(console.error)
       .finally(() => setPatientApptLoading(false));
+  }, [patientId, user?.role, user?.doctorId]);
+
+  useEffect(() => {
+    setIsMedicalRecordsLoading(true);
+    fetchMedicalRecords(patientId)
+      .catch((err: Error) => toast.error(err.message ?? "Failed to load medical records."))
+      .finally(() => setIsMedicalRecordsLoading(false));
   }, [patientId]);
 
   useEffect(() => {
@@ -439,8 +453,10 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [editingRecord, setEditingRecord] = useState<MedicalRecord | null>(null);
+
   const {
-    register, handleSubmit, reset, setValue, getValues,
+    register, handleSubmit, reset, setValue, watch, getValues,
     control,
     formState: { errors, isSubmitting },
   } = useForm<MedicalRecordFormData>({
@@ -503,49 +519,107 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
 
   const closeModal = () => {
     setIsRecordModalOpen(false);
+    setEditingRecord(null);
     reset({ date: new Date().toISOString().split("T")[0], visitType: "In-person", urgency: "Routine", prescribedDrugs: [] });
     setAttachments([]);
   };
 
-  const onAddRecord = async (data: MedicalRecordFormData) => {
-    await new Promise((r) => setTimeout(r, 400));
-    addMedicalRecord({
-      patientId,
-      date: data.date,
-      doctor: data.doctor,
-      visitType: data.visitType,
-      chiefComplaint: data.chiefComplaint,
-      diagnosis: data.diagnosis,
-      icdCode: data.icdCode,
-      secondaryDiagnoses: data.secondaryDiagnoses,
-      symptoms: data.symptoms,
-      physicalExam: data.physicalExam,
-      vitalSigns: {
-        bloodPressure: data.bp,
-        heartRate: data.hr,
-        temperature: data.temp,
-        respiratoryRate: data.rr,
-        oxygenSaturation: data.spo2,
-        weight: data.weight,
-        height: data.height,
-      },
-      treatment: data.treatment,
-      prescribedDrugs: (data.prescribedDrugs ?? []).map((d, i) => ({
-        ...d,
-        id: `d-${Date.now()}-${i}`,
-        route: d.route as RouteOfAdministration,
-        frequency: d.frequency as DrugFrequency,
-        prescribedBy: user?.name ?? data.doctor,
+  const buildRecordPayload = (data: MedicalRecordFormData) => ({
+    visitType: data.visitType,
+    chiefComplaint: data.chiefComplaint,
+    diagnosis: data.diagnosis,
+    icdCode: data.icdCode,
+    secondaryDiagnoses: data.secondaryDiagnoses,
+    symptoms: data.symptoms,
+    physicalExam: data.physicalExam,
+    vitalSigns: {
+      bloodPressure: data.bp,
+      heartRate: data.hr,
+      temperature: data.temp,
+      respiratoryRate: data.rr,
+      oxygenSaturation: data.spo2,
+      weight: data.weight,
+      height: data.height,
+    },
+    treatment: data.treatment,
+    prescribedDrugs: (data.prescribedDrugs ?? []).map((d, i) => ({
+      ...d,
+      id: `d-${Date.now()}-${i}`,
+      route: d.route as RouteOfAdministration,
+      frequency: d.frequency as DrugFrequency,
+      prescribedBy: user?.name ?? data.doctor,
+    })),
+    procedures: data.procedures,
+    urgency: data.urgency,
+    followUpIn: data.followUpIn,
+    followUpType: data.followUpType as FollowUpType | undefined,
+    referral: data.referral,
+    patientEducation: data.patientEducation,
+  });
+
+  const onSaveRecord = async (data: MedicalRecordFormData) => {
+    try {
+      if (editingRecord) {
+        await updateMedicalRecord(editingRecord.id, buildRecordPayload(data));
+      } else {
+        await addMedicalRecord({
+          patientId,
+          date: data.date,
+          doctor: data.doctor,
+          doctorId: user?.doctorId ?? "",
+          ...buildRecordPayload(data),
+          attachments,
+        });
+      }
+      closeModal();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to save medical record.";
+      toast.error(msg);
+    }
+  };
+
+  const openEditRecord = (record: MedicalRecord) => {
+    reset({
+      date: record.date,
+      doctor: record.doctor,
+      visitType: record.visitType,
+      urgency: record.urgency,
+      chiefComplaint: record.chiefComplaint,
+      diagnosis: record.diagnosis,
+      icdCode: record.icdCode ?? "",
+      secondaryDiagnoses: record.secondaryDiagnoses ?? "",
+      symptoms: record.symptoms,
+      physicalExam: record.physicalExam ?? "",
+      bp: record.vitalSigns?.bloodPressure ?? "",
+      hr: record.vitalSigns?.heartRate ?? "",
+      temp: record.vitalSigns?.temperature ?? "",
+      rr: record.vitalSigns?.respiratoryRate ?? "",
+      spo2: record.vitalSigns?.oxygenSaturation ?? "",
+      weight: record.vitalSigns?.weight ?? "",
+      height: record.vitalSigns?.height ?? "",
+      treatment: record.treatment,
+      procedures: record.procedures ?? "",
+      followUpIn: record.followUpIn ?? "",
+      followUpType: record.followUpType ?? "",
+      referral: record.referral ?? "",
+      patientEducation: record.patientEducation ?? "",
+      prescribedDrugs: (record.prescribedDrugs ?? []).map((d) => ({
+        name: d.name,
+        genericName: d.genericName ?? "",
+        dose: d.dose,
+        route: d.route,
+        frequency: d.frequency,
+        duration: d.duration,
+        quantity: d.quantity ?? "",
+        refills: d.refills ?? "",
+        instructions: d.instructions ?? "",
+        indication: d.indication ?? "",
+        startDate: d.startDate ?? "",
+        endDate: d.endDate ?? "",
       })),
-      procedures: data.procedures,
-      urgency: data.urgency,
-      followUpIn: data.followUpIn,
-      followUpType: data.followUpType as FollowUpType | undefined,
-      referral: data.referral,
-      patientEducation: data.patientEducation,
-      attachments,
     });
-    closeModal();
+    setEditingRecord(record);
+    setIsRecordModalOpen(true);
   };
 
   const openAddNoteModal = () => {
@@ -582,6 +656,9 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
 
   const canManageNote = (authorId: string) =>
     isAdmin || authorId === user?.doctorId;
+
+  const canEditRecord = (record: MedicalRecord) =>
+    (isSpecialist && user?.doctorId === record.doctorId) || isAdmin;
 
   const ALLOWED_LAB_TYPES = ["application/pdf", "image/jpeg", "image/png"];
   const MAX_LAB_SIZE = 10 * 1024 * 1024;
@@ -671,7 +748,8 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                     onClick={() => onNavigate(`edit-patient-${patientId}`)}
                     className="gap-1.5"
                   >
-                    <Pencil className="w-3.5 h-3.5" />Edit Patient
+                    <Pencil className="w-3.5 h-3.5" />
+                    {isSpecialist ? "Edit Medical Info" : "Edit Patient"}
                   </Button>
                 )}
                 {canScheduleAppointments && (
@@ -841,7 +919,12 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
             )}
           </div>
 
-          {medicalRecords.length === 0 ? (
+          {isMedicalRecordsLoading ? (
+            <div className="flex items-center justify-center py-12 text-muted-foreground">
+              <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              <span className="text-sm">Loading medical records…</span>
+            </div>
+          ) : medicalRecords.length === 0 ? (
             <Empty>
               <EmptyHeader>
                 <EmptyTitle>No medical records yet</EmptyTitle>
@@ -890,9 +973,21 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                                 )}
                               </div>
                             </div>
-                            <span className={`text-xs px-2.5 py-1 rounded-full font-semibold border ${urgStyle}`}>
-                              {urg}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className={`text-xs px-2.5 py-1 rounded-full font-semibold border ${urgStyle}`}>
+                                {urg}
+                              </span>
+                              {canEditRecord(record) && (
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="w-7 h-7 text-muted-foreground hover:text-foreground"
+                                  onClick={() => openEditRecord(record)}
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </Button>
+                              )}
+                            </div>
                           </div>
                           {record.chiefComplaint && (
                             <p className="text-sm mt-2 text-muted-foreground">
@@ -911,8 +1006,14 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                           {/* Secondary Diagnoses */}
                           {record.secondaryDiagnoses && (
                             <div>
-                              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Secondary diagnoses</p>
-                              <p className="text-sm">{record.secondaryDiagnoses}</p>
+                              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Diagnostice secundare</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {record.secondaryDiagnoses.split("; ").filter(Boolean).map((item) => (
+                                  <Badge key={item} variant="secondary" className="text-xs font-normal">
+                                    {item}
+                                  </Badge>
+                                ))}
+                              </div>
                             </div>
                           )}
 
@@ -1305,11 +1406,11 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
           <DialogHeader className="px-8 pt-6 pb-4 border-b border-border shrink-0">
             <DialogTitle className="flex items-center gap-2 text-lg">
               <FileText className="w-5 h-5 text-primary" />
-              New Medical Record
+              {editingRecord ? "Edit Medical Record" : "New Medical Record"}
             </DialogTitle>
           </DialogHeader>
 
-          <form id="record-form" onSubmit={handleSubmit(onAddRecord)} className="flex-1 overflow-y-auto">
+          <form id="record-form" onSubmit={handleSubmit(onSaveRecord)} className="flex-1 overflow-y-auto">
             <div className="px-8 py-6">
             {/* ═══ TWO-COLUMN LAYOUT ═══ */}
             <div className="grid grid-cols-2 gap-x-8">
@@ -1327,7 +1428,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                       <Input type="date" {...register("date")} />
                     </FormField>
                     <FormField label="Urgency" required error={errors.urgency?.message}>
-                      <Select defaultValue="Routine" onValueChange={(v) => setValue("urgency", v as UrgencyLevel)}>
+                      <Select value={watch("urgency") ?? "Routine"} onValueChange={(v) => setValue("urgency", v as UrgencyLevel)}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {URGENCY_LEVELS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
@@ -1337,7 +1438,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <FormField label="Visit type" required error={errors.visitType?.message}>
-                      <Select defaultValue="In-person" onValueChange={(v) => setValue("visitType", v as MedicalRecordFormData["visitType"])}>
+                      <Select value={watch("visitType") ?? "In-person"} onValueChange={(v) => setValue("visitType", v as MedicalRecordFormData["visitType"])}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {VISIT_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
@@ -1353,23 +1454,28 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                 {/* Section 2: Diagnosis */}
                 <div className="space-y-3">
                   <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border pb-1.5 flex items-center gap-1.5">
-                    <Stethoscope className="w-3.5 h-3.5" />Diagnosis
+                    <Stethoscope className="w-3.5 h-3.5" />Diagnostic
                   </h3>
-                  <FormField label="Chief complaint" required error={errors.chiefComplaint?.message}>
-                    <Input {...register("chiefComplaint")} placeholder="Primary reason for visit" />
+                  <FormField label="Acuza principala" required error={errors.chiefComplaint?.message}>
+                    <Input {...register("chiefComplaint")} placeholder="Motivul principal al consultatiei" />
                   </FormField>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="col-span-2">
-                      <FormField label="Primary diagnosis" required error={errors.diagnosis?.message}>
-                        <Input {...register("diagnosis")} placeholder="e.g. Nephrolithiasis (Kidney Stones)" />
-                      </FormField>
-                    </div>
-                    <FormField label="ICD-10 code" error={errors.icdCode?.message}>
-                      <Input {...register("icdCode")} placeholder="e.g. N20.1" className="font-mono" />
-                    </FormField>
-                  </div>
-                  <FormField label="Secondary diagnoses" error={errors.secondaryDiagnoses?.message}>
-                    <Input {...register("secondaryDiagnoses")} placeholder="e.g. Dehydration, Hypercalciuria (comma-separated)" />
+                  <FormField label="Diagnostic primar ICD-10" required error={errors.diagnosis?.message}>
+                    <IcdSearchField
+                      codeValue={watch("icdCode") ?? ""}
+                      descriptionValue={watch("diagnosis") ?? ""}
+                      onChange={(code, description) => {
+                        setValue("icdCode", code, { shouldValidate: true });
+                        setValue("diagnosis", description, { shouldValidate: true });
+                      }}
+                      error={errors.diagnosis?.message}
+                    />
+                  </FormField>
+                  <FormField label="Diagnostice secundare" error={errors.secondaryDiagnoses?.message}>
+                    <IcdMultiSearchField
+                      value={watch("secondaryDiagnoses") ?? ""}
+                      onChange={(v) => setValue("secondaryDiagnoses", v, { shouldValidate: true })}
+                      error={errors.secondaryDiagnoses?.message}
+                    />
                   </FormField>
                 </div>
 
@@ -1432,7 +1538,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                       <Input {...register("followUpIn")} placeholder="e.g. 1 week, 3 months" />
                     </FormField>
                     <FormField label="Follow-up type" error={errors.followUpType?.message}>
-                      <Select onValueChange={(v) => setValue("followUpType", v)}>
+                      <Select value={watch("followUpType") ?? ""} onValueChange={(v) => setValue("followUpType", v)}>
                         <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
                         <SelectContent>
                           {FOLLOW_UP_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
@@ -1556,7 +1662,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
             <div className="flex items-center gap-2 shrink-0">
               <Button type="button" variant="secondary" onClick={closeModal}>Cancel</Button>
               <Button type="submit" form="record-form" disabled={isSubmitting} className="gap-2">
-                {isSubmitting ? "Saving..." : "Save record"}
+                {isSubmitting ? "Saving..." : editingRecord ? "Save changes" : "Save record"}
               </Button>
             </div>
           </div>

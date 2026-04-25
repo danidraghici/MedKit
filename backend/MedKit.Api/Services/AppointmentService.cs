@@ -8,7 +8,7 @@ namespace MedKit.Api.Services;
 
 public class AppointmentService(AppDbContext db)
 {
-    public async Task<AppointmentStatsDto> GetStatsAsync()
+    public async Task<AppointmentStatsDto> GetStatsAsync(Guid? doctorId = null)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var thirtyDaysAgo = today.AddDays(-30);
@@ -16,26 +16,31 @@ public class AppointmentService(AppDbContext db)
         var nextWeek = today.AddDays(7);
 
         var totalNext30Days = await db.Appointments
-            .CountAsync(a => a.AppointmentDate >= today && a.AppointmentDate <= thirtyDaysFromNow);
+            .CountAsync(a => a.AppointmentDate >= today && a.AppointmentDate <= thirtyDaysFromNow
+                          && (doctorId == null || a.DoctorId == doctorId));
 
         var completedLast30Days = await db.Appointments
-            .CountAsync(a => a.Status == "Completed" && a.AppointmentDate >= thirtyDaysAgo);
+            .CountAsync(a => a.Status == "Completed" && a.AppointmentDate >= thirtyDaysAgo
+                          && (doctorId == null || a.DoctorId == doctorId));
 
         var todayCount = await db.Appointments
-            .CountAsync(a => a.AppointmentDate == today && a.Status == "Scheduled");
+            .CountAsync(a => a.AppointmentDate == today && a.Status == "Scheduled"
+                          && (doctorId == null || a.DoctorId == doctorId));
 
         var nextWeekCount = await db.Appointments
-            .CountAsync(a => a.AppointmentDate >= today && a.AppointmentDate <= nextWeek && a.Status == "Scheduled");
+            .CountAsync(a => a.AppointmentDate >= today && a.AppointmentDate <= nextWeek && a.Status == "Scheduled"
+                          && (doctorId == null || a.DoctorId == doctorId));
 
         return new AppointmentStatsDto(totalNext30Days, completedLast30Days, todayCount, nextWeekCount);
     }
 
-    public async Task<List<AppointmentDto>> GetAllAsync()
+    public async Task<List<AppointmentDto>> GetAllAsync(Guid? doctorId = null)
     {
         return await (
             from a in db.Appointments
             join p in db.Patients on a.PatientId equals p.Id
             join d in db.Doctors  on a.DoctorId  equals d.Id
+            where doctorId == null || a.DoctorId == doctorId
             orderby a.AppointmentDate descending, a.AppointmentTime
             select new AppointmentDto
             {
@@ -53,7 +58,7 @@ public class AppointmentService(AppDbContext db)
         ).ToListAsync();
     }
 
-    public async Task<List<AppointmentDto>> GetByPatientAsync(Guid patientId)
+    public async Task<List<AppointmentDto>> GetByPatientAsync(Guid patientId, Guid? doctorId = null)
     {
         var oneYearAgo = DateOnly.FromDateTime(DateTime.UtcNow.AddYears(-1));
         return await (
@@ -61,6 +66,7 @@ public class AppointmentService(AppDbContext db)
             join p in db.Patients on a.PatientId equals p.Id
             join d in db.Doctors  on a.DoctorId  equals d.Id
             where a.PatientId == patientId && a.AppointmentDate >= oneYearAgo
+               && (doctorId == null || a.DoctorId == doctorId)
             orderby a.AppointmentDate descending, a.AppointmentTime
             select new AppointmentDto
             {

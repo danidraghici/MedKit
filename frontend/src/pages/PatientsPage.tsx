@@ -46,7 +46,7 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
   const fetchPatients = useAppStore((s) => s.fetchPatients);
 
   useEffect(() => {
-    if (user?.role === "admin") {
+    if (user?.role === "admin" || user?.role === "specialist_doctor" || user?.role === "lab_doctor") {
       void fetchPatients();
     }
   }, [user?.role, fetchPatients]);

@@ -7,7 +7,6 @@ import type {
 import { api, configureApiClient } from "./api";
 import {
   MOCK_PATIENTS,
-  MOCK_MEDICAL_RECORDS,
   MOCK_APPOINTMENTS,
   MOCK_APPOINTMENT_REQUESTS,
   MOCK_LAB_AI_INSIGHTS,
@@ -52,7 +51,9 @@ interface AppState {
 
   // Medical Records
   medicalRecords: MedicalRecord[];
-  addMedicalRecord: (record: Omit<MedicalRecord, "id" | "createdAt">) => MedicalRecord;
+  fetchMedicalRecords: (patientId: string) => Promise<void>;
+  addMedicalRecord: (record: Omit<MedicalRecord, "id" | "createdAt">) => Promise<MedicalRecord>;
+  updateMedicalRecord: (id: string, data: Omit<MedicalRecord, "id" | "patientId" | "doctorId" | "doctor" | "date" | "createdAt" | "attachments">) => Promise<MedicalRecord>;
   getMedicalRecords: (patientId: string) => MedicalRecord[];
 
   // Lab Results
@@ -72,6 +73,7 @@ interface AppState {
 
   // Appointments
   appointments: Appointment[];
+  setAppointments: (apts: Appointment[]) => void;
   addAppointment: (apt: Omit<Appointment, "id">) => Appointment;
   updateAppointmentStatus: (id: string, status: Appointment["status"]) => void;
   getPatientAppointments: (patientId: string) => Appointment[];
@@ -218,7 +220,7 @@ export const useAppStore = create<AppState>()(
 
       addPatient: async (patientData) => {
         const { user } = get();
-        if (user?.role === "admin") {
+        if (user?.role === "admin" || user?.role === "specialist_doctor") {
           const created = await api.post<Patient>("/api/patients", patientData);
           set((state) => ({ patients: [...state.patients, created] }));
           return created;
@@ -251,7 +253,7 @@ export const useAppStore = create<AppState>()(
 
       fetchPatients: async () => {
         try {
-          const data = await api.get<Patient[]>("/api/patients");
+          const data = await api.get<Patient[]>("/api/patients/my");
           set({ patients: data });
         } catch {
           // Silently fall back — local mock/persisted data remains in place
@@ -259,21 +261,117 @@ export const useAppStore = create<AppState>()(
       },
 
       // Medical Records
-      medicalRecords: MOCK_MEDICAL_RECORDS,
+      medicalRecords: [],
 
-      addMedicalRecord: (recordData) => {
-        const newRecord: MedicalRecord = {
-          ...recordData,
-          id: generateId("mr"),
-          createdAt: new Date().toISOString(),
+      fetchMedicalRecords: async (patientId) => {
+        const data = await api.get<MedicalRecord[]>(`/api/medical-records/patient/${patientId}`);
+        const normalizedId = patientId.toLowerCase();
+        set((state) => ({
+          medicalRecords: [
+            ...state.medicalRecords.filter((r) => r.patientId.toLowerCase() !== normalizedId),
+            ...data,
+          ],
+        }));
+      },
+
+      addMedicalRecord: async (recordData) => {
+        const payload = {
+          patientId: recordData.patientId,
+          date: recordData.date,
+          visitType: recordData.visitType,
+          chiefComplaint: recordData.chiefComplaint,
+          diagnosis: recordData.diagnosis,
+          icdCode: recordData.icdCode,
+          secondaryDiagnoses: recordData.secondaryDiagnoses,
+          symptoms: recordData.symptoms,
+          physicalExam: recordData.physicalExam,
+          treatment: recordData.treatment,
+          procedures: recordData.procedures,
+          urgency: recordData.urgency,
+          followUpIn: recordData.followUpIn,
+          followUpType: recordData.followUpType,
+          referral: recordData.referral,
+          patientEducation: recordData.patientEducation,
+          vitalSigns: recordData.vitalSigns ? {
+            bloodPressure: recordData.vitalSigns.bloodPressure,
+            heartRate: recordData.vitalSigns.heartRate,
+            temperature: recordData.vitalSigns.temperature,
+            respiratoryRate: recordData.vitalSigns.respiratoryRate,
+            oxygenSaturation: recordData.vitalSigns.oxygenSaturation,
+            weight: recordData.vitalSigns.weight,
+            height: recordData.vitalSigns.height,
+          } : undefined,
+          prescribedDrugs: (recordData.prescribedDrugs ?? []).map((d) => ({
+            name: d.name,
+            genericName: d.genericName,
+            dose: d.dose,
+            route: d.route,
+            frequency: d.frequency,
+            duration: d.duration,
+            quantity: d.quantity,
+            refills: d.refills,
+            instructions: d.instructions,
+            indication: d.indication,
+            startDate: d.startDate,
+            endDate: d.endDate,
+          })),
         };
-        set((state) => ({ medicalRecords: [...state.medicalRecords, newRecord] }));
-        return newRecord;
+        const data = await api.post<MedicalRecord>("/api/medical-records", payload);
+        set((state) => ({ medicalRecords: [...state.medicalRecords, data] }));
+        return data;
+      },
+
+      updateMedicalRecord: async (id, recordData) => {
+        const payload = {
+          visitType: recordData.visitType,
+          chiefComplaint: recordData.chiefComplaint,
+          diagnosis: recordData.diagnosis,
+          icdCode: recordData.icdCode,
+          secondaryDiagnoses: recordData.secondaryDiagnoses,
+          symptoms: recordData.symptoms,
+          physicalExam: recordData.physicalExam,
+          treatment: recordData.treatment,
+          procedures: recordData.procedures,
+          urgency: recordData.urgency,
+          followUpIn: recordData.followUpIn,
+          followUpType: recordData.followUpType,
+          referral: recordData.referral,
+          patientEducation: recordData.patientEducation,
+          vitalSigns: recordData.vitalSigns ? {
+            bloodPressure: recordData.vitalSigns.bloodPressure,
+            heartRate: recordData.vitalSigns.heartRate,
+            temperature: recordData.vitalSigns.temperature,
+            respiratoryRate: recordData.vitalSigns.respiratoryRate,
+            oxygenSaturation: recordData.vitalSigns.oxygenSaturation,
+            weight: recordData.vitalSigns.weight,
+            height: recordData.vitalSigns.height,
+          } : undefined,
+          prescribedDrugs: (recordData.prescribedDrugs ?? []).map((d) => ({
+            name: d.name,
+            genericName: d.genericName,
+            dose: d.dose,
+            route: d.route,
+            frequency: d.frequency,
+            duration: d.duration,
+            quantity: d.quantity,
+            refills: d.refills,
+            instructions: d.instructions,
+            indication: d.indication,
+            startDate: d.startDate,
+            endDate: d.endDate,
+          })),
+        };
+        const data = await api.put<MedicalRecord>(`/api/medical-records/${id}`, payload);
+        set((state) => ({
+          medicalRecords: state.medicalRecords.map((r) => r.id === id ? data : r),
+        }));
+        return data;
       },
 
       getMedicalRecords: (patientId) => {
+        const id = patientId.toLowerCase();
         return get()
-          .medicalRecords.filter((r) => r.patientId === patientId)
+          .medicalRecords.filter((r) => r.patientId.toLowerCase() === id)
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       },
 
@@ -375,6 +473,8 @@ export const useAppStore = create<AppState>()(
 
       // Appointments
       appointments: MOCK_APPOINTMENTS,
+
+      setAppointments: (apts) => set({ appointments: apts }),
 
       addAppointment: (aptData) => {
         const newApt: Appointment = { ...aptData, id: generateId("apt") };

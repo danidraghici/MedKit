@@ -54,12 +54,15 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
   const addPatient = useAppStore((s) => s.addPatient);
   const updatePatient = useAppStore((s) => s.updatePatient);
   const patients = useAppStore((s) => s.patients);
+  const user = useAppStore((s) => s.user);
 
   const editingPatient = editingPatientId
     ? patients.find((p) => p.id === editingPatientId) ?? null
     : null;
 
   const isEditing = !!editingPatient;
+  // Specialist doctors can only edit allergies and current medications
+  const isRestrictedEdit = isEditing && user?.role === "specialist_doctor";
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const {
@@ -123,10 +126,12 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
         <div className="h-5 w-px bg-border" />
         <div>
           <h1 className="text-2xl font-bold text-foreground">
-            {isEditing ? "Edit Patient" : "Add New Patient"}
+            {isRestrictedEdit ? "Edit Medical Information" : isEditing ? "Edit Patient" : "Add New Patient"}
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {isEditing
+            {isRestrictedEdit
+              ? `Updating allergies and medications for ${editingPatient?.fullName}`
+              : isEditing
               ? `Updating record for ${editingPatient?.fullName}`
               : "Register a new patient in the system"}
           </p>
@@ -139,6 +144,9 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
           <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-border bg-muted/30">
             <User className="w-4 h-4 text-primary" />
             <h2 className="text-sm font-semibold">Personal Information</h2>
+            {isRestrictedEdit && (
+              <span className="ml-auto text-xs text-muted-foreground">Read-only</span>
+            )}
           </div>
           <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-5">
             {/* Full name */}
@@ -148,6 +156,7 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
                 id="fullName"
                 placeholder="e.g. Jane Elizabeth Smith"
                 {...register("fullName")}
+                disabled={isRestrictedEdit}
                 className={errors.fullName ? "border-destructive" : ""}
               />
               {errors.fullName && (
@@ -165,6 +174,7 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
                 id="dateOfBirth"
                 type="date"
                 {...register("dateOfBirth")}
+                disabled={isRestrictedEdit}
                 className={errors.dateOfBirth ? "border-destructive" : ""}
               />
               {errors.dateOfBirth && (
@@ -178,6 +188,7 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
               <Select
                 value={watch("sex")}
                 onValueChange={(v) => setValue("sex", v as Sex)}
+                disabled={isRestrictedEdit}
               >
                 <SelectTrigger className={errors.sex ? "border-destructive" : ""}>
                   <SelectValue />
@@ -207,6 +218,7 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
                   }
                 }}
                 error={errors.nationalId?.message}
+                disabled={isRestrictedEdit}
               />
               {errors.nationalId && (
                 <p className="text-xs text-destructive">{errors.nationalId.message}</p>
@@ -222,6 +234,7 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
               <Select
                 value={watch("bloodType")}
                 onValueChange={(v) => setValue("bloodType", v as BloodType)}
+                disabled={isRestrictedEdit}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -241,6 +254,9 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
           <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-border bg-muted/30">
             <Phone className="w-4 h-4 text-primary" />
             <h2 className="text-sm font-semibold">Contact Information</h2>
+            {isRestrictedEdit && (
+              <span className="ml-auto text-xs text-muted-foreground">Read-only</span>
+            )}
           </div>
           <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-5">
             {/* Phone */}
@@ -254,6 +270,7 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
                 type="tel"
                 placeholder="+1 (555) 000-0000"
                 {...register("phone")}
+                disabled={isRestrictedEdit}
                 className={errors.phone ? "border-destructive" : ""}
               />
               {errors.phone && (
@@ -272,6 +289,7 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
                 type="email"
                 placeholder="patient@email.com"
                 {...register("email")}
+                disabled={isRestrictedEdit}
                 className={errors.email ? "border-destructive" : ""}
               />
               {errors.email && (
