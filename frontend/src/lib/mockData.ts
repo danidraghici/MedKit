@@ -496,6 +496,7 @@ export const MOCK_NOTES: Note[] = [
   {
     id: "n001",
     patientId: "p001",
+    authorId: "d001",
     date: "2024-11-20",
     author: "Dr. Emily Carter",
     content: "Patient is highly compliant with medications. Counselled on importance of fluid intake and dietary oxalate restriction. Patient understands need for metabolic stone workup after acute episode resolves.",
@@ -503,6 +504,7 @@ export const MOCK_NOTES: Note[] = [
   {
     id: "n002",
     patientId: "p001",
+    authorId: "d001",
     date: "2024-08-15",
     author: "Dr. Emily Carter",
     content: "Family history of hypertension (father, paternal uncle). Lifestyle modifications discussed including DASH diet, regular exercise. Patient motivated to make dietary changes.",
@@ -510,6 +512,7 @@ export const MOCK_NOTES: Note[] = [
   {
     id: "n003",
     patientId: "p002",
+    authorId: "d002",
     date: "2024-12-01",
     author: "Dr. Michael Torres",
     content: "Patient reports good adherence to Metformin. Mild GI side effects initially but resolved. Referred to dietitian for ongoing support. Weight stable at 72kg.",

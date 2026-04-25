@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { toast } from "sonner";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -375,8 +376,11 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
   const getMedicalRecords = useAppStore((s) => s.getMedicalRecords);
   const getLabResults = useAppStore((s) => s.getLabResults);
   const getNotes = useAppStore((s) => s.getNotes);
+  const fetchNotes = useAppStore((s) => s.fetchNotes);
   const addMedicalRecord = useAppStore((s) => s.addMedicalRecord);
   const addNote = useAppStore((s) => s.addNote);
+  const updateNote = useAppStore((s) => s.updateNote);
+  const deleteNote = useAppStore((s) => s.deleteNote);
   const addLabResult = useAppStore((s) => s.addLabResult);
   const user = useAppStore((s) => s.user);
 
@@ -410,6 +414,11 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
       .finally(() => setPatientApptLoading(false));
   }, [patientId]);
 
+  useEffect(() => {
+    setIsNotesLoading(true);
+    void fetchNotes(patientId).finally(() => setIsNotesLoading(false));
+  }, [patientId]);
+
   const handleApptStatusChange = async (id: string, status: string) => {
     try {
       await api.patch(`/api/appointments/${id}/status`, { status });
@@ -425,6 +434,9 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
 
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+  const [isEditNoteModalOpen, setIsEditNoteModalOpen] = useState(false);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [isNotesLoading, setIsNotesLoading] = useState(true);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -449,6 +461,13 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
     handleSubmit: handleNoteSubmit,
     reset: resetNote,
     formState: { errors: noteErrors, isSubmitting: isNoteSubmitting },
+  } = useForm<NoteFormData>({ resolver: zodResolver(noteSchema) });
+
+  const {
+    register: registerEditNote,
+    handleSubmit: handleEditNoteSubmit,
+    reset: resetEditNote,
+    formState: { errors: editNoteErrors, isSubmitting: isEditNoteSubmitting },
   } = useForm<NoteFormData>({ resolver: zodResolver(noteSchema) });
 
   const {
@@ -546,12 +565,40 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
     closeModal();
   };
 
-  const onAddNote = async (data: NoteFormData) => {
-    await new Promise((r) => setTimeout(r, 300));
-    addNote({ patientId, date: new Date().toISOString(), author: user?.name ?? "Unknown", content: data.content });
-    setIsNoteModalOpen(false);
-    resetNote();
+  const openAddNoteModal = () => {
+    if (isAdmin && !user?.doctorId) {
+      toast.error("Admin accounts without a linked doctor profile cannot author notes.");
+      return;
+    }
+    setIsNoteModalOpen(true);
   };
+
+  const onAddNote = async (data: NoteFormData) => {
+    try {
+      await addNote(patientId, data.content);
+      setIsNoteModalOpen(false);
+      resetNote();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to add note.";
+      toast.error(msg);
+    }
+  };
+
+  const onEditNote = async (data: NoteFormData) => {
+    if (!editingNoteId) return;
+    await updateNote(editingNoteId, data.content);
+    setIsEditNoteModalOpen(false);
+    setEditingNoteId(null);
+    resetEditNote();
+  };
+
+  const onDeleteNote = async (id: string) => {
+    if (!window.confirm("Delete this note? This action cannot be undone.")) return;
+    await deleteNote(id);
+  };
+
+  const canManageNote = (authorId: string) =>
+    isAdmin || authorId === user?.doctorId;
 
   const onAddLabResult = async (data: LabResultFormData) => {
     await new Promise((r) => setTimeout(r, 300));
@@ -1181,12 +1228,16 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Clinical Notes</h3>
             {canAddNotes && (
-              <Button size="sm" onClick={() => setIsNoteModalOpen(true)} className="gap-1.5">
+              <Button size="sm" onClick={openAddNoteModal} className="gap-1.5">
                 <Plus className="w-4 h-4" />Add note
               </Button>
             )}
           </div>
-          {notes.length === 0 ? (
+          {isNotesLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : notes.length === 0 ? (
             <Empty>
               <EmptyHeader>
                 <EmptyTitle>No clinical notes</EmptyTitle>
@@ -1194,7 +1245,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
               </EmptyHeader>
               {canAddNotes && (
                 <EmptyContent>
-                  <Button onClick={() => setIsNoteModalOpen(true)} className="gap-2">
+                  <Button onClick={openAddNoteModal} className="gap-2">
                     <Plus className="w-4 h-4" />Add note
                   </Button>
                 </EmptyContent>
@@ -1210,10 +1261,34 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                         {getInitials(note.author)}
                       </AvatarFallback>
                     </Avatar>
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium">{note.author}</p>
                       <p className="text-xs text-muted-foreground">{formatDateTime(note.date)}</p>
                     </div>
+                    {canManageNote(note.authorId) && (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="w-7 h-7"
+                          onClick={() => {
+                            setEditingNoteId(note.id);
+                            resetEditNote({ content: note.content });
+                            setIsEditNoteModalOpen(true);
+                          }}
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="w-7 h-7 text-destructive hover:text-destructive"
+                          onClick={() => void onDeleteNote(note.id)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                   <p className="text-sm leading-relaxed">{note.content}</p>
                 </div>
@@ -1514,6 +1589,34 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
               </Button>
               <Button type="submit" disabled={isNoteSubmitting}>
                 {isNoteSubmitting ? "Saving..." : "Save note"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Edit Note Modal ── */}
+      <Dialog open={isEditNoteModalOpen} onOpenChange={(open) => { if (!open) { setIsEditNoteModalOpen(false); setEditingNoteId(null); resetEditNote(); } }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Clinical Note</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditNoteSubmit(onEditNote)} className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Note <span className="text-destructive">*</span></Label>
+              <Textarea
+                {...registerEditNote("content")}
+                placeholder="Enter clinical observations, follow-up notes, or relevant information..."
+                rows={5}
+              />
+              {editNoteErrors.content && <p className="text-xs text-destructive">{editNoteErrors.content.message}</p>}
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="secondary" onClick={() => { setIsEditNoteModalOpen(false); setEditingNoteId(null); resetEditNote(); }}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isEditNoteSubmitting}>
+                {isEditNoteSubmitting ? "Saving..." : "Save changes"}
               </Button>
             </DialogFooter>
           </form>

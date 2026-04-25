@@ -9,7 +9,6 @@ import {
   MOCK_PATIENTS,
   MOCK_MEDICAL_RECORDS,
   MOCK_LAB_RESULTS,
-  MOCK_NOTES,
   MOCK_APPOINTMENTS,
   MOCK_APPOINTMENT_REQUESTS,
   MOCK_LAB_AI_INSIGHTS,
@@ -64,8 +63,11 @@ interface AppState {
 
   // Notes
   notes: Note[];
+  fetchNotes: (patientId: string) => Promise<void>;
   getNotes: (patientId: string) => Note[];
-  addNote: (note: Omit<Note, "id">) => Note;
+  addNote: (patientId: string, content: string) => Promise<Note>;
+  updateNote: (id: string, content: string) => Promise<void>;
+  deleteNote: (id: string) => Promise<void>;
 
   // Appointments
   appointments: Appointment[];
@@ -290,7 +292,29 @@ export const useAppStore = create<AppState>()(
       },
 
       // Notes
-      notes: MOCK_NOTES,
+      notes: [],
+
+      fetchNotes: async (patientId) => {
+        try {
+          const data = await api.get<Array<{ id: string; patientId: string; authorId: string; authorName: string; noteDate: string; content: string }>>(`/api/notes/patient/${patientId}`);
+          const mapped: Note[] = data.map((n) => ({
+            id: n.id,
+            patientId: n.patientId,
+            authorId: n.authorId,
+            date: n.noteDate,
+            author: n.authorName,
+            content: n.content,
+          }));
+          set((state) => ({
+            notes: [
+              ...state.notes.filter((n) => n.patientId !== patientId),
+              ...mapped,
+            ],
+          }));
+        } catch {
+          // silently keep existing state
+        }
+      },
 
       getNotes: (patientId) => {
         return get()
@@ -298,10 +322,33 @@ export const useAppStore = create<AppState>()(
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       },
 
-      addNote: (noteData) => {
-        const newNote: Note = { ...noteData, id: generateId("n") };
-        set((state) => ({ notes: [...state.notes, newNote] }));
-        return newNote;
+      addNote: async (patientId, content) => {
+        const data = await api.post<{ id: string; patientId: string; authorId: string; authorName: string; noteDate: string; content: string }>(
+          "/api/notes",
+          { patientId, content }
+        );
+        const note: Note = {
+          id: data.id,
+          patientId: data.patientId,
+          authorId: data.authorId,
+          date: data.noteDate,
+          author: data.authorName,
+          content: data.content,
+        };
+        set((state) => ({ notes: [...state.notes, note] }));
+        return note;
+      },
+
+      updateNote: async (id, content) => {
+        await api.put(`/api/notes/${id}`, { content });
+        set((state) => ({
+          notes: state.notes.map((n) => n.id === id ? { ...n, content } : n),
+        }));
+      },
+
+      deleteNote: async (id) => {
+        await api.delete(`/api/notes/${id}`);
+        set((state) => ({ notes: state.notes.filter((n) => n.id !== id) }));
       },
 
       // Appointments
@@ -499,7 +546,7 @@ export const useAppStore = create<AppState>()(
         patients: state.patients,
         medicalRecords: state.medicalRecords,
         labResults: state.labResults,
-        notes: state.notes,
+        // notes are always fetched fresh from the API — not persisted
         appointments: state.appointments,
         chatSessions: state.chatSessions,
         appointmentRequests: state.appointmentRequests,

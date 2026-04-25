@@ -123,6 +123,7 @@ export interface LabResult {
 export interface Note {
   id: string;
   patientId: string;
+  authorId: string;
   date: string;
   author: string;
   content: string;
