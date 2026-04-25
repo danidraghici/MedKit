@@ -336,34 +336,26 @@ GO
 
 -- -----------------------------------------------------------------------------
 -- 8. lab_results
---    Laboratory test results uploaded by lab_doctor or specialist_doctor.
+--    Lab report files uploaded by lab_doctor (PDF/JPEG/PNG).
+--    The actual file is stored on the backend file system; blob_name holds
+--    the full disk path. No structured test fields — the file is the record.
 -- -----------------------------------------------------------------------------
 CREATE TABLE lab_results (
-    id                    UNIQUEIDENTIFIER  NOT NULL DEFAULT NEWSEQUENTIALID(),
-    patient_id            UNIQUEIDENTIFIER  NOT NULL,
-    uploaded_by_doctor_id UNIQUEIDENTIFIER  NULL,
-    test_date             DATE              NOT NULL,
-    test_name             NVARCHAR(255)     NOT NULL,
-    result                NVARCHAR(MAX)     NOT NULL,
-    reference_range       NVARCHAR(255)     NOT NULL,
-    unit                  NVARCHAR(100)     NULL,
-    status                NVARCHAR(50)      NOT NULL
-        CONSTRAINT CK_lab_results_status
-            CHECK (status IN ('Normal', 'Abnormal', 'Critical')),
-    notes                 NVARCHAR(MAX)     NULL,
-    created_at            DATETIMEOFFSET(7) NOT NULL DEFAULT SYSDATETIMEOFFSET(),
-    CONSTRAINT PK_lab_results               PRIMARY KEY (id),
-    CONSTRAINT FK_lab_results_patient       FOREIGN KEY (patient_id)
-        REFERENCES patients(id),
-    CONSTRAINT FK_lab_results_doctor        FOREIGN KEY (uploaded_by_doctor_id)
-        REFERENCES doctors(id) ON DELETE SET NULL
+    id                   UNIQUEIDENTIFIER  NOT NULL DEFAULT NEWSEQUENTIALID(),
+    patient_id           UNIQUEIDENTIFIER  NOT NULL,
+    uploaded_by_user_id  UNIQUEIDENTIFIER  NOT NULL,
+    original_file_name   NVARCHAR(500)     NOT NULL,
+    blob_name            NVARCHAR(1000)    NOT NULL,
+    content_type         NVARCHAR(100)     NOT NULL,
+    file_size_bytes      BIGINT            NOT NULL,
+    uploaded_at          DATETIMEOFFSET(7) NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+    CONSTRAINT PK_lab_results          PRIMARY KEY (id),
+    CONSTRAINT FK_lab_results_patient  FOREIGN KEY (patient_id)
+        REFERENCES patients(id)
 );
 
-CREATE INDEX IX_lab_results_patient_id        ON lab_results (patient_id);
-CREATE INDEX IX_lab_results_test_date         ON lab_results (test_date);
-CREATE INDEX IX_lab_results_patient_test_date ON lab_results (patient_id, test_date);
-CREATE INDEX IX_lab_results_status            ON lab_results (status);
-CREATE INDEX IX_lab_results_test_name         ON lab_results (test_name);
+CREATE INDEX IX_lab_results_patient_id ON lab_results (patient_id);
+CREATE INDEX IX_lab_results_uploaded_at ON lab_results (uploaded_at);
 GO
 
 -- -----------------------------------------------------------------------------
