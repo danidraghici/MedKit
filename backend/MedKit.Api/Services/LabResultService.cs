@@ -18,6 +18,27 @@ public class LabResultService(AppDbContext db, IConfiguration config)
 
     private string UploadPath => config["FileStorage:UploadPath"] ?? "Uploads";
 
+    public async Task<List<LabResultDto>> GetAllAsync()
+    {
+        return await (
+            from lr in db.LabResults
+            join u in db.Users on lr.UploadedByUserId equals u.Id into userJoin
+            from uploader in userJoin.DefaultIfEmpty()
+            orderby lr.UploadedAt descending
+            select new LabResultDto
+            {
+                Id               = lr.Id.ToString(),
+                PatientId        = lr.PatientId.ToString(),
+                UploadedByUserId = lr.UploadedByUserId.ToString(),
+                UploaderName     = uploader != null ? uploader.Name : "Unknown",
+                OriginalFileName = lr.OriginalFileName,
+                ContentType      = lr.ContentType,
+                FileSizeBytes    = lr.FileSizeBytes,
+                UploadedAt       = lr.UploadedAt.ToString("o"),
+            }
+        ).ToListAsync();
+    }
+
     public async Task<List<LabResultDto>> GetByPatientAsync(Guid patientId)
     {
         return await (

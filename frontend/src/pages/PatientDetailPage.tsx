@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -33,7 +33,7 @@ import { IcdMultiSearchField } from "@/components/IcdMultiSearchField";
 import { useAppStore } from "@/lib/store";
 import { api } from "@/lib/api";
 import { formatDate, formatDateTime, calculateAge, getInitials, formatFileSize } from "@/lib/utils";
-import type { Attachment, MedicalRecord, PrescribedDrug, RouteOfAdministration, DrugFrequency, UrgencyLevel, FollowUpType, Appointment } from "@/lib/types";
+import type { Attachment, MedicalRecord, PrescribedDrug, RouteOfAdministration, DrugFrequency, UrgencyLevel, FollowUpType, Appointment, SampleType, LabRequestStatus } from "@/lib/types";
 
 // ─── Zod schemas ──────────────────────────────────────────────────────────────
 
@@ -377,6 +377,14 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
   const fetchLabResults = useAppStore((s) => s.fetchLabResults);
   const uploadLabResult = useAppStore((s) => s.uploadLabResult);
   const getLabResultDownloadUrl = useAppStore((s) => s.getLabResultDownloadUrl);
+  const allLabRequests = useAppStore((s) => s.labRequests);
+  const labRequests = useMemo(
+    () => allLabRequests.filter((r) => r.patientId === patientId),
+    [allLabRequests, patientId]
+  );
+  const fetchLabRequestsByPatient = useAppStore((s) => s.fetchLabRequestsByPatient);
+  const updateLabRequestStatus = useAppStore((s) => s.updateLabRequestStatus);
+  const submitLabResult = useAppStore((s) => s.submitLabResult);
   const user = useAppStore((s) => s.user);
 
   // Role-based permissions
@@ -395,6 +403,13 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
   const [labFileError, setLabFileError] = useState<string | null>(null);
   const [isLabUploading, setIsLabUploading] = useState(false);
   const [isLabResultsLoading, setIsLabResultsLoading] = useState(true);
+
+  // Inline lab request action state (lab doctor)
+  const [processingReqId, setProcessingReqId] = useState<string | null>(null);
+  const [submittingReqId, setSubmittingReqId] = useState<string | null>(null);
+  const [expandedReqId, setExpandedReqId] = useState<string | null>(null);
+  const [labReqObs, setLabReqObs] = useState("");
+  const [labReqFile, setLabReqFile] = useState<File | null>(null);
   const [isMedicalRecordsLoading, setIsMedicalRecordsLoading] = useState(true);
 
   const patient = getPatient(patientId);
@@ -406,6 +421,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
   const [patientApptLoading, setPatientApptLoading] = useState(true);
 
   useEffect(() => {
+    if (isLabDoctor) { setPatientApptLoading(false); return; }
     setPatientApptLoading(true);
     void api.get<Appointment[]>(`/api/appointments/patient/${patientId}`)
       .then((apts) => {
@@ -413,24 +429,64 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
       })
       .catch(console.error)
       .finally(() => setPatientApptLoading(false));
-  }, [patientId, user?.role, user?.doctorId]);
+  }, [patientId, isLabDoctor, user?.role, user?.doctorId]);
 
   useEffect(() => {
+    if (isLabDoctor) { setIsMedicalRecordsLoading(false); return; }
     setIsMedicalRecordsLoading(true);
     fetchMedicalRecords(patientId)
       .catch((err: Error) => toast.error(err.message ?? "Failed to load medical records."))
       .finally(() => setIsMedicalRecordsLoading(false));
-  }, [patientId]);
+  }, [patientId, isLabDoctor]);
 
   useEffect(() => {
+    if (isLabDoctor) { setIsNotesLoading(false); return; }
     setIsNotesLoading(true);
     void fetchNotes(patientId).finally(() => setIsNotesLoading(false));
-  }, [patientId]);
+  }, [patientId, isLabDoctor]);
 
   useEffect(() => {
     setIsLabResultsLoading(true);
     void fetchLabResults(patientId).finally(() => setIsLabResultsLoading(false));
   }, [patientId]);
+
+  useEffect(() => {
+    void fetchLabRequestsByPatient(patientId);
+  }, [patientId]);
+
+  const handleStartLabProcessing = async (reqId: string) => {
+    setProcessingReqId(reqId);
+    try {
+      await updateLabRequestStatus(reqId, "In Progress");
+      toast.success("Status updated to In Progress");
+      setExpandedReqId(reqId);
+      setLabReqObs("");
+      setLabReqFile(null);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to update status.");
+    } finally {
+      setProcessingReqId(null);
+    }
+  };
+
+  const handleSubmitLabResult = async (reqId: string) => {
+    if (!labReqObs.trim() && !labReqFile) {
+      toast.error("Provide observations, a file, or both.");
+      return;
+    }
+    setSubmittingReqId(reqId);
+    try {
+      await submitLabResult(reqId, labReqObs.trim() || undefined, labReqFile ?? undefined);
+      toast.success("Results submitted. Lab request marked as Completed.");
+      setExpandedReqId(null);
+      setLabReqObs("");
+      setLabReqFile(null);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to submit results.");
+    } finally {
+      setSubmittingReqId(null);
+    }
+  };
 
   const handleApptStatusChange = async (id: string, status: string) => {
     try {
@@ -452,8 +508,11 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
   const [isNotesLoading, setIsNotesLoading] = useState(true);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const labReqFileRef = useRef<HTMLInputElement>(null);
 
   const [editingRecord, setEditingRecord] = useState<MedicalRecord | null>(null);
+  const [selectedSamples, setSelectedSamples] = useState<SampleType[]>([]);
+  const [labRequestNotes, setLabRequestNotes] = useState("");
 
   const {
     register, handleSubmit, reset, setValue, watch, getValues,
@@ -522,6 +581,8 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
     setEditingRecord(null);
     reset({ date: new Date().toISOString().split("T")[0], visitType: "In-person", urgency: "Routine", prescribedDrugs: [] });
     setAttachments([]);
+    setSelectedSamples([]);
+    setLabRequestNotes("");
   };
 
   const buildRecordPayload = (data: MedicalRecordFormData) => ({
@@ -559,8 +620,13 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
 
   const onSaveRecord = async (data: MedicalRecordFormData) => {
     try {
+      const samplePayload = selectedSamples.length > 0 ? selectedSamples : undefined;
       if (editingRecord) {
-        await updateMedicalRecord(editingRecord.id, buildRecordPayload(data));
+        await updateMedicalRecord(editingRecord.id, {
+          ...buildRecordPayload(data),
+          sampleTypes: samplePayload,
+          labRequestNotes: labRequestNotes.trim() || undefined,
+        });
       } else {
         await addMedicalRecord({
           patientId,
@@ -569,9 +635,12 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
           doctorId: user?.doctorId ?? "",
           ...buildRecordPayload(data),
           attachments,
+          sampleTypes: samplePayload,
+          labRequestNotes: labRequestNotes.trim() || undefined,
         });
       }
       closeModal();
+      void fetchLabRequestsByPatient(patientId);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to save medical record.";
       toast.error(msg);
@@ -618,6 +687,13 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
         endDate: d.endDate ?? "",
       })),
     });
+    if (record.labRequest?.status === "Pending") {
+      setSelectedSamples(record.labRequest.sampleTypes ?? []);
+      setLabRequestNotes(record.labRequest.notes ?? "");
+    } else {
+      setSelectedSamples([]);
+      setLabRequestNotes("");
+    }
     setEditingRecord(record);
     setIsRecordModalOpen(true);
   };
@@ -1117,6 +1193,26 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                               </div>
                             </div>
                           )}
+
+                          {/* Lab Request Status */}
+                          {record.labRequest && (
+                            <div className="flex items-center gap-2 pt-1">
+                              <FlaskConical className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                              <span className="text-xs text-muted-foreground">Lab request:</span>
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold border ${
+                                record.labRequest.status === "Pending"
+                                  ? "text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950/30 dark:border-amber-800"
+                                  : record.labRequest.status === "In Progress"
+                                  ? "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800"
+                                  : "text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950/30 dark:border-emerald-800"
+                              }`}>
+                                {record.labRequest.status}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                · {record.labRequest.sampleTypes.join(", ")}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1128,7 +1224,167 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
         </TabsContent>
 
         {/* ── Lab Results ── */}
-        <TabsContent value="lab-results" className="space-y-4">
+        <TabsContent value="lab-results" className="space-y-6">
+          {/* Lab Requests sub-section */}
+          {labRequests.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                <FlaskConical className="w-3.5 h-3.5" />Lab Requests
+              </h3>
+              <div className="space-y-3">
+                {labRequests.map((req) => (
+                  <div key={req.id} className="bg-card rounded-xl border border-border p-4 space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {req.sampleTypes.map((s) => (
+                          <span key={s} className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground capitalize">
+                            {s === "csf" ? "CSF" : s}
+                          </span>
+                        ))}
+                      </div>
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-semibold border shrink-0 ${
+                        req.status === "Pending"
+                          ? "text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950/30 dark:border-amber-800"
+                          : req.status === "In Progress"
+                          ? "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800"
+                          : "text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950/30 dark:border-emerald-800"
+                      }`}>
+                        {req.status}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Requested by {req.requestedByDoctorName} · {formatDate(req.createdAt)}
+                    </p>
+                    {req.notes && (
+                      <p className="text-xs text-muted-foreground italic">"{req.notes}"</p>
+                    )}
+                    {req.results.length > 0 && (
+                      <div className="pt-1 space-y-1.5">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Results</p>
+                        {req.results.map((res) => (
+                          <div key={res.id} className="rounded-lg bg-muted/50 border border-border px-3 py-2 text-xs space-y-1">
+                            {res.observations && <p className="text-sm">{res.observations}</p>}
+                            {res.labResultFileName && (
+                              <p className="text-muted-foreground flex items-center gap-1">
+                                <Paperclip className="w-3 h-3" />{res.labResultFileName}
+                              </p>
+                            )}
+                            <p className="text-muted-foreground">Submitted by {res.submitterName} · {formatDateTime(res.submittedAt)}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Lab doctor — Start Processing */}
+                    {isLabDoctor && req.status === "Pending" && (
+                      <div className="pt-2 border-t border-border">
+                        <Button
+                          size="sm"
+                          className="w-full gap-2"
+                          disabled={processingReqId === req.id}
+                          onClick={() => void handleStartLabProcessing(req.id)}
+                        >
+                          {processingReqId === req.id
+                            ? <Loader2 className="w-4 h-4 animate-spin" />
+                            : <FlaskConical className="w-4 h-4" />}
+                          Start Processing
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Lab doctor — Submit Results */}
+                    {isLabDoctor && req.status === "In Progress" && (
+                      <div className="pt-2 border-t border-border space-y-3">
+                        {expandedReqId !== req.id ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full gap-2"
+                            onClick={() => { setExpandedReqId(req.id); setLabReqObs(""); setLabReqFile(null); }}
+                          >
+                            <CheckCircle2 className="w-4 h-4" />Submit Results
+                          </Button>
+                        ) : (
+                          <div className="space-y-3">
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">Observations</Label>
+                              <Textarea
+                                value={labReqObs}
+                                onChange={(e) => setLabReqObs(e.target.value)}
+                                placeholder="Enter findings, measurements, or observations…"
+                                rows={3}
+                                className="resize-none text-sm"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">Attach file (PDF / JPEG / PNG, max 10 MB)</Label>
+                              {labReqFile ? (
+                                <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg text-sm border border-border">
+                                  <FileText className="w-4 h-4 shrink-0 text-muted-foreground" />
+                                  <span className="flex-1 truncate">{labReqFile.name}</span>
+                                  <span className="text-xs text-muted-foreground">{formatFileSize(labReqFile.size)}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => { setLabReqFile(null); if (labReqFileRef.current) labReqFileRef.current.value = ""; }}
+                                    className="text-muted-foreground hover:text-destructive"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => labReqFileRef.current?.click()}
+                                  className="w-full flex flex-col items-center gap-1.5 py-4 rounded-xl border-2 border-dashed border-border hover:border-primary/40 transition-colors text-muted-foreground hover:text-primary text-sm"
+                                >
+                                  <Upload className="w-4 h-4" />
+                                  Click to upload result file
+                                </button>
+                              )}
+                              <input
+                                ref={labReqFileRef}
+                                type="file"
+                                accept=".pdf,.jpg,.jpeg,.png"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0];
+                                  if (f) setLabReqFile(f);
+                                }}
+                              />
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => { setExpandedReqId(null); setLabReqObs(""); setLabReqFile(null); }}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                size="sm"
+                                className="flex-1 gap-2"
+                                disabled={submittingReqId === req.id}
+                                onClick={() => void handleSubmitLabResult(req.id)}
+                              >
+                                {submittingReqId === req.id
+                                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                                  : <CheckCircle2 className="w-4 h-4" />}
+                                Submit
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Uploaded Lab Results */}
+          <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Lab Results</h3>
             {canAddLabResults && (
@@ -1181,6 +1437,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
               ))}
             </div>
           )}
+          </div>{/* end Uploaded Lab Results */}
         </TabsContent>
 
         {/* ── Appointments ── */}
@@ -1643,6 +1900,65 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                         </div>
                       ))}
                     </div>
+                  )}
+                </div>
+
+                {/* Section 10: Laboratory Samples */}
+                <div className="space-y-3">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border pb-1.5 flex items-center gap-1.5">
+                    <FlaskConical className="w-3.5 h-3.5" />Laboratory Samples
+                  </h3>
+                  {editingRecord?.labRequest && editingRecord.labRequest.status !== "Pending" ? (
+                    <div className="flex items-center gap-2 rounded-lg bg-muted/50 border border-border px-3 py-2 text-sm">
+                      <FlaskConical className="w-4 h-4 shrink-0 text-muted-foreground" />
+                      <span className="text-muted-foreground">Lab request is</span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${
+                        editingRecord.labRequest.status === "In Progress"
+                          ? "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800"
+                          : "text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950/30 dark:border-emerald-800"
+                      }`}>
+                        {editingRecord.labRequest.status}
+                      </span>
+                      <span className="text-muted-foreground text-xs">— cannot be modified</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 gap-2">
+                        {(["blood", "urine", "stool", "csf", "sputum", "tissue", "other"] as SampleType[]).map((s) => (
+                          <label key={s} className="flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={selectedSamples.includes(s)}
+                              onChange={(e) =>
+                                setSelectedSamples((prev) =>
+                                  e.target.checked ? [...prev, s] : prev.filter((x) => x !== s)
+                                )
+                              }
+                              className="w-4 h-4 rounded border-border accent-primary"
+                            />
+                            <span className="text-sm capitalize">{s === "csf" ? "CSF" : s}</span>
+                          </label>
+                        ))}
+                      </div>
+                      {selectedSamples.length > 0 && (
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Notes for lab (optional)</Label>
+                          <Textarea
+                            value={labRequestNotes}
+                            onChange={(e) => setLabRequestNotes(e.target.value)}
+                            placeholder="Special instructions for the lab team…"
+                            rows={2}
+                            className="text-sm resize-none"
+                          />
+                        </div>
+                      )}
+                      {editingRecord?.labRequest?.status === "Pending" && (
+                        <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          Editing will update the existing pending lab request.
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
 

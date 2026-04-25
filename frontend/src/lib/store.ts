@@ -1,8 +1,9 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type {
-  Patient, MedicalRecord, LabResult, Note, Appointment, ChatSession, ChatMessage, User,
-  AppointmentRequest, LabAIInsight, ConsultationReminder, Doctor, DoctorRole, Department,
+  Patient, MedicalRecord, LabResult, LabRequest, LabRequestStatus, Note, Appointment,
+  ChatSession, ChatMessage, User, AppointmentRequest, LabAIInsight, ConsultationReminder,
+  Doctor, DoctorRole, Department,
 } from "./types";
 import { api, configureApiClient } from "./api";
 import {
@@ -58,10 +59,21 @@ interface AppState {
 
   // Lab Results
   labResults: LabResult[];
+  fetchAllLabResults: () => Promise<void>;
   fetchLabResults: (patientId: string) => Promise<void>;
   getLabResults: (patientId: string) => LabResult[];
   uploadLabResult: (patientId: string, file: File) => Promise<LabResult>;
   getLabResultDownloadUrl: (labResultId: string) => Promise<string>;
+
+  // Lab Requests
+  labRequests: LabRequest[];
+  labRequestUnreadCount: number;
+  fetchLabRequests: () => Promise<void>;
+  fetchLabRequestsByPatient: (patientId: string) => Promise<void>;
+  updateLabRequestStatus: (id: string, status: LabRequestStatus) => Promise<void>;
+  markLabRequestRead: (id: string) => Promise<void>;
+  submitLabResult: (requestId: string, observations: string | undefined, file: File | undefined) => Promise<void>;
+  fetchUnreadLabRequestCount: () => Promise<void>;
 
   // Notes
   notes: Note[];
@@ -292,6 +304,8 @@ export const useAppStore = create<AppState>()(
           followUpType: recordData.followUpType,
           referral: recordData.referral,
           patientEducation: recordData.patientEducation,
+          sampleTypes: recordData.sampleTypes,
+          labRequestNotes: recordData.labRequestNotes,
           vitalSigns: recordData.vitalSigns ? {
             bloodPressure: recordData.vitalSigns.bloodPressure,
             heartRate: recordData.vitalSigns.heartRate,
@@ -337,6 +351,8 @@ export const useAppStore = create<AppState>()(
           followUpType: recordData.followUpType,
           referral: recordData.referral,
           patientEducation: recordData.patientEducation,
+          sampleTypes: recordData.sampleTypes,
+          labRequestNotes: recordData.labRequestNotes,
           vitalSigns: recordData.vitalSigns ? {
             bloodPressure: recordData.vitalSigns.bloodPressure,
             heartRate: recordData.vitalSigns.heartRate,
@@ -378,6 +394,15 @@ export const useAppStore = create<AppState>()(
       // Lab Results
       labResults: [],
 
+      fetchAllLabResults: async () => {
+        try {
+          const data = await api.get<LabResult[]>("/api/lab-results");
+          set({ labResults: data });
+        } catch {
+          // silently keep existing state
+        }
+      },
+
       fetchLabResults: async (patientId) => {
         try {
           const data = await api.get<LabResult[]>(`/api/patients/${patientId}/lab-results`);
@@ -409,6 +434,74 @@ export const useAppStore = create<AppState>()(
       getLabResultDownloadUrl: async (labResultId) => {
         const blob = await api.getFile(`/api/lab-results/${labResultId}/file`);
         return URL.createObjectURL(blob);
+      },
+
+      // Lab Requests
+      labRequests: [],
+      labRequestUnreadCount: 0,
+
+      fetchLabRequests: async () => {
+        try {
+          const data = await api.get<LabRequest[]>("/api/lab-requests");
+          set({ labRequests: data });
+        } catch {
+          // silently keep existing state
+        }
+      },
+
+      fetchLabRequestsByPatient: async (patientId) => {
+        try {
+          const data = await api.get<LabRequest[]>(`/api/lab-requests/patient/${patientId}`);
+          set((state) => ({
+            labRequests: [
+              ...state.labRequests.filter((r) => r.patientId !== patientId),
+              ...data,
+            ],
+          }));
+        } catch {
+          // silently keep existing state
+        }
+      },
+
+      updateLabRequestStatus: async (id, status) => {
+        const data = await api.patch<LabRequest>(`/api/lab-requests/${id}/status`, { status });
+        set((state) => ({
+          labRequests: state.labRequests.map((r) => r.id === id ? data : r),
+        }));
+      },
+
+      markLabRequestRead: async (id) => {
+        try {
+          await api.patch(`/api/lab-requests/${id}/mark-read`, undefined);
+          set((state) => ({
+            labRequests: state.labRequests.map((r) =>
+              r.id === id ? { ...r, viewedByLabAt: new Date().toISOString() } : r
+            ),
+            labRequestUnreadCount: Math.max(0, state.labRequestUnreadCount - 1),
+          }));
+        } catch {
+          // silently ignore
+        }
+      },
+
+      submitLabResult: async (requestId, observations, file) => {
+        const formData = new FormData();
+        if (observations) formData.append("observations", observations);
+        if (file) formData.append("file", file);
+        const data = await api.postFile<LabRequest>(`/api/lab-requests/${requestId}/results`, formData);
+        set((state) => ({
+          labRequests: state.labRequests.map((r) => r.id === requestId ? data : r),
+          labRequestUnreadCount: Math.max(0, state.labRequestUnreadCount - 1),
+        }));
+      },
+
+      fetchUnreadLabRequestCount: async () => {
+        try {
+          const data = await api.get<{ count: number }>("/api/lab-requests/unread-count");
+          set({ labRequestUnreadCount: data.count });
+        } catch {
+          // silently ignore
+        }
       },
 
       // Notes
@@ -620,7 +713,7 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: "medkit-storage",
-      version: 6,
+      version: 7,
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as Record<string, unknown>;
         if (version < 2) {
@@ -651,15 +744,19 @@ export const useAppStore = create<AppState>()(
         if (version < 6) {
           state.departments = [];
         }
+        if (version < 7) {
+          state.labRequests = [];
+          state.labRequestUnreadCount = 0;
+        }
         return state;
       },
       partialize: (state) => ({
         // Auth state is NOT persisted — sessions are managed via httpOnly cookies.
         // accessToken lives in memory only; user is rehydrated via initAuth() on mount.
-        // doctors and labResults are NOT persisted — always fetched fresh from the API.
+        // doctors, labResults, and labRequests are NOT persisted — always fetched fresh from the API.
         patients: state.patients,
         medicalRecords: state.medicalRecords,
-        // notes and labResults are always fetched fresh from the API — not persisted
+        // notes, labResults, and labRequests are always fetched fresh from the API — not persisted
         appointments: state.appointments,
         chatSessions: state.chatSessions,
         appointmentRequests: state.appointmentRequests,

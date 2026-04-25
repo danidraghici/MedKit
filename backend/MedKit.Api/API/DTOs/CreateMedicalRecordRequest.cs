@@ -49,4 +49,6 @@ public class CreateMedicalRecordRequest
     public string? PatientEducation { get; set; }
     public CreateVitalSignsRequest? VitalSigns { get; set; }
     public List<CreatePrescribedDrugRequest> PrescribedDrugs { get; set; } = [];
+    public List<string>? SampleTypes { get; set; }
+    public string? LabRequestNotes { get; set; }
 }

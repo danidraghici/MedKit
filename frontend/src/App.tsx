@@ -47,6 +47,7 @@ import ForceChangePasswordPage from "@/pages/ForceChangePasswordPage";
 import DepartmentsPage from "@/pages/DepartmentsPage";
 import DepartmentDoctorsPage from "@/pages/DepartmentDoctorsPage";
 import AuditLogsPage from "@/pages/AuditLogsPage";
+import LabRequestsPage from "@/pages/LabRequestsPage";
 
 type PageId = string;
 type LoginMode = "doctor" | "patient";
@@ -60,9 +61,10 @@ const specialistNavigation = [
   { id: "profile", label: "My Profile", icon: UserCircle },
 ];
 
-const labDoctorNavigation = [
+const labDoctorNavigationBase = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "patients", label: "Patients", icon: Users },
+  { id: "lab-requests", label: "Lab Requests", icon: FlaskConical },
   { id: "profile", label: "My Profile", icon: UserCircle },
 ];
 
@@ -91,6 +93,9 @@ export default function App() {
   const patients = useAppStore((s) => s.patients);
   const departments = useAppStore((s) => s.departments);
   const getPatientReminders = useAppStore((s) => s.getPatientReminders);
+  const labRequestUnreadCount = useAppStore((s) => s.labRequestUnreadCount);
+  const fetchUnreadLabRequestCount = useAppStore((s) => s.fetchUnreadLabRequestCount);
+  const fetchLabRequests = useAppStore((s) => s.fetchLabRequests);
 
   const [activePage, setActivePage] = useState<PageId>("dashboard");
   const [loginMode, setLoginMode] = useState<LoginMode>("doctor");
@@ -123,6 +128,13 @@ export default function App() {
     ? "border-purple-300 text-purple-700 dark:text-purple-400"
     : "border-emerald-300 text-emerald-700 dark:text-emerald-400";
 
+  // Lab doctor nav with live unread badge on "lab-requests"
+  const labDoctorNavigation = labDoctorNavigationBase.map((item) =>
+    item.id === "lab-requests" && labRequestUnreadCount > 0
+      ? { ...item, badge: labRequestUnreadCount }
+      : item
+  );
+
   // Select navigation based on role
   const staffNavigation = isAdmin
     ? adminNavigation
@@ -134,6 +146,15 @@ export default function App() {
   const reminderCount = isPatient && user?.patientId
     ? getPatientReminders(user.patientId).length
     : 0;
+
+  // Pre-fetch lab requests and poll unread count every 30 s when logged in as lab doctor
+  useEffect(() => {
+    if (!isLabDoctor) return;
+    void fetchLabRequests();
+    void fetchUnreadLabRequestCount();
+    const id = setInterval(() => void fetchUnreadLabRequestCount(), 30_000);
+    return () => clearInterval(id);
+  }, [isLabDoctor, fetchLabRequests, fetchUnreadLabRequestCount]);
 
   // Attempt silent re-auth on mount via httpOnly refresh cookie
   useEffect(() => {
@@ -289,6 +310,7 @@ export default function App() {
     }
     if (activePage === "audit-logs") return [{ label: "Audit Logs" }];
     if (activePage === "profile") return [{ label: "My Profile" }];
+    if (activePage === "lab-requests") return [{ label: "Lab Requests" }];
     if (activePage.startsWith("create-appointment-patient-")) {
       const id = activePage.replace("create-appointment-patient-", "");
       const patient = patients.find((p) => p.id === id);
@@ -337,6 +359,7 @@ export default function App() {
       return <CreateAppointmentPage onNavigate={handleNavigate} preselectedPatientId={patientId} />;
     }
     if (activePage === "chatbot") return <ChatbotPage onNavigate={handleNavigate} />;
+    if (activePage === "lab-requests" && isLabDoctor) return <LabRequestsPage />;
     if (activePage === "audit-logs" && isAdmin) return <AuditLogsPage />;
     if (activePage === "profile") return <DoctorProfilePage />;
     if (activePage.startsWith("patient-")) {

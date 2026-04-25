@@ -67,6 +67,36 @@ export interface PrescribedDrug {
 export type UrgencyLevel = "Routine" | "Semi-urgent" | "Urgent" | "Emergency";
 export type FollowUpType = "Office visit" | "Phone call" | "Lab work" | "Imaging" | "Specialist referral" | "ER if symptoms worsen" | "None";
 
+export type LabRequestStatus = "Pending" | "In Progress" | "Completed";
+export type SampleType = "blood" | "urine" | "stool" | "csf" | "sputum" | "tissue" | "other";
+
+export interface LabRequestResult {
+  id: string;
+  labRequestId: string;
+  submittedByUserId: string;
+  submitterName: string;
+  observations?: string;
+  labResultId?: string;
+  labResultFileName?: string;
+  submittedAt: string;
+}
+
+export interface LabRequest {
+  id: string;
+  medicalRecordId: string;
+  patientId: string;
+  patientName: string;
+  requestedByDoctorId: string;
+  requestedByDoctorName: string;
+  sampleTypes: SampleType[];
+  status: LabRequestStatus;
+  notes?: string;
+  viewedByLabAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  results: LabRequestResult[];
+}
+
 export interface MedicalRecord {
   id: string;
   patientId: string;
@@ -99,6 +129,10 @@ export interface MedicalRecord {
   patientEducation?: string;           // Education provided to patient
   attachments?: Attachment[];
   createdAt: string;
+  labRequest?: LabRequest;
+  // Creation-only fields (not returned by API)
+  sampleTypes?: SampleType[];
+  labRequestNotes?: string;
 }
 
 export interface Attachment {

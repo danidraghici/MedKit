@@ -17,6 +17,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<NotificationRuleEntity> NotificationRules => Set<NotificationRuleEntity>();
     public DbSet<NoteEntity> Notes => Set<NoteEntity>();
     public DbSet<LabResultEntity> LabResults => Set<LabResultEntity>();
+    public DbSet<LabRequestEntity> LabRequests => Set<LabRequestEntity>();
+    public DbSet<LabRequestResultEntity> LabRequestResults => Set<LabRequestResultEntity>();
     public DbSet<VitalSignEntity> VitalSigns => Set<VitalSignEntity>();
     public DbSet<PrescribedDrugEntity> PrescribedDrugs => Set<PrescribedDrugEntity>();
 
@@ -124,6 +126,31 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<LabResultEntity>(e =>
         {
             e.ToTable(t => t.UseSqlOutputClause(false));
+        });
+
+        modelBuilder.Entity<LabRequestEntity>(e =>
+        {
+            // lab_requests has audit trigger — OUTPUT clause is forbidden on triggered tables
+            e.ToTable(t => t.UseSqlOutputClause(false));
+
+            // Explicit FK so EF Core inserts medical_records before lab_requests
+            e.HasOne<MedicalRecordEntity>()
+             .WithMany()
+             .HasForeignKey(r => r.MedicalRecordId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasMany(r => r.Results)
+             .WithOne()
+             .HasForeignKey(rr => rr.LabRequestId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<LabRequestResultEntity>(e =>
+        {
+            e.HasOne<LabResultEntity>()
+             .WithMany()
+             .HasForeignKey(rr => rr.LabResultId)
+             .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

@@ -53,4 +53,5 @@ public class MedicalRecordDto
     public string CreatedAt { get; set; } = "";
     public VitalSignsDto? VitalSigns { get; set; }
     public List<PrescribedDrugDto> PrescribedDrugs { get; set; } = [];
+    public LabRequestDto? LabRequest { get; set; }
 }

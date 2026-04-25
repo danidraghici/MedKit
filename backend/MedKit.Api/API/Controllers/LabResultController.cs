@@ -9,6 +9,14 @@ namespace MedKit.Api.API.Controllers;
 [Route("api")]
 public class LabResultController(LabResultService labResultService) : ControllerBase
 {
+    [HttpGet("lab-results")]
+    [Authorize(Roles = "lab_doctor,admin")]
+    public async Task<IActionResult> GetAll()
+    {
+        var results = await labResultService.GetAllAsync();
+        return Ok(results);
+    }
+
     [HttpGet("patients/{patientId:guid}/lab-results")]
     [Authorize]
     public async Task<IActionResult> GetByPatient(Guid patientId)

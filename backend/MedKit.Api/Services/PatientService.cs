@@ -57,6 +57,29 @@ public class PatientService(AppDbContext ctx)
             .ToListAsync();
     }
 
+    public async Task<List<PatientDto>> GetByLabRequestsAsync()
+    {
+        return await ctx.Patients
+            .Where(p => ctx.LabRequests.Any(lr => lr.PatientId == p.Id))
+            .OrderBy(p => p.FullName)
+            .Select(p => new PatientDto
+            {
+                Id                 = p.Id.ToString(),
+                FullName           = p.FullName,
+                DateOfBirth        = p.DateOfBirth.ToString("yyyy-MM-dd"),
+                Sex                = p.Sex,
+                NationalId         = p.NationalId,
+                Phone              = p.Phone,
+                Email              = p.Email,
+                BloodType          = p.BloodType,
+                Allergies          = p.Allergies ?? "",
+                CurrentMedications = p.CurrentMedications ?? "",
+                CreatedAt          = p.CreatedAt.ToString("O"),
+                UpdatedAt          = p.UpdatedAt.ToString("O"),
+            })
+            .ToListAsync();
+    }
+
     public async Task<(PatientDto? Dto, string? Error)> CreateAsync(
         CreatePatientRequest request,
         Guid actingUserId,

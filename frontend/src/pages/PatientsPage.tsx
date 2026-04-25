@@ -13,6 +13,7 @@ import {
   Edit,
   Trash2,
   Eye,
+  FlaskConical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +36,15 @@ import type { Patient } from "@/lib/types";
 
 const PAGE_SIZE = 8;
 
+function labStatusBadge(status: "Pending" | "In Progress" | "Completed") {
+  const base = "text-xs px-2 py-0.5 rounded-full font-semibold border";
+  if (status === "Pending")
+    return `${base} text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950/30 dark:border-amber-800`;
+  if (status === "In Progress")
+    return `${base} text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800`;
+  return `${base} text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950/30 dark:border-emerald-800`;
+}
+
 interface PatientsPageProps {
   onNavigate: (page: string) => void;
 }
@@ -44,12 +54,17 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
   const deletePatient = useAppStore((s) => s.deletePatient);
   const user = useAppStore((s) => s.user);
   const fetchPatients = useAppStore((s) => s.fetchPatients);
+  const labRequests = useAppStore((s) => s.labRequests);
+  const fetchLabRequests = useAppStore((s) => s.fetchLabRequests);
+
+  const isLabDoctor = user?.role === "lab_doctor";
 
   useEffect(() => {
     if (user?.role === "admin" || user?.role === "specialist_doctor" || user?.role === "lab_doctor") {
       void fetchPatients();
+      if (user?.role === "lab_doctor") void fetchLabRequests();
     }
-  }, [user?.role, fetchPatients]);
+  }, [user?.role, fetchPatients, fetchLabRequests]);
 
   // Lab doctors cannot add/edit/delete patients
   const canManagePatients = user?.role === "admin" || user?.role === "specialist_doctor";
@@ -57,11 +72,37 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterSex, setFilterSex] = useState<string>("all");
   const [filterBloodType, setFilterBloodType] = useState<string>("all");
+  const [labStatusFilter, setLabStatusFilter] = useState<"All" | "Pending" | "In Progress" | "Completed">("All");
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteConfirm, setDeleteConfirm] = useState<Patient | null>(null);
 
+  const pid = (id: string) => id.toLowerCase();
+
+  // For lab doctors: map patientId (normalised) → most-urgent lab request status
+  const labStatusByPatient = useMemo(() => {
+    const priority: Record<string, number> = { Pending: 0, "In Progress": 1, Completed: 2 };
+    const map = new Map<string, "Pending" | "In Progress" | "Completed">();
+    for (const r of labRequests) {
+      const key = pid(r.patientId);
+      const cur = map.get(key);
+      if (!cur || priority[r.status] < priority[cur]) map.set(key, r.status);
+    }
+    return map;
+  }, [labRequests]);
+
   const filteredPatients = useMemo(() => {
     let filtered = patients;
+
+    if (isLabDoctor) {
+      const labPatientIds = new Set(labRequests.map((r) => pid(r.patientId)));
+      filtered = filtered.filter((p) => labPatientIds.has(pid(p.id)));
+      if (labStatusFilter !== "All") {
+        filtered = filtered.filter((p) =>
+          labRequests.some((r) => pid(r.patientId) === pid(p.id) && r.status === labStatusFilter)
+        );
+      }
+    }
+
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter(
@@ -79,7 +120,7 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
       filtered = filtered.filter((p) => p.bloodType === filterBloodType);
     }
     return filtered;
-  }, [patients, searchQuery, filterSex, filterBloodType]);
+  }, [patients, searchQuery, filterSex, filterBloodType, isLabDoctor, labRequests, labStatusFilter]);
 
   const totalPages = Math.ceil(filteredPatients.length / PAGE_SIZE);
   const paginatedPatients = filteredPatients.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
@@ -101,7 +142,9 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Pacienti</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {patients.length} pacienti inrecistrati
+            {isLabDoctor
+              ? `${new Set(labRequests.map((r) => pid(r.patientId))).size} pacienti cu analize`
+              : `${patients.length} pacienti inrecistrati`}
           </p>
         </div>
         {canManagePatients && (
@@ -111,6 +154,31 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
           </Button>
         )}
       </div>
+
+      {/* Lab status filter tabs — lab doctors only */}
+      {isLabDoctor && (
+        <div className="flex gap-1 border-b border-border">
+          {(["All", "Pending", "In Progress", "Completed"] as const).map((tab) => {
+            const count = tab === "All"
+              ? new Set(labRequests.map((r) => pid(r.patientId))).size
+              : new Set(labRequests.filter((r) => r.status === tab).map((r) => pid(r.patientId))).size;
+            return (
+              <button
+                key={tab}
+                onClick={() => { setLabStatusFilter(tab); setCurrentPage(1); }}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  labStatusFilter === tab
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tab}
+                <span className="ml-1.5 text-xs text-muted-foreground">({count})</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -235,14 +303,27 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
               {/* Footer */}
               <div className="flex items-center justify-between pt-2.5 border-t border-border">
                 <div className="flex items-center gap-1.5">
-                  <Droplets className="w-3.5 h-3.5 text-muted-foreground" />
-                  <Badge
-                    variant="solid"
-                    accent={(bloodTypeColors[patient.bloodType] as any) || "default"}
-                    className="text-xs px-1.5 py-0"
-                  >
-                    {patient.bloodType}
-                  </Badge>
+                  {isLabDoctor ? (
+                    <>
+                      <FlaskConical className="w-3.5 h-3.5 text-muted-foreground" />
+                      {labStatusByPatient.get(pid(patient.id)) && (
+                        <span className={labStatusBadge(labStatusByPatient.get(pid(patient.id))!)}>
+                          {labStatusByPatient.get(pid(patient.id))}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <Droplets className="w-3.5 h-3.5 text-muted-foreground" />
+                      <Badge
+                        variant="solid"
+                        accent={(bloodTypeColors[patient.bloodType] as any) || "default"}
+                        className="text-xs px-1.5 py-0"
+                      >
+                        {patient.bloodType}
+                      </Badge>
+                    </>
+                  )}
                 </div>
                 <Button
                   size="sm"

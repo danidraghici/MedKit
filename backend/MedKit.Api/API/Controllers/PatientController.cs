@@ -32,6 +32,9 @@ public class PatientController(PatientService patientService, AppDbContext ctx) 
         if (role == "admin")
             return Ok(await patientService.GetAllAsync());
 
+        if (role == "lab_doctor")
+            return Ok(await patientService.GetByLabRequestsAsync());
+
         var user = await ctx.Users.FindAsync(userId);
         if (user?.DoctorId is null)
             return Forbid();

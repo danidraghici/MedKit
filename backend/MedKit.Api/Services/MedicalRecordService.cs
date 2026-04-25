@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MedKit.Api.Services;
 
-public class MedicalRecordService(AppDbContext db)
+public class MedicalRecordService(AppDbContext db, LabRequestService labRequestService)
 {
     public async Task<List<MedicalRecordDto>> GetByPatientAsync(Guid patientId)
     {
@@ -39,11 +39,14 @@ public class MedicalRecordService(AppDbContext db)
             .GroupBy(x => x.Drug.MedicalRecordId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
+        var labRequestsByRecord = await labRequestService.GetByMedicalRecordIdsAsync(recordIds);
+
         return records.Select(x =>
         {
             var r = x.Record;
             vitalsByRecord.TryGetValue(r.Id, out var vs);
             drugLookup.TryGetValue(r.Id, out var drugs);
+            labRequestsByRecord.TryGetValue(r.Id, out var labRequest);
 
             return new MedicalRecordDto
             {
@@ -94,6 +97,7 @@ public class MedicalRecordService(AppDbContext db)
                     EndDate      = d.Drug.EndDate?.ToString("yyyy-MM-dd"),
                     PrescribedBy = d.DoctorName,
                 }).ToList(),
+                LabRequest = labRequest,
             };
         }).ToList();
     }
@@ -185,13 +189,39 @@ public class MedicalRecordService(AppDbContext db)
             CreatedAt           = now,
         }).ToList();
 
+        LabRequestEntity? labRequestEntity = null;
+        var sampleTypes = request.SampleTypes?.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+        if (sampleTypes is { Count: > 0 })
+        {
+            labRequestEntity = new LabRequestEntity
+            {
+                Id = Guid.NewGuid(),
+                MedicalRecordId = record.Id,
+                PatientId = patientId,
+                RequestedByDoctorId = doctor.Id,
+                SampleTypes = string.Join(",", sampleTypes),
+                Status = "Pending",
+                Notes = request.LabRequestNotes,
+                CreatedAt = now,
+                UpdatedAt = now,
+            };
+        }
+
         await SessionContextHelper.SetAndExecuteAsync(db, userId, async () =>
         {
             db.MedicalRecords.Add(record);
             if (vitalSign is not null) db.VitalSigns.Add(vitalSign);
             db.PrescribedDrugs.AddRange(drugs);
+            if (labRequestEntity is not null) db.LabRequests.Add(labRequestEntity);
             await db.SaveChangesAsync();
         });
+
+        LabRequestDto? labRequestDto = null;
+        if (labRequestEntity is not null)
+        {
+            var labDtos = await labRequestService.GetByMedicalRecordIdsAsync([record.Id]);
+            labDtos.TryGetValue(record.Id, out labRequestDto);
+        }
 
         var dto = new MedicalRecordDto
         {
@@ -242,6 +272,7 @@ public class MedicalRecordService(AppDbContext db)
                 EndDate      = d.EndDate?.ToString("yyyy-MM-dd"),
                 PrescribedBy = doctor.Name,
             }).ToList(),
+            LabRequest = labRequestDto,
         };
 
         return (dto, null);
@@ -358,10 +389,49 @@ public class MedicalRecordService(AppDbContext db)
 
         db.PrescribedDrugs.AddRange(newDrugs);
 
+        // Lab request management: only touch Pending requests; ignore In Progress/Completed.
+        var existingLabRequest = await db.LabRequests
+            .FirstOrDefaultAsync(lr => lr.MedicalRecordId == recordId);
+
+        var newSampleTypes = request.SampleTypes?.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+        var hasSamples = newSampleTypes is { Count: > 0 };
+
         await SessionContextHelper.SetAndExecuteAsync(db, userId, async () =>
         {
+            if (existingLabRequest is not null && existingLabRequest.Status == "Pending")
+            {
+                if (hasSamples)
+                {
+                    existingLabRequest.SampleTypes = string.Join(",", newSampleTypes!);
+                    existingLabRequest.Notes = request.LabRequestNotes;
+                    existingLabRequest.UpdatedAt = now;
+                }
+                else
+                {
+                    db.LabRequests.Remove(existingLabRequest);
+                }
+            }
+            else if (existingLabRequest is null && hasSamples)
+            {
+                db.LabRequests.Add(new LabRequestEntity
+                {
+                    Id = Guid.NewGuid(),
+                    MedicalRecordId = recordId,
+                    PatientId = record.PatientId,
+                    RequestedByDoctorId = doctor.Id,
+                    SampleTypes = string.Join(",", newSampleTypes!),
+                    Status = "Pending",
+                    Notes = request.LabRequestNotes,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                });
+            }
+
             await db.SaveChangesAsync();
         });
+
+        var labRequestsById = await labRequestService.GetByMedicalRecordIdsAsync([recordId]);
+        labRequestsById.TryGetValue(recordId, out var labRequestDto);
 
         var dto = new MedicalRecordDto
         {
@@ -412,6 +482,7 @@ public class MedicalRecordService(AppDbContext db)
                 EndDate      = d.EndDate?.ToString("yyyy-MM-dd"),
                 PrescribedBy = doctor.Name,
             }).ToList(),
+            LabRequest = labRequestDto,
         };
 
         return (dto, null);
