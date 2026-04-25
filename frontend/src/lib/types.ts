@@ -256,3 +256,17 @@ export interface DoctorSummary {
   department: string;
   doctorRole: DoctorRole;
 }
+
+export interface AuditLog {
+  id: string;
+  performedByUserId: string | null;
+  performedByName: string | null;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  oldValues: string | null;
+  newValues: string | null;
+  ipAddress: string | null;
+  metadata: string | null;
+  performedAt: string;
+}

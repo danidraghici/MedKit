@@ -15,6 +15,7 @@ import {
   Stethoscope,
   UserCog,
   Building2,
+  ClipboardList,
 } from "lucide-react";
 import { PrimaryTemplate } from "@/components/blocks/primary-template";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ import PatientDashboardPage from "@/pages/PatientDashboardPage";
 import ForceChangePasswordPage from "@/pages/ForceChangePasswordPage";
 import DepartmentsPage from "@/pages/DepartmentsPage";
 import DepartmentDoctorsPage from "@/pages/DepartmentDoctorsPage";
+import AuditLogsPage from "@/pages/AuditLogsPage";
 
 type PageId = string;
 type LoginMode = "doctor" | "patient";
@@ -70,6 +72,7 @@ const adminNavigation = [
   { id: "appointments", label: "Appointments", icon: Calendar },
   { id: "doctors", label: "Doctors", icon: UserCog },
   { id: "departments", label: "Departments", icon: Building2 },
+  { id: "audit-logs", label: "Audit Logs", icon: ClipboardList },
   { id: "profile", label: "My Profile", icon: UserCircle },
 ];
 
@@ -284,6 +287,7 @@ export default function App() {
       const dept = departments.find((d) => d.id === id);
       return [{ label: "Departments" }, { label: dept?.name ?? "Department" }];
     }
+    if (activePage === "audit-logs") return [{ label: "Audit Logs" }];
     if (activePage === "profile") return [{ label: "My Profile" }];
     if (activePage.startsWith("create-appointment-patient-")) {
       const id = activePage.replace("create-appointment-patient-", "");
@@ -333,6 +337,7 @@ export default function App() {
       return <CreateAppointmentPage onNavigate={handleNavigate} preselectedPatientId={patientId} />;
     }
     if (activePage === "chatbot") return <ChatbotPage onNavigate={handleNavigate} />;
+    if (activePage === "audit-logs" && isAdmin) return <AuditLogsPage />;
     if (activePage === "profile") return <DoctorProfilePage />;
     if (activePage.startsWith("patient-")) {
       return <PatientDetailPage patientId={activePage.replace("patient-", "")} onNavigate={handleNavigate} />;

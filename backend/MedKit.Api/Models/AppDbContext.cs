@@ -84,5 +84,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
              .HasForeignKey(d => d.DepartmentId)
              .OnDelete(DeleteBehavior.SetNull);
         });
+
+        modelBuilder.Entity<NotificationRuleEntity>(e =>
+        {
+            // notification_rules has audit trigger — OUTPUT clause is forbidden on triggered tables
+            e.ToTable(t => t.UseSqlOutputClause(false));
+        });
     }
 }

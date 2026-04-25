@@ -78,3 +78,7 @@ export const api = {
   delete: <T>(path: string, opts?: RequestOptions) =>
     request<T>(path, { ...opts, method: "DELETE" }),
 };
+
+import type { AuditLog } from "@/lib/types";
+export const getAuditLogs = (limit = 200) =>
+  api.get<AuditLog[]>(`/api/audit-logs?limit=${limit}`);

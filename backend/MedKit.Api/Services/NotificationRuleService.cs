@@ -1,4 +1,5 @@
 using MedKit.Api.API.DTOs;
+using MedKit.Api.API.Helpers;
 using MedKit.Api.Models;
 using MedKit.Api.Models.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -31,8 +32,11 @@ public class NotificationRuleService(AppDbContext ctx)
             UpdatedAt = DateTimeOffset.UtcNow,
         };
 
-        ctx.NotificationRules.Add(rule);
-        await ctx.SaveChangesAsync();
+        await SessionContextHelper.SetAndExecuteAsync(ctx, createdBy, async () =>
+        {
+            ctx.NotificationRules.Add(rule);
+            await ctx.SaveChangesAsync();
+        });
 
         return (ToDto(rule), null);
     }
@@ -49,7 +53,10 @@ public class NotificationRuleService(AppDbContext ctx)
         rule.IsActive = req.IsActive;
         rule.UpdatedAt = DateTimeOffset.UtcNow;
 
-        await ctx.SaveChangesAsync();
+        await SessionContextHelper.SetAndExecuteAsync(ctx, updatedBy, async () =>
+        {
+            await ctx.SaveChangesAsync();
+        });
 
         return (ToDto(rule), null);
     }
