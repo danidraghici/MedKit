@@ -8,7 +8,6 @@ import { api, configureApiClient } from "./api";
 import {
   MOCK_PATIENTS,
   MOCK_MEDICAL_RECORDS,
-  MOCK_LAB_RESULTS,
   MOCK_APPOINTMENTS,
   MOCK_APPOINTMENT_REQUESTS,
   MOCK_LAB_AI_INSIGHTS,
@@ -58,8 +57,10 @@ interface AppState {
 
   // Lab Results
   labResults: LabResult[];
+  fetchLabResults: (patientId: string) => Promise<void>;
   getLabResults: (patientId: string) => LabResult[];
-  addLabResult: (result: Omit<LabResult, "id">) => LabResult;
+  uploadLabResult: (patientId: string, file: File) => Promise<LabResult>;
+  getLabResultDownloadUrl: (labResultId: string) => Promise<string>;
 
   // Notes
   notes: Note[];
@@ -277,18 +278,39 @@ export const useAppStore = create<AppState>()(
       },
 
       // Lab Results
-      labResults: MOCK_LAB_RESULTS,
+      labResults: [],
+
+      fetchLabResults: async (patientId) => {
+        try {
+          const data = await api.get<LabResult[]>(`/api/patients/${patientId}/lab-results`);
+          set((state) => ({
+            labResults: [
+              ...state.labResults.filter((r) => r.patientId !== patientId),
+              ...data,
+            ],
+          }));
+        } catch {
+          // silently keep existing state
+        }
+      },
 
       getLabResults: (patientId) => {
         return get()
           .labResults.filter((r) => r.patientId === patientId)
-          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
       },
 
-      addLabResult: (resultData) => {
-        const newResult: LabResult = { ...resultData, id: generateId("lr") };
-        set((state) => ({ labResults: [...state.labResults, newResult] }));
-        return newResult;
+      uploadLabResult: async (patientId, file) => {
+        const formData = new FormData();
+        formData.append("file", file);
+        const data = await api.postFile<LabResult>(`/api/patients/${patientId}/lab-results`, formData);
+        set((state) => ({ labResults: [...state.labResults, data] }));
+        return data;
+      },
+
+      getLabResultDownloadUrl: async (labResultId) => {
+        const blob = await api.getFile(`/api/lab-results/${labResultId}/file`);
+        return URL.createObjectURL(blob);
       },
 
       // Notes
@@ -456,31 +478,23 @@ export const useAppStore = create<AppState>()(
         const existing = get().labAIInsights.find((i) => i.labResultId === labResultId);
         if (existing) return existing;
         const labResult = get().labResults.find((r) => r.id === labResultId);
-        const isAbnormal = labResult?.status === "Abnormal";
-        const isCritical = labResult?.status === "Critical";
-        const urgency = isCritical ? "Urgent" : isAbnormal ? "Consult Doctor" : "Normal";
         const insight: LabAIInsight = {
           id: generateId("ins"),
           labResultId,
           patientId,
           generatedAt: new Date().toISOString(),
-          urgency,
-          summary: isCritical
-            ? `Your ${labResult?.testName} result is critically outside the normal range and requires prompt medical attention.`
-            : isAbnormal
-            ? `Your ${labResult?.testName} result is outside the normal reference range. Please discuss this with your doctor at your next appointment.`
-            : `Your ${labResult?.testName} result is within the normal reference range. No immediate action is required.`,
+          urgency: "Consult Doctor",
+          summary: `Lab report "${labResult?.originalFileName ?? "uploaded file"}" has been received. Please consult your doctor for a detailed interpretation of your results.`,
           findings: [
-            `Result: ${labResult?.result} ${labResult?.unit}`,
-            `Reference range: ${labResult?.referenceRange}`,
-            `Status: ${labResult?.status}`,
-            labResult?.notes ? `Note: ${labResult.notes}` : null,
-          ].filter(Boolean) as string[],
-          recommendations: isCritical
-            ? ["Contact your doctor immediately", "Do not ignore this result", "Seek urgent consultation"]
-            : isAbnormal
-            ? ["Schedule a follow-up appointment", "Bring this result to your next visit", "Avoid self-medicating based on lab results"]
-            : ["Continue your current health routine", "Schedule your next routine check-up", "Maintain a healthy lifestyle"],
+            `File: ${labResult?.originalFileName ?? "Lab report"}`,
+            `Uploaded: ${labResult?.uploadedAt ? new Date(labResult.uploadedAt).toLocaleDateString() : "Recently"}`,
+            `Uploaded by: ${labResult?.uploaderName ?? "Lab specialist"}`,
+          ],
+          recommendations: [
+            "Review the lab report with your doctor at your next appointment",
+            "Do not self-diagnose based on lab reports",
+            "Contact your care team if you have questions about your results",
+          ],
           disclaimer: "This AI-generated insight is for informational purposes only and does not constitute medical advice. Always consult your doctor before making any health decisions.",
         };
         set((state) => ({ labAIInsights: [...state.labAIInsights, insight] }));
@@ -542,11 +556,10 @@ export const useAppStore = create<AppState>()(
       partialize: (state) => ({
         // Auth state is NOT persisted — sessions are managed via httpOnly cookies.
         // accessToken lives in memory only; user is rehydrated via initAuth() on mount.
-        // doctors are NOT persisted — they are always fetched fresh from the API.
+        // doctors and labResults are NOT persisted — always fetched fresh from the API.
         patients: state.patients,
         medicalRecords: state.medicalRecords,
-        labResults: state.labResults,
-        // notes are always fetched fresh from the API — not persisted
+        // notes and labResults are always fetched fresh from the API — not persisted
         appointments: state.appointments,
         chatSessions: state.chatSessions,
         appointmentRequests: state.appointmentRequests,

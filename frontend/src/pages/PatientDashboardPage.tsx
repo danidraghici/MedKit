@@ -82,7 +82,7 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
   const myRecords = medicalRecords.filter((r) => r.patientId === patientId)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const myLabs = labResults.filter((r) => r.patientId === patientId)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
   const myAppointments = appointments.filter((a) => a.patientId === patientId);
   const myRequests = getPatientAppointmentRequests(patientId);
   const reminders = getPatientReminders(patientId);
@@ -149,13 +149,6 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
     if (status === "Approved" || status === "Completed") return <Badge variant="success">{status}</Badge>;
     if (status === "Pending" || status === "Scheduled") return <Badge variant="warning">{status}</Badge>;
     if (status === "Rejected" || status === "Cancelled") return <Badge variant="destructive">{status}</Badge>;
-    return <Badge>{status}</Badge>;
-  };
-
-  const labStatusBadge = (status: string) => {
-    if (status === "Normal") return <Badge variant="success">Normal</Badge>;
-    if (status === "Abnormal") return <Badge variant="warning">Abnormal</Badge>;
-    if (status === "Critical") return <Badge variant="destructive">Critical</Badge>;
     return <Badge>{status}</Badge>;
   };
 
@@ -363,29 +356,24 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
             </Card>
           </div>
 
-          {/* Lab AI highlight */}
-          {myLabs.some((l) => l.status !== "Normal") && (
-            <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-950/10">
+          {/* Lab files quick summary */}
+          {myLabs.length > 0 && (
+            <Card className="border-purple-200 dark:border-purple-800 bg-purple-50/30 dark:bg-purple-950/10">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-amber-600" /> Lab results needing attention
+                  <Sparkles className="w-4 h-4 text-purple-600" /> Latest lab report available
                 </CardTitle>
               </CardHeader>
-              <CardContent className="pt-0 space-y-2">
-                {myLabs.filter((l) => l.status !== "Normal").map((lab) => (
-                  <div key={lab.id} className="flex items-center justify-between p-3 rounded-lg bg-card border gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">{lab.testName}</p>
-                      <p className="text-xs text-muted-foreground">{lab.result} {lab.unit} · {formatDate(lab.date)}</p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {labStatusBadge(lab.status)}
-                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => handleOpenInsight(lab.id)}>
-                        <Sparkles className="w-3 h-3 text-amber-500" /> AI insight
-                      </Button>
-                    </div>
+              <CardContent className="pt-0">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-card border gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{myLabs[0].originalFileName}</p>
+                    <p className="text-xs text-muted-foreground">{formatDate(myLabs[0].uploadedAt)} · {myLabs[0].uploaderName}</p>
                   </div>
-                ))}
+                  <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 shrink-0" onClick={() => handleOpenInsight(myLabs[0].id)}>
+                    <Sparkles className="w-3 h-3 text-amber-500" /> AI insight
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           )}
@@ -470,20 +458,15 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
               myLabs.map((lab) => {
                 const insight = getLabAIInsight(lab.id);
                 return (
-                  <Card key={lab.id} className={lab.status === "Critical" ? "border-red-300 dark:border-red-800" : lab.status === "Abnormal" ? "border-amber-300 dark:border-amber-800" : ""}>
+                  <Card key={lab.id}>
                     <CardContent className="p-5">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold">{lab.testName}</h3>
-                            {labStatusBadge(lab.status)}
+                          <h3 className="font-semibold truncate">{lab.originalFileName}</h3>
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
+                            <span><span className="font-medium text-foreground">Date:</span> {formatDate(lab.uploadedAt)}</span>
+                            <span><span className="font-medium text-foreground">Uploaded by:</span> {lab.uploaderName}</span>
                           </div>
-                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                            <span><span className="font-medium text-foreground">Result:</span> {lab.result} {lab.unit}</span>
-                            <span><span className="font-medium text-foreground">Reference:</span> {lab.referenceRange}</span>
-                            <span><span className="font-medium text-foreground">Date:</span> {formatDate(lab.date)}</span>
-                          </div>
-                          {lab.notes && <p className="text-sm text-muted-foreground mt-1.5 italic">{lab.notes}</p>}
                         </div>
                         <Button size="sm" variant="outline" className="shrink-0 gap-1.5 border-amber-300 hover:bg-amber-50 dark:border-amber-700 dark:hover:bg-amber-950/30"
                           onClick={() => handleOpenInsight(lab.id)}>

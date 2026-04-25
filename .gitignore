@@ -66,6 +66,9 @@ frontend/.env.*.local
 *.ldf
 *.ndf
 
+# ── Uploaded files (local storage) ───────────────────────────────────────────
+backend/MedKit.Api/Uploads/
+
 # ── OS ────────────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db

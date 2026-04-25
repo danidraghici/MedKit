@@ -85,6 +85,7 @@ builder.Services.AddScoped<AppointmentService>();
 builder.Services.AddScoped<UserProfileService>();
 builder.Services.AddScoped<NotificationRuleService>();
 builder.Services.AddScoped<NoteService>();
+builder.Services.AddScoped<LabResultService>();
 
 // ── Build App ─────────────────────────────────────────────────────────────────
 var app = builder.Build();

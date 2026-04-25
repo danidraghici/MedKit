@@ -81,19 +81,8 @@ const noteSchema = z.object({
   content: z.string().min(5, "Note must be at least 5 characters"),
 });
 
-const labResultSchema = z.object({
-  date: z.string().min(1, "Date required"),
-  testName: z.string().min(2, "Test name required"),
-  result: z.string().min(1, "Result required"),
-  unit: z.string(),
-  referenceRange: z.string().min(1, "Reference range required"),
-  status: z.enum(["Normal", "Abnormal", "Critical"]),
-  notes: z.string(),
-});
-
 type MedicalRecordFormData = z.infer<typeof medicalRecordSchema>;
 type NoteFormData = z.infer<typeof noteSchema>;
-type LabResultFormData = z.infer<typeof labResultSchema>;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -381,22 +370,26 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
   const addNote = useAppStore((s) => s.addNote);
   const updateNote = useAppStore((s) => s.updateNote);
   const deleteNote = useAppStore((s) => s.deleteNote);
-  const addLabResult = useAppStore((s) => s.addLabResult);
+  const fetchLabResults = useAppStore((s) => s.fetchLabResults);
+  const uploadLabResult = useAppStore((s) => s.uploadLabResult);
+  const getLabResultDownloadUrl = useAppStore((s) => s.getLabResultDownloadUrl);
   const user = useAppStore((s) => s.user);
 
   // Role-based permissions
   const isLabDoctor = user?.role === "lab_doctor";
   const isSpecialist = user?.role === "specialist_doctor";
   const isAdmin = user?.role === "admin";
-  // Lab doctor: can only upload lab results
-  // Specialist / admin: can add records, appointments, notes, medications — but NOT edit lab results
-  const canAddLabResults = isLabDoctor || isSpecialist || isAdmin;
+  // Only lab_doctor can upload lab result files
+  const canAddLabResults = isLabDoctor;
   const canAddRecords = isSpecialist || isAdmin;
   const canAddNotes = isSpecialist || isAdmin;
   const canScheduleAppointments = isSpecialist || isAdmin;
 
-  // Lab-result add form state
+  // Lab result upload state
   const [isLabModalOpen, setIsLabModalOpen] = useState(false);
+  const [labFile, setLabFile] = useState<File | null>(null);
+  const [labFileError, setLabFileError] = useState<string | null>(null);
+  const [isLabUploading, setIsLabUploading] = useState(false);
 
   const patient = getPatient(patientId);
   const medicalRecords = getMedicalRecords(patientId);
@@ -417,6 +410,10 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
   useEffect(() => {
     setIsNotesLoading(true);
     void fetchNotes(patientId).finally(() => setIsNotesLoading(false));
+  }, [patientId]);
+
+  useEffect(() => {
+    void fetchLabResults(patientId);
   }, [patientId]);
 
   const handleApptStatusChange = async (id: string, status: string) => {
@@ -470,22 +467,6 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
     formState: { errors: editNoteErrors, isSubmitting: isEditNoteSubmitting },
   } = useForm<NoteFormData>({ resolver: zodResolver(noteSchema) });
 
-  const {
-    register: registerLab,
-    handleSubmit: handleLabSubmit,
-    reset: resetLab,
-    setValue: setLabValue,
-    watch: watchLab,
-    formState: { errors: labErrors, isSubmitting: isLabSubmitting },
-  } = useForm<LabResultFormData>({
-    resolver: zodResolver(labResultSchema),
-    defaultValues: {
-      date: new Date().toISOString().split("T")[0],
-      status: "Normal",
-      unit: "",
-      notes: "",
-    },
-  });
 
   if (!patient) {
     return (
@@ -600,20 +581,34 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
   const canManageNote = (authorId: string) =>
     isAdmin || authorId === user?.doctorId;
 
-  const onAddLabResult = async (data: LabResultFormData) => {
-    await new Promise((r) => setTimeout(r, 300));
-    addLabResult({
-      patientId,
-      date: data.date,
-      testName: data.testName,
-      result: data.result,
-      unit: data.unit,
-      referenceRange: data.referenceRange,
-      status: data.status,
-      notes: data.notes,
-    });
-    setIsLabModalOpen(false);
-    resetLab({ date: new Date().toISOString().split("T")[0], status: "Normal", unit: "", notes: "" });
+  const ALLOWED_LAB_TYPES = ["application/pdf", "image/jpeg", "image/png"];
+  const MAX_LAB_SIZE = 10 * 1024 * 1024;
+
+  const handleLabFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setLabFile(file);
+    setLabFileError(null);
+    if (file && !ALLOWED_LAB_TYPES.includes(file.type))
+      setLabFileError("Only PDF, JPEG, and PNG files are accepted.");
+    else if (file && file.size > MAX_LAB_SIZE)
+      setLabFileError("File must not exceed 10 MB.");
+  };
+
+  const onUploadLabResult = async () => {
+    if (!labFile) { setLabFileError("Please select a file."); return; }
+    if (labFileError) return;
+    setIsLabUploading(true);
+    try {
+      await uploadLabResult(patientId, labFile);
+      setIsLabModalOpen(false);
+      setLabFile(null);
+      toast.success("Lab result uploaded successfully.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Upload failed.";
+      toast.error(msg);
+    } finally {
+      setIsLabUploading(false);
+    }
   };
 
   const downloadAttachment = (att: Attachment) => {
@@ -624,10 +619,6 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
   };
 
   const age = calculateAge(patient.dateOfBirth);
-
-  const statusBadge: Record<string, "default" | "secondary" | "outline"> = {
-    Normal: "secondary", Abnormal: "secondary", Critical: "outline",
-  };
 
   const addEmptyDrug = () => {
     append({
@@ -1037,7 +1028,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Lab Results</h3>
             {canAddLabResults && (
               <Button size="sm" onClick={() => setIsLabModalOpen(true)} className="gap-1.5">
-                <Plus className="w-4 h-4" />Upload Result
+                <Upload className="w-4 h-4" />Upload Result
               </Button>
             )}
           </div>
@@ -1045,38 +1036,37 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
             <Empty>
               <EmptyHeader>
                 <EmptyTitle>No lab results</EmptyTitle>
-                <EmptyDescription>No laboratory results have been recorded.</EmptyDescription>
+                <EmptyDescription>No laboratory result files have been uploaded yet.</EmptyDescription>
               </EmptyHeader>
             </Empty>
           ) : (
             <div className="space-y-3">
               {labResults.map((result) => (
-                <div key={result.id} className="bg-card rounded-xl border border-border p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
-                    <div>
-                      <p className="font-semibold text-sm">{result.testName}</p>
-                      <p className="text-xs text-muted-foreground">{formatDate(result.date)}</p>
-                    </div>
-                    <Badge variant={statusBadge[result.status]} className="text-xs">{result.status}</Badge>
+                <div key={result.id} className="bg-card rounded-xl border border-border p-4 flex items-center gap-4">
+                  <div className="shrink-0 w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 flex items-center justify-center">
+                    <Paperclip className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-0.5">Result</p>
-                      <p className="font-medium">
-                        {result.result} {result.unit && <span className="text-muted-foreground">{result.unit}</span>}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-0.5">Reference range</p>
-                      <p className="font-medium">{result.referenceRange}</p>
-                    </div>
-                    {result.notes && (
-                      <div className="col-span-2 sm:col-span-1">
-                        <p className="text-xs text-muted-foreground mb-0.5">Notes</p>
-                        <p className="text-sm">{result.notes}</p>
-                      </div>
-                    )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm truncate">{result.originalFileName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDate(result.uploadedAt)} · {formatFileSize(result.fileSizeBytes)} · Uploaded by {result.uploaderName}
+                    </p>
                   </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="shrink-0 gap-1.5"
+                    onClick={async () => {
+                      try {
+                        const url = await getLabResultDownloadUrl(result.id);
+                        window.open(url, "_blank", "noopener,noreferrer");
+                      } catch {
+                        toast.error("Could not generate download link. Please try again.");
+                      }
+                    }}
+                  >
+                    <Eye className="w-3.5 h-3.5" />View
+                  </Button>
                 </div>
               ))}
             </div>
@@ -1624,95 +1614,68 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
       </Dialog>
 
       {/* ── Upload Lab Result Modal ── */}
-      <Dialog open={isLabModalOpen} onOpenChange={(open) => { if (!open) { setIsLabModalOpen(false); resetLab({ date: new Date().toISOString().split("T")[0], status: "Normal", unit: "", notes: "" }); } }}>
-        <DialogContent className="max-w-lg">
+      <Dialog open={isLabModalOpen} onOpenChange={(open) => { if (!open) { setIsLabModalOpen(false); setLabFile(null); setLabFileError(null); } }}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FlaskConical className="w-5 h-5 text-purple-600" />
               Upload Lab Result
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleLabSubmit(onAddLabResult)} className="space-y-4 py-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Date */}
-              <div className="space-y-1.5">
-                <Label htmlFor="lab-date">Date <span className="text-destructive">*</span></Label>
-                <Input id="lab-date" type="date" {...registerLab("date")} />
-                {labErrors.date && <p className="text-xs text-destructive">{labErrors.date.message}</p>}
-              </div>
-
-              {/* Test Name */}
-              <div className="space-y-1.5">
-                <Label htmlFor="lab-testName">Test name <span className="text-destructive">*</span></Label>
-                <Input id="lab-testName" placeholder="e.g. Creatinine, CBC" {...registerLab("testName")} />
-                {labErrors.testName && <p className="text-xs text-destructive">{labErrors.testName.message}</p>}
-              </div>
-
-              {/* Result */}
-              <div className="space-y-1.5">
-                <Label htmlFor="lab-result">Result <span className="text-destructive">*</span></Label>
-                <Input id="lab-result" placeholder="e.g. 1.2, 95%" {...registerLab("result")} />
-                {labErrors.result && <p className="text-xs text-destructive">{labErrors.result.message}</p>}
-              </div>
-
-              {/* Unit */}
-              <div className="space-y-1.5">
-                <Label htmlFor="lab-unit">Unit</Label>
-                <Input id="lab-unit" placeholder="e.g. mg/dL, mmol/L" {...registerLab("unit")} />
-              </div>
-
-              {/* Reference Range */}
-              <div className="space-y-1.5">
-                <Label htmlFor="lab-refRange">Reference range <span className="text-destructive">*</span></Label>
-                <Input id="lab-refRange" placeholder="e.g. 0.6–1.2 mg/dL" {...registerLab("referenceRange")} />
-                {labErrors.referenceRange && <p className="text-xs text-destructive">{labErrors.referenceRange.message}</p>}
-              </div>
-
-              {/* Status */}
-              <div className="space-y-1.5">
-                <Label>Status <span className="text-destructive">*</span></Label>
-                <Select
-                  value={watchLab("status")}
-                  onValueChange={(v) => setLabValue("status", v as "Normal" | "Abnormal" | "Critical")}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Normal">Normal</SelectItem>
-                    <SelectItem value="Abnormal">Abnormal</SelectItem>
-                    <SelectItem value="Critical">Critical</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Notes */}
-              <div className="sm:col-span-2 space-y-1.5">
-                <Label htmlFor="lab-notes">Notes</Label>
-                <Textarea
-                  id="lab-notes"
-                  placeholder="Additional observations or comments..."
-                  rows={2}
-                  {...registerLab("notes")}
-                />
-              </div>
+          <div className="space-y-4 py-2">
+            <div
+              className="border-2 border-dashed border-border rounded-xl p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors"
+              onClick={() => document.getElementById("lab-file-input")?.click()}
+            >
+              <input
+                id="lab-file-input"
+                type="file"
+                accept="application/pdf,image/jpeg,image/png"
+                className="hidden"
+                onChange={handleLabFileChange}
+              />
+              {labFile ? (
+                <div className="flex items-center justify-center gap-3">
+                  <Paperclip className="w-5 h-5 text-purple-600 shrink-0" />
+                  <div className="text-left min-w-0">
+                    <p className="text-sm font-medium truncate">{labFile.name}</p>
+                    <p className="text-xs text-muted-foreground">{formatFileSize(labFile.size)}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="shrink-0 w-7 h-7"
+                    onClick={(e) => { e.stopPropagation(); setLabFile(null); setLabFileError(null); }}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground opacity-50" />
+                  <p className="text-sm font-medium">Click to select a file</p>
+                  <p className="text-xs text-muted-foreground mt-1">PDF, JPEG, or PNG · max 10 MB</p>
+                </>
+              )}
             </div>
-
+            {labFileError && <p className="text-xs text-destructive">{labFileError}</p>}
             <p className="text-xs text-muted-foreground">
-              Uploaded by: <strong>{user?.name}</strong> · {new Date().toLocaleDateString()}
+              Uploading as: <strong>{user?.name}</strong> · {new Date().toLocaleDateString()}
             </p>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => { setIsLabModalOpen(false); resetLab({ date: new Date().toISOString().split("T")[0], status: "Normal", unit: "", notes: "" }); }}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isLabSubmitting}>
-                {isLabSubmitting ? "Uploading..." : "Upload result"}
-              </Button>
-            </DialogFooter>
-          </form>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => { setIsLabModalOpen(false); setLabFile(null); setLabFileError(null); }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={onUploadLabResult} disabled={isLabUploading || !labFile || !!labFileError}>
+              {isLabUploading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Uploading...</> : "Upload"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

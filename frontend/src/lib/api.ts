@@ -66,11 +66,75 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   return response.json() as Promise<T>;
 }
 
+async function requestFileBlob(path: string): Promise<Blob> {
+  const buildHeaders = (): HeadersInit => {
+    const headers: HeadersInit = {};
+    const token = getAccessToken();
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    return headers;
+  };
+
+  const doFetch = () =>
+    fetch(`${API_BASE}${path}`, {
+      method: "GET",
+      credentials: "include",
+      headers: buildHeaders(),
+    });
+
+  let response = await doFetch();
+
+  if (response.status === 401) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) response = await doFetch();
+  }
+
+  if (!response.ok) {
+    throw Object.assign(new Error(httpErrorMessage(response.status)), { status: response.status });
+  }
+
+  return response.blob();
+}
+
+async function requestFormData<T>(path: string, formData: FormData): Promise<T> {
+  const buildHeaders = (): HeadersInit => {
+    const headers: HeadersInit = {};
+    const token = getAccessToken();
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    return headers;
+  };
+
+  const doFetch = () =>
+    fetch(`${API_BASE}${path}`, {
+      method: "POST",
+      credentials: "include",
+      headers: buildHeaders(),
+      body: formData,
+    });
+
+  let response = await doFetch();
+
+  if (response.status === 401) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) response = await doFetch();
+  }
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({})) as { error?: string };
+    const message = payload.error ?? httpErrorMessage(response.status);
+    throw Object.assign(new Error(message), { status: response.status, payload });
+  }
+
+  return response.json() as Promise<T>;
+}
+
 export const api = {
   get: <T>(path: string, opts?: RequestOptions) =>
     request<T>(path, { ...opts, method: "GET" }),
   post: <T>(path: string, body?: unknown, opts?: RequestOptions) =>
     request<T>(path, { ...opts, method: "POST", body }),
+  postFile: <T>(path: string, formData: FormData) =>
+    requestFormData<T>(path, formData),
+  getFile: (path: string) => requestFileBlob(path),
   put: <T>(path: string, body?: unknown, opts?: RequestOptions) =>
     request<T>(path, { ...opts, method: "PUT", body }),
   patch: <T>(path: string, body?: unknown, opts?: RequestOptions) =>

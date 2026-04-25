@@ -245,3 +245,8 @@ When the app loads, it automatically attempts a token refresh using the stored h
 ## Audit Trail
 
 The database maintains a complete, immutable audit trail in the `audit_logs` table. All data mutations (INSERT / UPDATE / DELETE) on clinical tables are captured automatically via SQL Server triggers. Login, logout, and record-view events are written by the API layer. The audit log cannot be modified or deleted — enforced by INSTEAD OF triggers on the table itself.
+
+
+EF Core migrations: 
+dotnet ef migrations add AddLabResults --project backend/MedKit.Api
+dotnet ef database update --project backend/MedKit.Api

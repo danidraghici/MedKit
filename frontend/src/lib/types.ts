@@ -111,13 +111,12 @@ export interface Attachment {
 export interface LabResult {
   id: string;
   patientId: string;
-  date: string;
-  testName: string;
-  result: string;
-  referenceRange: string;
-  unit: string;
-  status: "Normal" | "Abnormal" | "Critical";
-  notes: string;
+  uploadedByUserId: string;
+  uploaderName: string;
+  originalFileName: string;
+  contentType: string;
+  fileSizeBytes: number;
+  uploadedAt: string;
 }
 
 export interface Note {

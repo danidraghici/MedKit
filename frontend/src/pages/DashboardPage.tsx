@@ -36,6 +36,7 @@ import {
   Activity,
   ClipboardList,
   Loader2,
+  Upload,
 } from "lucide-react";
 import { KPI } from "@/components/ui/kpi";
 import { Button } from "@/components/ui/button";
@@ -215,20 +216,11 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
     const upcomingApts = appointments.filter(
       (a) => new Date(a.date) >= today && a.status === "Scheduled"
     );
-    // Lab-specific stats
-    const criticalResults = labResults.filter((r) => r.status === "Critical");
-    const abnormalResults = labResults.filter((r) => r.status === "Abnormal");
-    const todayResults = labResults.filter((r) => r.date === todayStr);
+    // Lab-specific stats (file-based: no status, use uploadedAt for date filtering)
+    const todayResults = labResults.filter((r) => r.uploadedAt.startsWith(todayStr));
     const recentLabResults = [...labResults]
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())
       .slice(0, 6);
-    const flaggedResults = [...criticalResults, ...abnormalResults]
-      .sort((a, b) => {
-        const order = { Critical: 0, Abnormal: 1, Normal: 2 };
-        return order[a.status] - order[b.status];
-      })
-      .slice(0, 6);
-    // Patients who have at least one lab result with pending/abnormal status
     const patientsWithLabWork = new Set(labResults.map((r) => r.patientId)).size;
     return {
       totalPatients: patients.length,
@@ -237,11 +229,8 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
       upcomingList: upcomingApts.slice(0, 5),
       // Lab stats
       totalLabResults: labResults.length,
-      criticalCount: criticalResults.length,
-      abnormalCount: abnormalResults.length,
       todayCount: todayResults.length,
       patientsWithLabWork,
-      flaggedResults,
       recentLabResults,
       // Upcoming harvests = all upcoming scheduled appointments (lab doctor view)
       upcomingHarvests: upcomingApts,
@@ -543,18 +532,11 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
             accent="cerulean"
           />
           <KPI
-            label="Critical Results"
-            value={stats.criticalCount}
-            period="Needs attention"
-            icon={<AlertTriangle className="w-7 h-7" />}
+            label="Uploaded Today"
+            value={stats.todayCount}
+            period="Lab files today"
+            icon={<Upload className="w-7 h-7" />}
             accent="orange"
-          />
-          <KPI
-            label="Abnormal Results"
-            value={stats.abnormalCount}
-            period="Out of range"
-            icon={<Activity className="w-7 h-7" />}
-            accent="purple"
           />
           <KPI
             label="Patients with Labs"
@@ -663,49 +645,35 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
           {isLabDoctor && (
             <div className="space-y-6">
 
-              {/* ── Flagged Results (Critical + Abnormal) ─────────────────────── */}
+              {/* ── Recent Uploads ────────────────────────────────────────────── */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-3">
                   <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 text-orange-500" />
-                    Flagged Results
-                    {(stats.criticalCount + stats.abnormalCount) > 0 && (
-                      <Badge className="ml-1 bg-orange-100 text-orange-700 border-orange-200 text-[10px] px-1.5">
-                        {stats.criticalCount + stats.abnormalCount} flagged
+                    <FileText className="w-4 h-4 text-purple-500" />
+                    Recent Uploads
+                    {stats.todayCount > 0 && (
+                      <Badge className="ml-1 bg-purple-100 text-purple-700 border-purple-200 text-[10px] px-1.5">
+                        {stats.todayCount} today
                       </Badge>
                     )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0 space-y-2">
-                  {stats.flaggedResults.length === 0 ? (
+                  {stats.recentLabResults.length === 0 ? (
                     <div className="text-center py-10 text-muted-foreground">
-                      <CheckCircle2 className="w-9 h-9 mx-auto mb-2 opacity-40 text-emerald-500" />
-                      <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">All results within normal range</p>
-                      <p className="text-xs mt-0.5">No critical or abnormal results to review</p>
+                      <FlaskConical className="w-9 h-9 mx-auto mb-2 opacity-40" />
+                      <p className="text-sm font-medium">No lab files uploaded yet</p>
+                      <p className="text-xs mt-0.5">Upload a lab result from any patient's profile</p>
                     </div>
                   ) : (
-                    stats.flaggedResults.map((r) => {
+                    stats.recentLabResults.map((r) => {
                       const patient = patients.find((p) => p.id === r.patientId);
                       return (
                         <div key={r.id} className="flex items-start gap-3 p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors">
-                          {/* Status indicator */}
-                          <div className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${r.status === "Critical" ? "bg-red-500" : "bg-orange-400"}`} />
+                          <div className="mt-0.5 w-2 h-2 rounded-full shrink-0 bg-purple-400" />
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2 flex-wrap">
-                              <p className="text-sm font-medium">{r.testName}</p>
-                              <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium shrink-0 ${
-                                r.status === "Critical"
-                                  ? "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-800"
-                                  : "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-800"
-                              }`}>
-                                {r.status}
-                              </span>
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              Result: <span className="font-medium text-foreground">{r.result}{r.unit ? ` ${r.unit}` : ""}</span>
-                              {r.referenceRange && <span> · Ref: {r.referenceRange}</span>}
-                            </p>
-                            <div className="flex items-center justify-between mt-1.5 flex-wrap gap-1">
+                            <p className="text-sm font-medium truncate">{r.originalFileName}</p>
+                            <div className="flex items-center justify-between mt-1 flex-wrap gap-1">
                               <button
                                 onClick={() => patient && onNavigate(`patient-${patient.id}`)}
                                 className="text-xs text-primary hover:underline flex items-center gap-1"
@@ -713,7 +681,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                                 <User className="w-3 h-3" />
                                 {patient?.fullName ?? "Unknown patient"}
                               </button>
-                              <span className="text-[10px] text-muted-foreground">{formatDate(r.date)}</span>
+                              <span className="text-[10px] text-muted-foreground">{formatDate(r.uploadedAt)}</span>
                             </div>
                           </div>
                         </div>
@@ -840,21 +808,10 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                               </AvatarFallback>
                             </Avatar>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">{r.testName}</p>
+                              <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">{r.originalFileName}</p>
                               <p className="text-xs text-muted-foreground truncate">{patient?.fullName ?? "Unknown patient"}</p>
                             </div>
-                            <div className="flex flex-col items-end gap-1 shrink-0">
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium ${
-                                r.status === "Critical"
-                                  ? "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400"
-                                  : r.status === "Abnormal"
-                                  ? "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/30 dark:text-orange-400"
-                                  : "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400"
-                              }`}>
-                                {r.status}
-                              </span>
-                              <span className="text-[10px] text-muted-foreground">{formatDate(r.date)}</span>
-                            </div>
+                            <span className="text-[10px] text-muted-foreground shrink-0">{formatDate(r.uploadedAt)}</span>
                           </button>
                         );
                       })
@@ -870,43 +827,18 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                       Workload Summary
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-0 space-y-4">
-                    {/* Result status breakdown */}
-                    <div className="space-y-2.5">
-                      {(
-                        [
-                          { label: "Normal", count: stats.totalLabResults - stats.criticalCount - stats.abnormalCount, color: "bg-emerald-500", textColor: "text-emerald-700 dark:text-emerald-400" },
-                          { label: "Abnormal", count: stats.abnormalCount, color: "bg-orange-400", textColor: "text-orange-700 dark:text-orange-400" },
-                          { label: "Critical", count: stats.criticalCount, color: "bg-red-500", textColor: "text-red-700 dark:text-red-400" },
-                        ] as const
-                      ).map(({ label, count, color, textColor }) => (
-                        <div key={label} className="flex items-center gap-3">
-                          <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${color}`} />
-                          <span className="text-sm flex-1">{label}</span>
-                          <span className={`text-sm font-semibold ${textColor}`}>{count}</span>
-                          <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full ${color}`}
-                              style={{ width: stats.totalLabResults > 0 ? `${(count / stats.totalLabResults) * 100}%` : "0%" }}
-                            />
-                          </div>
-                        </div>
-                      ))}
+                  <CardContent className="pt-0 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Total files uploaded</span>
+                      <span className="font-semibold">{stats.totalLabResults}</span>
                     </div>
-
-                    <div className="border-t pt-4 space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Total results uploaded</span>
-                        <span className="font-semibold">{stats.totalLabResults}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Patients with lab work</span>
-                        <span className="font-semibold">{stats.patientsWithLabWork}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Results uploaded today</span>
-                        <span className="font-semibold">{stats.todayCount}</span>
-                      </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Patients with lab work</span>
+                      <span className="font-semibold">{stats.patientsWithLabWork}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Uploaded today</span>
+                      <span className="font-semibold">{stats.todayCount}</span>
                     </div>
                   </CardContent>
                 </Card>

@@ -423,74 +423,8 @@ export const MOCK_MEDICAL_RECORDS: MedicalRecord[] = [
   },
 ];
 
-export const MOCK_LAB_RESULTS: LabResult[] = [
-  {
-    id: "lr001",
-    patientId: "p001",
-    date: "2024-11-20",
-    testName: "Urinalysis",
-    result: "Positive for RBCs, Crystals present",
-    referenceRange: "Negative",
-    unit: "",
-    status: "Abnormal",
-    notes: "Calcium oxalate crystals seen. Consistent with kidney stone.",
-  },
-  {
-    id: "lr002",
-    patientId: "p001",
-    date: "2024-11-20",
-    testName: "Serum Creatinine",
-    result: "1.4",
-    referenceRange: "0.7 – 1.3",
-    unit: "mg/dL",
-    status: "Abnormal",
-    notes: "Mildly elevated. Monitor renal function.",
-  },
-  {
-    id: "lr003",
-    patientId: "p001",
-    date: "2024-11-20",
-    testName: "Serum Calcium",
-    result: "10.8",
-    referenceRange: "8.5 – 10.5",
-    unit: "mg/dL",
-    status: "Abnormal",
-    notes: "Mildly elevated. Consider primary hyperparathyroidism workup.",
-  },
-  {
-    id: "lr004",
-    patientId: "p002",
-    date: "2024-12-01",
-    testName: "HbA1c",
-    result: "7.1",
-    referenceRange: "<7.0",
-    unit: "%",
-    status: "Abnormal",
-    notes: "Slightly above target. Dietary counselling provided.",
-  },
-  {
-    id: "lr005",
-    patientId: "p002",
-    date: "2024-12-01",
-    testName: "Fasting Glucose",
-    result: "118",
-    referenceRange: "70 – 99",
-    unit: "mg/dL",
-    status: "Abnormal",
-    notes: "Above normal range. Continue monitoring.",
-  },
-  {
-    id: "lr006",
-    patientId: "p003",
-    date: "2024-10-15",
-    testName: "CT Abdomen (Non-contrast)",
-    result: "4mm stone in left proximal ureter",
-    referenceRange: "No stones",
-    unit: "",
-    status: "Critical",
-    notes: "Moderate hydronephrosis noted. Urgent urology referral.",
-  },
-];
+// Lab results are now file attachments fetched from the API — no mock data needed.
+export const MOCK_LAB_RESULTS: LabResult[] = [];
 
 export const MOCK_NOTES: Note[] = [
   {

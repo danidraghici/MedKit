@@ -16,6 +16,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<UserProfileEntity> UserProfiles => Set<UserProfileEntity>();
     public DbSet<NotificationRuleEntity> NotificationRules => Set<NotificationRuleEntity>();
     public DbSet<NoteEntity> Notes => Set<NoteEntity>();
+    public DbSet<LabResultEntity> LabResults => Set<LabResultEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -95,6 +96,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<NoteEntity>(e =>
         {
             // notes has audit trigger — OUTPUT clause is forbidden on triggered tables
+            e.ToTable(t => t.UseSqlOutputClause(false));
+        });
+
+        modelBuilder.Entity<LabResultEntity>(e =>
+        {
             e.ToTable(t => t.UseSqlOutputClause(false));
         });
     }
