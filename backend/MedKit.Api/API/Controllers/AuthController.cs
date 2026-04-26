@@ -48,10 +48,10 @@ public class AuthController(AuthService authService, IWebHostEnvironment env) : 
 
         return error switch
         {
-            "account_disabled" => Unauthorized(new { error = "Account is disabled. Contact your administrator." }),
-            "invalid_credentials" => Unauthorized(new { error = "Invalid email or password." }),
+            "account_disabled" => Unauthorized(new { error = "Contul este dezactivat. Contactați administratorul." }),
+            "invalid_credentials" => Unauthorized(new { error = "Email sau parolă incorectă." }),
             _ when result is not null => SetCookieAndRespond(result),
-            _ => StatusCode(500, new { error = "Unexpected error." })
+            _ => StatusCode(500, new { error = "Eroare neașteptată." })
         };
     }
 
@@ -67,14 +67,14 @@ public class AuthController(AuthService authService, IWebHostEnvironment env) : 
     {
         var rawToken = Request.Cookies["refreshToken"];
         if (string.IsNullOrEmpty(rawToken))
-            return Unauthorized(new { error = "No refresh token provided." });
+            return Unauthorized(new { error = "Nu a fost furnizat un token de reîmprospătare." });
 
         var result = await authService.RefreshAsync(rawToken, GetIp(), GetUserAgent());
 
         if (result is null)
         {
             ClearRefreshCookie();
-            return Unauthorized(new { error = "Invalid or expired refresh token." });
+            return Unauthorized(new { error = "Token de reîmprospătare invalid sau expirat." });
         }
 
         SetRefreshCookie(result.NewRawRefreshToken, result.Remember);
@@ -95,7 +95,7 @@ public class AuthController(AuthService authService, IWebHostEnvironment env) : 
         }
 
         ClearRefreshCookie();
-        return Ok(new { message = "Logged out successfully." });
+        return Ok(new { message = "Deconectare efectuată cu succes." });
     }
 
     // POST /api/auth/change-password
@@ -115,18 +115,18 @@ public class AuthController(AuthService authService, IWebHostEnvironment env) : 
 
         return error switch
         {
-            "not_found"      => NotFound(new { error = "User not found." }),
-            "wrong_password" => BadRequest(new { error = "Current password is incorrect." }),
-            "same_password"  => BadRequest(new { error = "New password must be different from the current password." }),
+            "not_found"      => NotFound(new { error = "Utilizatorul nu a fost găsit." }),
+            "wrong_password" => BadRequest(new { error = "Parola curentă este incorectă." }),
+            "same_password"  => BadRequest(new { error = "Parola nouă trebuie să fie diferită de parola actuală." }),
             null             => ClearAndRespond(),
-            _                => StatusCode(500, new { error = "Unexpected error." })
+            _                => StatusCode(500, new { error = "Eroare neașteptată." })
         };
     }
 
     private OkObjectResult ClearAndRespond()
     {
         ClearRefreshCookie();
-        return Ok(new { message = "Password changed successfully. Please sign in again." });
+        return Ok(new { message = "Parola a fost schimbată cu succes. Vă rugăm să vă autentificați din nou." });
     }
 
     // GET /api/health

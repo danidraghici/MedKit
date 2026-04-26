@@ -29,8 +29,8 @@ import type { DoctorScheduleEntry, CreateScheduleEntryPayload } from "@/lib/type
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAY_NAMES = ["Duminică", "Luni", "Marți", "Miercuri", "Joi", "Vineri", "Sâmbătă"];
+const DAY_SHORT = ["Dum", "Lun", "Mar", "Mie", "Joi", "Vin", "Sâm"];
 
 // ─── Zod schema ──────────────────────────────────────────────────────────────
 
@@ -38,22 +38,22 @@ const scheduleSchema = z.object({
   scheduleType: z.enum(["working_hours", "block"]),
   dayOfWeek: z.number().int().min(0).max(6).optional(),
   specificDate: z.string().optional(),
-  startTime: z.string().regex(/^\d{2}:\d{2}$/, "Use HH:mm format").optional().or(z.literal("")),
-  endTime: z.string().regex(/^\d{2}:\d{2}$/, "Use HH:mm format").optional().or(z.literal("")),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/, "Utilizați formatul HH:mm").optional().or(z.literal("")),
+  endTime: z.string().regex(/^\d{2}:\d{2}$/, "Utilizați formatul HH:mm").optional().or(z.literal("")),
   isWorkingDay: z.boolean(),
   isFullDay: z.boolean(),
   reason: z.string().max(500).optional(),
 }).superRefine((data, ctx) => {
   if (data.scheduleType === "working_hours") {
     if (data.dayOfWeek === undefined || data.dayOfWeek === null) {
-      ctx.addIssue({ code: "custom", path: ["dayOfWeek"], message: "Select a day" });
+      ctx.addIssue({ code: "custom", path: ["dayOfWeek"], message: "Selectați o zi" });
     }
     if (data.isWorkingDay && !data.startTime) {
-      ctx.addIssue({ code: "custom", path: ["startTime"], message: "Start time is required" });
+      ctx.addIssue({ code: "custom", path: ["startTime"], message: "Ora de început este obligatorie" });
     }
   }
   if (data.scheduleType === "block" && !data.specificDate) {
-    ctx.addIssue({ code: "custom", path: ["specificDate"], message: "Select a date" });
+    ctx.addIssue({ code: "custom", path: ["specificDate"], message: "Selectați o dată" });
   }
 });
 
@@ -77,9 +77,9 @@ function toPayload(v: FormValues): CreateScheduleEntryPayload {
 // ─── Time display helper ──────────────────────────────────────────────────────
 
 function formatTimeRange(entry: DoctorScheduleEntry): string {
-  if (entry.isFullDay) return "Full day";
+  if (entry.isFullDay) return "Zi întreagă";
   if (!entry.startTime) return "—";
-  return entry.endTime ? `${entry.startTime} – ${entry.endTime}` : `From ${entry.startTime}`;
+  return entry.endTime ? `${entry.startTime} – ${entry.endTime}` : `De la ${entry.startTime}`;
 }
 
 // ─── Entry Dialog ─────────────────────────────────────────────────────────────
@@ -141,14 +141,14 @@ function EntryDialog({ open, onClose, onSubmit, defaultType = "working_hours", e
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{title ?? (editing ? "Edit Entry" : "Add Entry")}</DialogTitle>
+          <DialogTitle>{title ?? (editing ? "Editează înregistrare" : "Adaugă înregistrare")}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
           {/* Schedule Type */}
           {!readonlyType && (
             <div className="space-y-1.5">
-              <Label>Type</Label>
+              <Label>Tip</Label>
               <Controller
                 name="scheduleType"
                 control={control}
@@ -158,8 +158,8 @@ function EntryDialog({ open, onClose, onSubmit, defaultType = "working_hours", e
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="working_hours">Working hours</SelectItem>
-                      <SelectItem value="block">Block / unavailable</SelectItem>
+                      <SelectItem value="working_hours">Ore de lucru</SelectItem>
+                      <SelectItem value="block">Blocat / indisponibil</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
@@ -171,7 +171,7 @@ function EntryDialog({ open, onClose, onSubmit, defaultType = "working_hours", e
           {scheduleType === "working_hours" && (
             <>
               <div className="space-y-1.5">
-                <Label>Day of week</Label>
+                <Label>Ziua săptămânii</Label>
                 <Controller
                   name="dayOfWeek"
                   control={control}
@@ -181,7 +181,7 @@ function EntryDialog({ open, onClose, onSubmit, defaultType = "working_hours", e
                       onValueChange={(v) => field.onChange(parseInt(v))}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select day…" />
+                        <SelectValue placeholder="Selectați ziua…" />
                       </SelectTrigger>
                       <SelectContent>
                         {DAY_NAMES.map((name, i) => (
@@ -204,20 +204,20 @@ function EntryDialog({ open, onClose, onSubmit, defaultType = "working_hours", e
                     <Switch checked={field.value} onCheckedChange={field.onChange} id="isWorkingDay" />
                   )}
                 />
-                <Label htmlFor="isWorkingDay">Working day</Label>
+                <Label htmlFor="isWorkingDay">Zi lucrătoare</Label>
               </div>
 
               {isWorkingDay && (
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label>Start time</Label>
+                    <Label>Ora de început</Label>
                     <Input type="time" {...register("startTime")} />
                     {errors.startTime && (
                       <p className="text-xs text-destructive">{errors.startTime.message}</p>
                     )}
                   </div>
                   <div className="space-y-1.5">
-                    <Label>End time</Label>
+                    <Label>Ora de sfârșit</Label>
                     <Input type="time" {...register("endTime")} />
                     {errors.endTime && (
                       <p className="text-xs text-destructive">{errors.endTime.message}</p>
@@ -232,13 +232,13 @@ function EntryDialog({ open, onClose, onSubmit, defaultType = "working_hours", e
           {scheduleType === "block" && (
             <>
               <div className="space-y-1.5">
-                <Label>Date</Label>
+                <Label>Dată</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start font-normal">
                       {specificDate
                         ? format(parseISO(specificDate), "PPP")
-                        : <span className="text-muted-foreground">Pick a date…</span>}
+                        : <span className="text-muted-foreground">Alegeți o dată…</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -262,35 +262,35 @@ function EntryDialog({ open, onClose, onSubmit, defaultType = "working_hours", e
                     <Switch checked={field.value} onCheckedChange={field.onChange} id="isFullDay" />
                   )}
                 />
-                <Label htmlFor="isFullDay">Full day</Label>
+                <Label htmlFor="isFullDay">Zi întreagă</Label>
               </div>
 
               {!isFullDay && (
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label>Start time</Label>
+                    <Label>Ora de început</Label>
                     <Input type="time" {...register("startTime")} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>End time</Label>
+                    <Label>Ora de sfârșit</Label>
                     <Input type="time" {...register("endTime")} />
                   </div>
                 </div>
               )}
 
               <div className="space-y-1.5">
-                <Label>Reason (optional)</Label>
-                <Textarea rows={2} placeholder="e.g. Vacation, Conference…" {...register("reason")} />
+                <Label>Motiv (opțional)</Label>
+                <Textarea rows={2} placeholder="ex. Concediu, Conferință…" {...register("reason")} />
               </div>
             </>
           )}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
-              Cancel
+              Anulează
             </Button>
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Saving…" : "Save"}
+              {submitting ? "Se salvează…" : "Salvează"}
             </Button>
           </DialogFooter>
         </form>
@@ -337,7 +337,7 @@ export function DoctorScheduleTab({ doctorId, readOnly = false, adminMode = fals
       setActiveEntries(active);
       setPendingEntries(pending);
     } catch {
-      toast.error("Failed to load schedule.");
+      toast.error("Eroare la încărcarea programului.");
     } finally {
       setLoading(false);
     }
@@ -376,23 +376,23 @@ export function DoctorScheduleTab({ doctorId, readOnly = false, adminMode = fals
         const updated = await updateScheduleEntry(doctorId, editingEntry.id, payload);
         if (adminMode) {
           // Admin update creates a pending entry — it won't appear in active list immediately
-          toast.success("Proposed change submitted. Waiting for doctor approval.");
+          toast.success("Modificare propusă trimisă. Se așteaptă aprobarea medicului.");
         } else {
           setActiveEntries((prev) => prev.map((e) => e.id === editingEntry.id ? updated : e));
-          toast.success("Schedule updated.");
+          toast.success("Program actualizat.");
         }
       } else {
         const created = await createScheduleEntry(doctorId, payload);
         if (adminMode) {
-          toast.success("Proposed entry submitted. Waiting for doctor approval.");
+          toast.success("Înregistrare propusă trimisă. Se așteaptă aprobarea medicului.");
         } else {
           setActiveEntries((prev) => [...prev, created]);
-          toast.success("Schedule entry added.");
+          toast.success("Înregistrare adăugată.");
         }
       }
       setDialogOpen(false);
     } catch {
-      toast.error("Failed to save. Please try again.");
+      toast.error("Eroare la salvare. Vă rugăm să încercați din nou.");
     } finally {
       setSubmitting(false);
     }
@@ -406,10 +406,10 @@ export function DoctorScheduleTab({ doctorId, readOnly = false, adminMode = fals
     try {
       await deleteScheduleEntry(doctorId, deleteTarget.id);
       setActiveEntries((prev) => prev.filter((e) => e.id !== deleteTarget.id));
-      toast.success("Entry removed.");
+      toast.success("Înregistrare eliminată.");
       setDeleteTarget(null);
     } catch {
-      toast.error("Failed to delete entry.");
+      toast.error("Eroare la ștergerea înregistrării.");
     } finally {
       setDeleting(false);
     }
@@ -428,9 +428,9 @@ export function DoctorScheduleTab({ doctorId, readOnly = false, adminMode = fals
         setActiveEntries((prev) => [...prev, approved]);
       }
       fetchSchedulePendingCount(doctorId);
-      toast.success("Schedule change approved.");
+      toast.success("Modificare de program aprobată.");
     } catch {
-      toast.error("Failed to approve change.");
+      toast.error("Eroare la aprobarea modificării.");
     }
   };
 
@@ -441,16 +441,16 @@ export function DoctorScheduleTab({ doctorId, readOnly = false, adminMode = fals
       await rejectScheduleEntry(doctorId, entry.id);
       setPendingEntries((prev) => prev.filter((e) => e.id !== entry.id));
       fetchSchedulePendingCount(doctorId);
-      toast.success("Change rejected.");
+      toast.success("Modificare respinsă.");
     } catch {
-      toast.error("Failed to reject change.");
+      toast.error("Eroare la respingerea modificării.");
     }
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <p className="text-sm text-muted-foreground">Loading schedule…</p>
+        <p className="text-sm text-muted-foreground">Se încarcă programul…</p>
       </div>
     );
   }
@@ -464,8 +464,8 @@ export function DoctorScheduleTab({ doctorId, readOnly = false, adminMode = fals
             <Info className="h-4 w-4 text-amber-600 dark:text-amber-400" />
             <AlertDescription className="text-amber-800 dark:text-amber-300">
               {pendingEntries.length === 1
-                ? "1 schedule change proposed by an admin requires your review."
-                : `${pendingEntries.length} schedule changes proposed by an admin require your review.`}
+                ? "1 modificare de program propusă de un administrator necesită revizuirea dvs."
+                : `${pendingEntries.length} modificări de program propuse de un administrator necesită revizuirea dvs.`}
             </AlertDescription>
           </Alert>
 
@@ -476,24 +476,24 @@ export function DoctorScheduleTab({ doctorId, readOnly = false, adminMode = fals
                   <div className="space-y-1 text-sm">
                     <p className="font-medium">
                       {entry.scheduleType === "working_hours"
-                        ? `Working hours — ${DAY_NAMES[entry.dayOfWeek ?? 0]}`
-                        : `Block — ${entry.specificDate ? format(parseISO(entry.specificDate), "PPP") : "—"}`}
+                        ? `Ore de lucru — ${DAY_NAMES[entry.dayOfWeek ?? 0]}`
+                        : `Blocat — ${entry.specificDate ? format(parseISO(entry.specificDate), "PPP") : "—"}`}
                     </p>
                     <p className="text-muted-foreground">
                       {entry.scheduleType === "working_hours"
                         ? entry.isWorkingDay
                           ? `${formatTimeRange(entry)}`
-                          : "Mark as day off"
+                          : "Marchează ca zi liberă"
                         : formatTimeRange(entry)}
                     </p>
                     {entry.reason && (
-                      <p className="text-muted-foreground italic">Reason: {entry.reason}</p>
+                      <p className="text-muted-foreground italic">Motiv: {entry.reason}</p>
                     )}
                     {entry.proposedByName && (
-                      <p className="text-xs text-muted-foreground">Proposed by {entry.proposedByName}</p>
+                      <p className="text-xs text-muted-foreground">Propus de {entry.proposedByName}</p>
                     )}
                     {entry.replacesScheduleId && (
-                      <Badge variant="outline" className="text-xs">Replaces existing entry</Badge>
+                      <Badge variant="outline" className="text-xs">Înlocuiește înregistrarea existentă</Badge>
                     )}
                   </div>
                   <div className="flex gap-2 shrink-0">
@@ -503,7 +503,7 @@ export function DoctorScheduleTab({ doctorId, readOnly = false, adminMode = fals
                       className="border-green-400 text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950"
                       onClick={() => void handleApprove(entry)}
                     >
-                      <CheckCircle2 className="w-4 h-4 mr-1" /> Approve
+                      <CheckCircle2 className="w-4 h-4 mr-1" /> Aprobă
                     </Button>
                     <Button
                       size="sm"
@@ -511,7 +511,7 @@ export function DoctorScheduleTab({ doctorId, readOnly = false, adminMode = fals
                       className="border-destructive text-destructive hover:bg-destructive/10"
                       onClick={() => void handleReject(entry)}
                     >
-                      <XCircle className="w-4 h-4 mr-1" /> Reject
+                      <XCircle className="w-4 h-4 mr-1" /> Respinge
                     </Button>
                   </div>
                 </div>
@@ -528,18 +528,18 @@ export function DoctorScheduleTab({ doctorId, readOnly = false, adminMode = fals
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2">
-              <Clock className="w-4 h-4" /> Working Hours
+              <Clock className="w-4 h-4" /> Ore de lucru
             </CardTitle>
             {!readOnly && (
               <Button size="sm" variant="outline" onClick={() => openAdd("working_hours")}>
-                <Plus className="w-4 h-4 mr-1" /> Add
+                <Plus className="w-4 h-4 mr-1" /> Adaugă
               </Button>
             )}
           </div>
         </CardHeader>
         <CardContent>
           {workingHours.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-2">No working hours set.</p>
+            <p className="text-sm text-muted-foreground py-2">Nicio oră de lucru setată.</p>
           ) : (
             <div className="space-y-2">
               {DAY_NAMES.map((_, dayIndex) => {
@@ -552,7 +552,7 @@ export function DoctorScheduleTab({ doctorId, readOnly = false, adminMode = fals
                       {entry.isWorkingDay ? (
                         <span>{formatTimeRange(entry)}</span>
                       ) : (
-                        <Badge variant="secondary">Day Off</Badge>
+                        <Badge variant="secondary">Zi liberă</Badge>
                       )}
                     </div>
                     {!readOnly && (
@@ -566,7 +566,7 @@ export function DoctorScheduleTab({ doctorId, readOnly = false, adminMode = fals
                           className="h-7 w-7 text-destructive hover:text-destructive"
                           onClick={() => !adminMode && setDeleteTarget(entry)}
                           disabled={adminMode}
-                          title={adminMode ? "Admins cannot delete entries directly" : undefined}
+                          title={adminMode ? "Administratorii nu pot șterge înregistrări direct" : undefined}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>
@@ -585,18 +585,18 @@ export function DoctorScheduleTab({ doctorId, readOnly = false, adminMode = fals
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2">
-              <CalendarX className="w-4 h-4" /> Blocked Dates
+              <CalendarX className="w-4 h-4" /> Date blocate
             </CardTitle>
             {!readOnly && (
               <Button size="sm" variant="outline" onClick={() => openAdd("block")}>
-                <Plus className="w-4 h-4 mr-1" /> Add
+                <Plus className="w-4 h-4 mr-1" /> Adaugă
               </Button>
             )}
           </div>
         </CardHeader>
         <CardContent>
           {blocks.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-2">No blocked dates.</p>
+            <p className="text-sm text-muted-foreground py-2">Nicio dată blocată.</p>
           ) : (
             <div className="space-y-2">
               {blocks.map((entry) => (
@@ -621,7 +621,7 @@ export function DoctorScheduleTab({ doctorId, readOnly = false, adminMode = fals
                         className="h-7 w-7 text-destructive hover:text-destructive"
                         onClick={() => !adminMode && setDeleteTarget(entry)}
                         disabled={adminMode}
-                        title={adminMode ? "Admins cannot delete entries directly" : undefined}
+                        title={adminMode ? "Administratorii nu pot șterge înregistrări direct" : undefined}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
@@ -645,8 +645,8 @@ export function DoctorScheduleTab({ doctorId, readOnly = false, adminMode = fals
         readonlyType={!!editingEntry}
         title={
           adminMode
-            ? editingEntry ? "Propose Change" : "Propose New Entry"
-            : editingEntry ? "Edit Entry" : "Add Entry"
+            ? editingEntry ? "Propune modificare" : "Propune înregistrare nouă"
+            : editingEntry ? "Editează înregistrare" : "Adaugă înregistrare"
         }
       />
 
@@ -654,15 +654,15 @@ export function DoctorScheduleTab({ doctorId, readOnly = false, adminMode = fals
       <Dialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Remove entry?</DialogTitle>
+            <DialogTitle>Eliminați înregistrarea?</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">This schedule entry will be permanently deleted.</p>
+          <p className="text-sm text-muted-foreground">Această înregistrare din program va fi ștearsă permanent.</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
-              Cancel
+              Anulează
             </Button>
             <Button variant="destructive" onClick={() => void handleDelete()} disabled={deleting}>
-              {deleting ? "Removing…" : "Remove"}
+              {deleting ? "Se elimină…" : "Elimină"}
             </Button>
           </DialogFooter>
         </DialogContent>

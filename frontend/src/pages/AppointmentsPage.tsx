@@ -55,19 +55,19 @@ const statusConfig: Record<
   { label: string; icon: React.ReactNode; className: string }
 > = {
   Scheduled: {
-    label: "Scheduled",
+    label: "Programat",
     icon: <AlertCircle className="w-3.5 h-3.5" />,
     className:
       "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800",
   },
   Completed: {
-    label: "Completed",
+    label: "Finalizat",
     icon: <CheckCircle2 className="w-3.5 h-3.5" />,
     className:
       "text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950/30 dark:border-emerald-800",
   },
   Cancelled: {
-    label: "Cancelled",
+    label: "Anulat",
     icon: <XCircle className="w-3.5 h-3.5" />,
     className: "text-muted-foreground bg-muted border-border",
   },
@@ -177,7 +177,7 @@ export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) 
     return (
       <div className="flex items-center justify-center h-64 text-muted-foreground gap-2">
         <Loader2 className="w-5 h-5 animate-spin" />
-        <span>Loading appointments…</span>
+        <span>Se încarcă programările…</span>
       </div>
     );
   }
@@ -187,44 +187,44 @@ export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Appointments</h1>
+          <h1 className="text-2xl font-bold text-foreground">Programări</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {stats?.nextWeek ?? 0} upcoming this week · {stats?.today ?? 0} today
+            {stats?.nextWeek ?? 0} programări în această săptămână · {stats?.today ?? 0} astăzi
           </p>
         </div>
         <Button onClick={() => onNavigate("create-appointment")} className="gap-2 sm:w-auto w-full">
           <Plus className="w-4 h-4" />
-          Schedule Appointment
+          Programează consultație
         </Button>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <KPI
-          label="Next 30 days"
+          label="Următoarele 30 zile"
           value={stats?.totalNext30Days ?? 0}
-          period="Upcoming"
+          period="Viitoare"
           icon={<CalendarDays className="w-7 h-7" />}
           accent="cerulean"
         />
         <KPI
-          label="Completed"
+          label="Finalizate (30z)"
           value={stats?.completedLast30Days ?? 0}
-          period="Last 30 days"
+          period="Ultimele 30 zile"
           icon={<CalendarCheck className="w-7 h-7" />}
           accent="teal"
         />
         <KPI
-          label="Today"
+          label="Astăzi"
           value={stats?.today ?? 0}
-          period="Scheduled"
+          period="Programate"
           icon={<Clock className="w-7 h-7" />}
           accent="purple"
         />
         <KPI
-          label="This Week"
+          label="Această săptămână"
           value={stats?.nextWeek ?? 0}
-          period="Next 7 days"
+          period="Următoarele 7 zile"
           icon={<Filter className="w-7 h-7" />}
           accent="orange"
         />
@@ -235,7 +235,7 @@ export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) 
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search patient, type, doctor..."
+            placeholder="Caută pacient, tip, doctor..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
@@ -246,10 +246,10 @@ export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) 
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            <SelectItem value="Scheduled">Scheduled</SelectItem>
-            <SelectItem value="Completed">Completed</SelectItem>
-            <SelectItem value="Cancelled">Cancelled</SelectItem>
+            <SelectItem value="all">Toate statusurile</SelectItem>
+            <SelectItem value="Scheduled">Programat</SelectItem>
+            <SelectItem value="Completed">Finalizat</SelectItem>
+            <SelectItem value="Cancelled">Anulat</SelectItem>
           </SelectContent>
         </Select>
         <Select value={filterPeriod} onValueChange={setFilterPeriod}>
@@ -257,10 +257,10 @@ export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) 
             <SelectValue placeholder="Period" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All time</SelectItem>
-            <SelectItem value="today">Today</SelectItem>
-            <SelectItem value="upcoming">Upcoming</SelectItem>
-            <SelectItem value="past">Past</SelectItem>
+            <SelectItem value="all">Oricând</SelectItem>
+            <SelectItem value="today">Astăzi</SelectItem>
+            <SelectItem value="upcoming">Viitoare</SelectItem>
+            <SelectItem value="past">Trecute</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -269,17 +269,17 @@ export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) 
       {filtered.length === 0 ? (
         <Empty>
           <EmptyHeader>
-            <EmptyTitle>No appointments found</EmptyTitle>
+            <EmptyTitle>Nicio programare găsită</EmptyTitle>
             <EmptyDescription>
               {searchQuery || filterStatus !== "all" || filterPeriod !== "all"
-                ? "Try clearing your filters."
-                : "Schedule the first appointment to get started."}
+                ? "Încercați să ștergeți filtrele."
+                : "Programați prima consultație pentru a începe."}
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
             <Button onClick={() => onNavigate("create-appointment")} className="gap-2">
               <Plus className="w-4 h-4" />
-              Schedule Appointment
+              Programează consultație
             </Button>
           </EmptyContent>
         </Empty>
@@ -295,9 +295,9 @@ export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) 
               new Date(today.getTime() + 86400000).toDateString();
 
             const dayLabel = isToday
-              ? "Today"
+              ? "Astăzi"
               : isTomorrow
-              ? "Tomorrow"
+              ? "Mâine"
               : formatDate(date, "EEEE, dd MMMM yyyy");
 
             return (
@@ -322,7 +322,7 @@ export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) 
                       {dayLabel}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {apts.length} appointment{apts.length !== 1 ? "s" : ""}
+                      {apts.length} programare{apts.length !== 1 ? "i" : ""}
                     </p>
                   </div>
                   <div className="flex-1 h-px bg-border" />
@@ -392,7 +392,7 @@ export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) 
                                   onClick={() => onNavigate(`patient-${apt.patientId}`)}
                                 >
                                   <User className="w-4 h-4 mr-2" />
-                                  View patient record
+                                  Vezi fișa pacientului
                                 </DropdownMenuItem>
                                 {apt.status === "Scheduled" && (
                                   <>
@@ -401,14 +401,14 @@ export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) 
                                       onClick={() => void handleStatusChange(apt.id, "Completed")}
                                     >
                                       <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />
-                                      Mark as completed
+                                      Marchează finalizat
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                       className="text-destructive"
                                       onClick={() => void handleStatusChange(apt.id, "Cancelled")}
                                     >
                                       <XCircle className="w-4 h-4 mr-2" />
-                                      Cancel appointment
+                                      Marchează anulat
                                     </DropdownMenuItem>
                                   </>
                                 )}
@@ -419,7 +419,7 @@ export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) 
                                       onClick={() => onNavigate("create-appointment")}
                                     >
                                       <CalendarDays className="w-4 h-4 mr-2 text-blue-600" />
-                                      Reschedule
+                                      Reprogramează
                                     </DropdownMenuItem>
                                   </>
                                 )}

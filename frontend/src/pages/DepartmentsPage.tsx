@@ -19,7 +19,7 @@ import { api } from "@/lib/api";
 import type { Department } from "@/lib/types";
 
 const deptSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
+  name: z.string().min(2, "Numele trebuie să aibă cel puțin 2 caractere"),
   description: z.string().optional(),
 });
 type DeptFormData = z.infer<typeof deptSchema>;
@@ -82,10 +82,10 @@ export default function DepartmentsPage({ onNavigate }: DepartmentsPageProps) {
       const apiErr = err as { status?: number };
       if (apiErr.status === 409) {
         setError("name", {
-          message: "A department with this name already exists.",
+          message: "Un departament cu acest nume există deja.",
         });
       } else {
-        setServerError("Failed to save department. Please try again.");
+        setServerError("Salvarea departamentului a eșuat. Încercați din nou.");
       }
     }
   };
@@ -95,14 +95,14 @@ export default function DepartmentsPage({ onNavigate }: DepartmentsPageProps) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Departments</h1>
+          <h1 className="text-2xl font-bold text-foreground">Departamente</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {departments.length} department{departments.length !== 1 ? "s" : ""}
+            {departments.length} {departments.length !== 1 ? "departamente" : "departament"}
           </p>
         </div>
         <Button onClick={openAdd} className="gap-2 sm:w-auto w-full">
           <Plus className="w-4 h-4" />
-          Add Department
+          Adaugă departament
         </Button>
       </div>
 
@@ -112,13 +112,13 @@ export default function DepartmentsPage({ onNavigate }: DepartmentsPageProps) {
           <div className="p-4 rounded-full bg-muted mb-4">
             <Building2 className="w-8 h-8 text-muted-foreground" />
           </div>
-          <p className="text-base font-medium text-foreground">No departments yet</p>
+          <p className="text-base font-medium text-foreground">Niciun departament încă</p>
           <p className="text-sm text-muted-foreground mt-1 mb-4">
-            Add the first department to get started.
+            Adaugă primul departament pentru a începe.
           </p>
           <Button onClick={openAdd} variant="outline" className="gap-2">
             <Plus className="w-4 h-4" />
-            Add Department
+            Adaugă departament
           </Button>
         </div>
       ) : (
@@ -160,10 +160,10 @@ export default function DepartmentsPage({ onNavigate }: DepartmentsPageProps) {
                   className="h-7 text-xs"
                   onClick={(e) => { e.stopPropagation(); openEdit(dept); }}
                 >
-                  Edit
+                  Editează
                 </Button>
                 <span className="flex items-center gap-1 text-xs text-muted-foreground group-hover:text-primary transition-colors">
-                  View doctors <ChevronRight className="w-3.5 h-3.5" />
+                  Vezi medici <ChevronRight className="w-3.5 h-3.5" />
                 </span>
               </div>
             </div>
@@ -176,17 +176,17 @@ export default function DepartmentsPage({ onNavigate }: DepartmentsPageProps) {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {editingDept ? "Edit Department" : "Add Department"}
+              {editingDept ? "Editează departament" : "Adaugă departament"}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label htmlFor="dept-name">
-                Name <span className="text-destructive">*</span>
+                Nume <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="dept-name"
-                placeholder="e.g. Cardiology"
+                placeholder="ex. Cardiologie"
                 {...register("name")}
                 className={errors.name ? "border-destructive" : ""}
               />
@@ -196,10 +196,10 @@ export default function DepartmentsPage({ onNavigate }: DepartmentsPageProps) {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="dept-desc">Description</Label>
+              <Label htmlFor="dept-desc">Descriere</Label>
               <Textarea
                 id="dept-desc"
-                placeholder="Brief description of this department's function..."
+                placeholder="Scurtă descriere a funcției acestui departament..."
                 rows={3}
                 {...register("description")}
               />
@@ -217,14 +217,14 @@ export default function DepartmentsPage({ onNavigate }: DepartmentsPageProps) {
                 variant="secondary"
                 onClick={() => setDialogOpen(false)}
               >
-                Cancel
+                Anulează
               </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting
-                  ? "Saving..."
+                  ? "Se salvează..."
                   : editingDept
-                  ? "Save changes"
-                  : "Add department"}
+                  ? "Salvează modificările"
+                  : "Adaugă departament"}
               </Button>
             </DialogFooter>
           </form>

@@ -171,7 +171,7 @@ export default function ChatbotPage({ onNavigate }: ChatbotPageProps) {
     } catch {
       addChatMessage(sessionId, {
         role: "assistant",
-        content: "I encountered an error processing your request. Please try again.",
+        content: "A apărut o eroare la procesarea cererii. Vă rugăm încercați din nou.",
       });
     } finally {
       setIsTyping(false);
@@ -294,10 +294,10 @@ export default function ChatbotPage({ onNavigate }: ChatbotPageProps) {
             <Bot className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h2 className="font-semibold text-sm">Kidney Stone AI Assistant</h2>
+            <h2 className="font-semibold text-sm">Asistent AI - Calculi renali</h2>
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-xs text-muted-foreground">Clinical decision support active</span>
+              <span className="text-xs text-muted-foreground">Suport decizional clinic activ</span>
             </div>
           </div>
         </div>
@@ -310,7 +310,7 @@ export default function ChatbotPage({ onNavigate }: ChatbotPageProps) {
             className="gap-1.5 text-xs hidden sm:flex"
           >
             <Download className="w-3.5 h-3.5" />
-            Export PDF
+            Descarcă PDF
           </Button>
           <Button
             variant="outline"
@@ -320,11 +320,11 @@ export default function ChatbotPage({ onNavigate }: ChatbotPageProps) {
             className="gap-1.5 text-xs hidden sm:flex"
           >
             <Paperclip className="w-3.5 h-3.5" />
-            Attach to patient
+            Atașează la pacient
           </Button>
           <Button variant="ghost" size="sm" onClick={handleNewSession} className="gap-1.5 text-xs">
             <Plus className="w-3.5 h-3.5" />
-            New chat
+            Conversație nouă
           </Button>
         </div>
       </div>
@@ -332,10 +332,10 @@ export default function ChatbotPage({ onNavigate }: ChatbotPageProps) {
       {/* Mobile actions bar */}
       <div className="flex sm:hidden items-center gap-2 px-4 py-2 border-b border-border bg-muted/20 shrink-0">
         <Button variant="outline" size="sm" onClick={exportAsPDF} disabled={messages.length === 0} className="gap-1.5 text-xs flex-1">
-          <Download className="w-3.5 h-3.5" /> Export PDF
+          <Download className="w-3.5 h-3.5" /> Descarcă PDF
         </Button>
         <Button variant="outline" size="sm" onClick={() => setAttachToPatientDialog(true)} disabled={messages.length === 0} className="gap-1.5 text-xs flex-1">
-          <Paperclip className="w-3.5 h-3.5" /> Attach
+          <Paperclip className="w-3.5 h-3.5" /> Atașează
         </Button>
       </div>
 
@@ -384,7 +384,7 @@ export default function ChatbotPage({ onNavigate }: ChatbotPageProps) {
                       ? "text-primary-foreground/70 hover:text-primary-foreground bg-primary-foreground/10"
                       : "text-muted-foreground hover:text-foreground bg-background/80"
                   }`}
-                  title="Copy message"
+                  title="Copiază mesajul"
                 >
                   {copiedId === message.id ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                 </button>
@@ -405,7 +405,7 @@ export default function ChatbotPage({ onNavigate }: ChatbotPageProps) {
             <div className="bg-muted/50 border border-border rounded-2xl rounded-tl-sm px-4 py-3">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Analysing symptoms...</span>
+                <span>Se analizează simptomele...</span>
               </div>
             </div>
           </div>
@@ -419,7 +419,7 @@ export default function ChatbotPage({ onNavigate }: ChatbotPageProps) {
         <div className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-400">
           <AlertCircle className="w-3.5 h-3.5 shrink-0" />
           <span>
-            <strong>Clinical decision-support tool only.</strong> AI assessments must be validated by a qualified clinician. Not for diagnosis.
+            <strong>Instrument de suport decizional clinic.</strong> Evaluările AI trebuie validate de un clinician calificat. Nu se utilizează ca diagnostic.
           </span>
         </div>
       </div>
@@ -452,7 +452,7 @@ export default function ChatbotPage({ onNavigate }: ChatbotPageProps) {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Describe patient symptoms (pain location, urine colour, imaging results, labs...)&#10;Press Enter to send, Shift+Enter for new line"
+            placeholder="Descrieți simptomele pacientului (localizarea durerii, culoarea urinei, rezultate imagistice, analize...)&#10;Apăsați Enter pentru a trimite, Shift+Enter pentru linie nouă"
             className="resize-none text-sm min-h-[80px] max-h-[160px] flex-1"
             rows={3}
           />
@@ -460,13 +460,13 @@ export default function ChatbotPage({ onNavigate }: ChatbotPageProps) {
             onClick={handleSend}
             disabled={!inputValue.trim() || isTyping}
             className="h-10 w-10 p-0 shrink-0"
-            title="Send message"
+            title="Trimite mesajul"
           >
             <Send className="w-4 h-4" />
           </Button>
         </div>
         <p className="text-[10px] text-muted-foreground mt-1.5">
-          Shift+Enter for new line · Enter to send
+          Shift+Enter pentru linie nouă · Enter pentru trimitere
         </p>
       </div>
 
@@ -474,17 +474,17 @@ export default function ChatbotPage({ onNavigate }: ChatbotPageProps) {
       <Dialog open={attachToPatientDialog} onOpenChange={setAttachToPatientDialog}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Attach consultation to patient</DialogTitle>
+            <DialogTitle>Atașează consultația la pacient</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <p className="text-sm text-muted-foreground">
-              This will create a new medical record with the full chat transcript attached to the selected patient.
+              Se va crea o nouă fișă medicală cu transcriptul complet al conversației atașat pacientului selectat.
             </p>
             <div className="space-y-1.5">
-              <Label>Select patient</Label>
+              <Label>Selectați pacientul</Label>
               <Select value={selectedPatientId} onValueChange={setSelectedPatientId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Choose a patient..." />
+                  <SelectValue placeholder="Alegeți un pacient..." />
                 </SelectTrigger>
                 <SelectContent>
                   {patients.map((p) => (
@@ -495,9 +495,9 @@ export default function ChatbotPage({ onNavigate }: ChatbotPageProps) {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="secondary" onClick={() => setAttachToPatientDialog(false)}>Cancel</Button>
+            <Button variant="secondary" onClick={() => setAttachToPatientDialog(false)}>Anulează</Button>
             <Button onClick={attachToPatient} disabled={!selectedPatientId}>
-              Attach to record
+              Atașează la fișă
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -8,16 +8,16 @@ namespace MedKit.Api.Services;
 
 public class LabRequestService(AppDbContext db, LabResultService labResultService, NotificationDeliveryService notificationService)
 {
-    private static readonly HashSet<string> ValidStatuses = ["Pending", "In Progress", "Completed"];
+    private static readonly HashSet<string> ValidStatuses = ["În așteptare", "În procesare", "Finalizat"];
     private static readonly Dictionary<string, int> StatusOrder = new()
     {
-        ["Pending"] = 0, ["In Progress"] = 1, ["Completed"] = 2,
+        ["În așteptare"] = 0, ["În procesare"] = 1, ["Finalizat"] = 2,
     };
 
     public async Task<List<LabRequestDto>> GetAllPendingAsync()
     {
         return await FetchDtosAsync(db.LabRequests
-            .OrderBy(r => r.Status == "Pending" ? 0 : r.Status == "In Progress" ? 1 : 2)
+            .OrderBy(r => r.Status == "În așteptare" ? 0 : r.Status == "În procesare" ? 1 : 2)
             .ThenByDescending(r => r.CreatedAt));
     }
 
@@ -88,7 +88,7 @@ public class LabRequestService(AppDbContext db, LabResultService labResultServic
 
         var entity = await db.LabRequests.FindAsync(requestId);
         if (entity is null) return (null, "not_found");
-        if (entity.Status == "Pending") return (null, "must_start_processing_first");
+        if (entity.Status == "În așteptare") return (null, "must_start_processing_first");
 
         Guid? labResultId = null;
 
@@ -111,7 +111,7 @@ public class LabRequestService(AppDbContext db, LabResultService labResultServic
                 SubmittedAt = DateTimeOffset.UtcNow,
             });
 
-            entity.Status = "Completed";
+            entity.Status = "Finalizat";
             entity.UpdatedAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync();
         });

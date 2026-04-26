@@ -56,16 +56,16 @@ type DoctorFormData = z.infer<typeof doctorSchema>;
 
 const roleConfig: Record<DoctorRole, { label: string; icon: React.ReactNode; color: string; description: string }> = {
   specialist_doctor: {
-    label: "Specialist Doctor",
+    label: "Medic specialist",
     icon: <Stethoscope className="w-4 h-4" />,
     color: "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800",
-    description: "Can add patients, create appointments, add notes, and manage medications.",
+    description: "Poate adăuga pacienți, crea programări, adăuga note și gestiona medicamentele.",
   },
   lab_doctor: {
-    label: "Lab Doctor",
+    label: "Medic laborator",
     icon: <FlaskConical className="w-4 h-4" />,
     color: "text-purple-700 bg-purple-50 border-purple-200 dark:text-purple-400 dark:bg-purple-950/30 dark:border-purple-800",
-    description: "Can only upload and manage laboratory results for patients.",
+    description: "Poate doar încărca și gestiona rezultatele de laborator ale pacienților.",
   },
 };
 
@@ -139,15 +139,15 @@ export default function AdminPage() {
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Shield className="w-6 h-6 text-primary" />
-            Admin Panel
+            Panou de administrare
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Manage doctors and system access
+            Gestionați medicii și accesul la sistem
           </p>
         </div>
         <Button onClick={openAddModal} className="gap-2 sm:w-auto w-full">
           <UserPlus className="w-4 h-4" />
-          Add Doctor
+          Adaugă medic
         </Button>
       </div>
 
@@ -161,7 +161,7 @@ export default function AdminPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{doctors.length}</p>
-                <p className="text-xs text-muted-foreground">Total doctors</p>
+                <p className="text-xs text-muted-foreground">Total medici</p>
               </div>
             </div>
           </CardContent>
@@ -174,7 +174,7 @@ export default function AdminPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{specialists}</p>
-                <p className="text-xs text-muted-foreground">Specialist doctors</p>
+                <p className="text-xs text-muted-foreground">Medici specialiști</p>
               </div>
             </div>
           </CardContent>
@@ -187,7 +187,7 @@ export default function AdminPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{labDoctors}</p>
-                <p className="text-xs text-muted-foreground">Lab doctors</p>
+                <p className="text-xs text-muted-foreground">Medici laborator</p>
               </div>
             </div>
           </CardContent>
@@ -210,15 +210,15 @@ export default function AdminPage() {
       {/* Filter + Doctor list */}
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-base font-semibold">Doctors ({filteredDoctors.length})</h2>
+          <h2 className="text-base font-semibold">Medici ({filteredDoctors.length})</h2>
           <Select value={filterRole} onValueChange={setFilterRole}>
             <SelectTrigger className="w-48">
-              <SelectValue placeholder="All roles" />
+              <SelectValue placeholder="Toate rolurile" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All roles</SelectItem>
-              <SelectItem value="specialist_doctor">Specialist doctors</SelectItem>
-              <SelectItem value="lab_doctor">Lab doctors</SelectItem>
+              <SelectItem value="all">Toate rolurile</SelectItem>
+              <SelectItem value="specialist_doctor">Medici specialiști</SelectItem>
+              <SelectItem value="lab_doctor">Medici laborator</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -226,12 +226,12 @@ export default function AdminPage() {
         {filteredDoctors.length === 0 ? (
           <Empty>
             <EmptyHeader>
-              <EmptyTitle>No doctors found</EmptyTitle>
-              <EmptyDescription>Add a doctor to get started.</EmptyDescription>
+              <EmptyTitle>Niciun medic găsit</EmptyTitle>
+              <EmptyDescription>Adaugați un medic pentru a începe.</EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
               <Button onClick={openAddModal} className="gap-2">
-                <UserPlus className="w-4 h-4" />Add Doctor
+                <UserPlus className="w-4 h-4" />Adaugă medic
               </Button>
             </EmptyContent>
           </Empty>
@@ -269,14 +269,14 @@ export default function AdminPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => openEditModal(doctor)}>
-                          <Edit className="w-4 h-4 mr-2" /> Edit doctor
+                          <Edit className="w-4 h-4 mr-2" /> Editează medic
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-destructive"
                           onClick={() => setDeleteConfirm(doctor)}
                         >
-                          <Trash2 className="w-4 h-4 mr-2" /> Remove doctor
+                          <Trash2 className="w-4 h-4 mr-2" /> Elimină medic
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -321,26 +321,26 @@ export default function AdminPage() {
         <CardHeader>
           <CardTitle className="text-sm flex items-center gap-2">
             <BookOpen className="w-4 h-4 text-primary" />
-            System Overview
+            Prezentare generală sistem
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
             <div className="text-center p-3 rounded-lg bg-muted/40 border border-border">
               <p className="text-xl font-bold text-primary">{patients.length}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Patients</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Pacienți</p>
             </div>
             <div className="text-center p-3 rounded-lg bg-muted/40 border border-border">
               <p className="text-xl font-bold text-blue-600">{appointments.filter(a => a.status === "Scheduled").length}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Scheduled appts</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Programări programate</p>
             </div>
             <div className="text-center p-3 rounded-lg bg-muted/40 border border-border">
               <p className="text-xl font-bold text-emerald-600">{appointments.filter(a => a.status === "Completed").length}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Completed appts</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Programări finalizate</p>
             </div>
             <div className="text-center p-3 rounded-lg bg-muted/40 border border-border">
               <p className="text-xl font-bold text-muted-foreground">{doctors.length}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Active doctors</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Medici activi</p>
             </div>
           </div>
         </CardContent>
@@ -350,12 +350,12 @@ export default function AdminPage() {
       <Dialog open={isModalOpen} onOpenChange={(open) => { if (!open) { setIsModalOpen(false); reset(); } }}>
         <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingDoctor ? "Edit Doctor" : "Add New Doctor"}</DialogTitle>
+            <DialogTitle>{editingDoctor ? "Editează medic" : "Adaugă medic nou"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
             {/* Doctor Role */}
             <div className="space-y-1.5">
-              <Label>Doctor type *</Label>
+              <Label>Tip medic *</Label>
               <Select
                 value={watch("doctorRole")}
                 onValueChange={(v) => setValue("doctorRole", v as DoctorRole)}
@@ -367,13 +367,13 @@ export default function AdminPage() {
                   <SelectItem value="specialist_doctor">
                     <span className="flex items-center gap-2">
                       <Stethoscope className="w-4 h-4 text-blue-600" />
-                      Specialist Doctor
+                      Medic specialist
                     </span>
                   </SelectItem>
                   <SelectItem value="lab_doctor">
                     <span className="flex items-center gap-2">
                       <FlaskConical className="w-4 h-4 text-purple-600" />
-                      Lab Doctor
+                      Medic laborator
                     </span>
                   </SelectItem>
                 </SelectContent>
@@ -388,31 +388,31 @@ export default function AdminPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Full Name */}
               <div className="sm:col-span-2 space-y-1.5">
-                <Label htmlFor="name">Full name *</Label>
-                <Input id="name" placeholder="e.g. Dr. Jane Smith" {...register("name")} />
+                <Label htmlFor="name">Nume complet *</Label>
+                <Input id="name" placeholder="ex. Dr. Ion Popescu" {...register("name")} />
                 {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
               </div>
 
               {/* Email */}
               <div className="space-y-1.5">
-                <Label htmlFor="email">Email address *</Label>
-                <Input id="email" type="email" placeholder="doctor@hospital.com" {...register("email")} />
+                <Label htmlFor="email">Adresă email *</Label>
+                <Input id="email" type="email" placeholder="doctor@spital.ro" {...register("email")} />
                 {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
               </div>
 
               {/* Phone */}
               <div className="space-y-1.5">
-                <Label htmlFor="phone">Phone number *</Label>
-                <Input id="phone" type="tel" placeholder="+1 (555) 000-0000" {...register("phone")} />
+                <Label htmlFor="phone">Număr de telefon *</Label>
+                <Input id="phone" type="tel" placeholder="+40 755 000 000" {...register("phone")} />
                 {errors.phone && <p className="text-xs text-destructive">{errors.phone.message}</p>}
               </div>
 
               {/* Specialty */}
               <div className="space-y-1.5">
-                <Label htmlFor="specialty">Specialty *</Label>
+                <Label htmlFor="specialty">Specialitate *</Label>
                 <Input
                   id="specialty"
-                  placeholder={watch("doctorRole") === "lab_doctor" ? "e.g. Clinical Pathology" : "e.g. Cardiology"}
+                  placeholder={watch("doctorRole") === "lab_doctor" ? "ex. Patologie clinică" : "ex. Cardiologie"}
                   {...register("specialty")}
                 />
                 {errors.specialty && <p className="text-xs text-destructive">{errors.specialty.message}</p>}
@@ -420,10 +420,10 @@ export default function AdminPage() {
 
               {/* Department */}
               <div className="space-y-1.5">
-                <Label htmlFor="department">Department *</Label>
+                <Label htmlFor="department">Departament *</Label>
                 <Input
                   id="department"
-                  placeholder={watch("doctorRole") === "lab_doctor" ? "e.g. Laboratory" : "e.g. Internal Medicine"}
+                  placeholder={watch("doctorRole") === "lab_doctor" ? "ex. Laborator" : "ex. Medicină internă"}
                   {...register("department")}
                 />
                 {errors.department && <p className="text-xs text-destructive">{errors.department.message}</p>}
@@ -431,10 +431,10 @@ export default function AdminPage() {
 
               {/* License */}
               <div className="sm:col-span-2 space-y-1.5">
-                <Label htmlFor="licenseNumber">License number *</Label>
+                <Label htmlFor="licenseNumber">Număr de licență *</Label>
                 <Input
                   id="licenseNumber"
-                  placeholder={watch("doctorRole") === "lab_doctor" ? "e.g. LAB-0042" : "e.g. MD-4821"}
+                  placeholder={watch("doctorRole") === "lab_doctor" ? "ex. LAB-0042" : "ex. MD-4821"}
                   {...register("licenseNumber")}
                 />
                 {errors.licenseNumber && <p className="text-xs text-destructive">{errors.licenseNumber.message}</p>}
@@ -443,17 +443,17 @@ export default function AdminPage() {
 
             <div className="rounded-lg bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-800 p-3">
               <p className="text-xs text-amber-700 dark:text-amber-400">
-                <strong>Note:</strong> After adding a doctor, their login credentials will use the email above with the system password{" "}
-                <span className="font-mono font-bold">MedKit2025!</span>. Contact IT to set a custom password.
+                <strong>Notă:</strong> După adăugarea unui medic, datele de autentificare vor folosi emailul de mai sus cu parola de sistem{" "}
+                <span className="font-mono font-bold">MedKit2025!</span>. Contactați IT pentru a seta o parolă personalizată.
               </p>
             </div>
 
             <DialogFooter className="pt-2">
               <Button type="button" variant="secondary" onClick={() => { setIsModalOpen(false); reset(); }}>
-                Cancel
+                Anulează
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Saving..." : editingDoctor ? "Save changes" : "Add doctor"}
+                {isSubmitting ? "Se salvează..." : editingDoctor ? "Salvează modificările" : "Adaugă medic"}
               </Button>
             </DialogFooter>
           </form>
@@ -464,14 +464,14 @@ export default function AdminPage() {
       <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Remove doctor?</DialogTitle>
+            <DialogTitle>Elimină medic?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground py-2">
-            This will remove <strong>{deleteConfirm?.name}</strong> from the system. They will no longer be able to log in.
-            This action cannot be undone.
+            Aceasta va elimina <strong>{deleteConfirm?.name}</strong> din sistem. Nu va mai putea să se autentifice.
+            Această acțiune nu poate fi anulată.
           </p>
           <DialogFooter>
-            <Button variant="secondary" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
+            <Button variant="secondary" onClick={() => setDeleteConfirm(null)}>Anulează</Button>
             <Button
               variant="destructive"
               onClick={() => {
@@ -481,7 +481,7 @@ export default function AdminPage() {
                 }
               }}
             >
-              Remove doctor
+              Elimină medic
             </Button>
           </DialogFooter>
         </DialogContent>

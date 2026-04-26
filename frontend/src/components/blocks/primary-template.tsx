@@ -300,7 +300,7 @@ export function PrimaryTemplate({
                     </div>
                   ))
                 ) : (
-                  <div className="px-2 py-4 text-sm text-muted-foreground text-center">No pages found</div>
+                  <div className="px-2 py-4 text-sm text-muted-foreground text-center">Nu s-au găsit pagini</div>
                 ))}
 
               {/* Normal navigation */}
@@ -518,7 +518,7 @@ export function PrimaryTemplate({
                     onBlur={() => {
                       if (!searchQuery.trim()) setIsSearchActive(false);
                     }}
-                    placeholder="Search pages..."
+                    placeholder="Caută pagini..."
                     className="pl-9 h-9"
                   />
                   {searchQuery && (
@@ -544,9 +544,9 @@ export function PrimaryTemplate({
           <div className="mt-auto border-t p-2">
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton tooltip="Help & Support">
+                <SidebarMenuButton tooltip="Ajutor & Suport">
                   <HelpCircle className="w-4 h-4" />
-                  <span>Help & Support</span>
+                  <span>Ajutor & Suport</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

@@ -46,16 +46,16 @@ import type { BloodType, Sex, Patient, Appointment, Doctor, Department } from "@
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const APPOINTMENT_TYPES = [
-  "General Consultation",
-  "Follow-up",
-  "Lab Review",
-  "Annual Check-up",
-  "Telemedicine",
-  "Emergency",
-  "Specialist Referral",
-  "Procedure",
-  "Vaccination",
-  "Prescription Renewal",
+  "Consultație generală",
+  "Urmărire",
+  "Revizuire analize",
+  "Control anual",
+  "Telemedicină",
+  "Urgență",
+  "Trimitere specialist",
+  "Procedură",
+  "Vaccinare",
+  "Reînnoire rețetă",
 ] as const;
 
 const APPOINTMENT_TIMES = [
@@ -92,9 +92,9 @@ function useAvailableSlots(doctorId: string | undefined, date: string | undefine
 // ── Schemas ──────────────────────────────────────────────────────────────────
 
 const existingPatientSchema = z.object({
-  date: z.string().min(1, "Date is required"),
-  time: z.string().min(1, "Time is required"),
-  type: z.string().min(1, "Appointment type is required"),
+  date: z.string().min(1, "Data este obligatorie"),
+  time: z.string().min(1, "Ora este obligatorie"),
+  type: z.string().min(1, "Tipul programării este obligatoriu"),
   notes: z.string().optional(),
   doctorId: z.string().optional(),
 });
@@ -103,19 +103,19 @@ type ExistingPatientForm = z.infer<typeof existingPatientSchema>;
 
 const newPatientSchema = z.object({
   // Patient
-  fullName: z.string().min(2, "Full name must be at least 2 characters"),
-  dateOfBirth: z.string().min(1, "Date of birth is required"),
+  fullName: z.string().min(2, "Numele complet trebuie să aibă cel puțin 2 caractere"),
+  dateOfBirth: z.string().min(1, "Data nașterii este obligatorie"),
   sex: z.enum(["Male", "Female", "Other"]),
-  nationalId: z.string().refine(isValidCNP, "Enter a valid 13-digit CNP."),
-  phone: z.string().min(7, "Phone number is required"),
-  email: z.string().email("Enter a valid email"),
+  nationalId: z.string().refine(isValidCNP, "Introduceți un CNP valid de 13 cifre."),
+  phone: z.string().min(7, "Numărul de telefon este obligatoriu"),
+  email: z.string().email("Introduceți o adresă de email validă"),
   bloodType: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "Unknown"]),
   allergies: z.string(),
   currentMedications: z.string(),
   // Appointment
-  date: z.string().min(1, "Date is required"),
-  time: z.string().min(1, "Time is required"),
-  type: z.string().min(1, "Appointment type is required"),
+  date: z.string().min(1, "Data este obligatorie"),
+  time: z.string().min(1, "Ora este obligatorie"),
+  type: z.string().min(1, "Tipul programării este obligatoriu"),
   notes: z.string().optional(),
   doctorId: z.string().optional(),
 });
@@ -200,7 +200,7 @@ export default function CreateAppointmentPage({
     defaultValues: {
       date: today,
       time: "09:00",
-      type: "General Consultation",
+      type: "Consultație generală",
       notes: "",
     },
   });
@@ -215,7 +215,7 @@ export default function CreateAppointmentPage({
       currentMedications: "",
       date: today,
       time: "09:00",
-      type: "General Consultation",
+      type: "Consultație generală",
       notes: "",
     },
   });
@@ -233,7 +233,7 @@ export default function CreateAppointmentPage({
     setSubmitError(null);
     const doctorId = user?.role === "admin" ? data.doctorId : user?.doctorId;
     if (!doctorId) {
-      setSubmitError("Please select a doctor.");
+      setSubmitError("Vă rugăm selectați un doctor.");
       return;
     }
     try {
@@ -248,7 +248,7 @@ export default function CreateAppointmentPage({
       setSubmitted(true);
       setTimeout(() => onNavigate("appointments"), 1200);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to schedule appointment.";
+      const message = err instanceof Error ? err.message : "Programarea nu a putut fi salvată.";
       setSubmitError(message);
     }
   };
@@ -257,7 +257,7 @@ export default function CreateAppointmentPage({
     setSubmitError(null);
     const doctorId = user?.role === "admin" ? data.doctorId : user?.doctorId;
     if (!doctorId) {
-      setSubmitError("Please select a doctor.");
+      setSubmitError("Vă rugăm selectați un doctor.");
       return;
     }
     try {
@@ -283,7 +283,7 @@ export default function CreateAppointmentPage({
       setSubmitted(true);
       setTimeout(() => onNavigate("appointments"), 1200);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to register patient or schedule appointment.";
+      const message = err instanceof Error ? err.message : "Înregistrarea pacientului sau salvarea programării a eșuat.";
       setSubmitError(message);
     }
   };
@@ -295,8 +295,8 @@ export default function CreateAppointmentPage({
         <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center">
           <Check className="w-8 h-8 text-emerald-600" />
         </div>
-        <h2 className="text-xl font-bold text-foreground">Appointment Scheduled!</h2>
-        <p className="text-muted-foreground text-sm">Redirecting to appointments…</p>
+        <h2 className="text-xl font-bold text-foreground">Programare salvată!</h2>
+        <p className="text-muted-foreground text-sm">Redirecționare către programări…</p>
       </div>
     );
   }
@@ -305,7 +305,7 @@ export default function CreateAppointmentPage({
     return (
       <div className="flex items-center justify-center h-64 text-muted-foreground gap-2">
         <Loader2 className="w-5 h-5 animate-spin" />
-        <span>Loading…</span>
+        <span>Se încarcă…</span>
       </div>
     );
   }
@@ -316,7 +316,7 @@ export default function CreateAppointmentPage({
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" onClick={handleBack} className="gap-1.5 -ml-2 text-muted-foreground hover:text-foreground">
           <ArrowLeft className="w-4 h-4" />
-          Back
+          Înapoi
         </Button>
       </div>
 
@@ -325,11 +325,11 @@ export default function CreateAppointmentPage({
           <CalendarDays className="w-6 h-6 text-primary" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Schedule Appointment</h1>
+          <h1 className="text-2xl font-bold text-foreground">Creează programare</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {forceExisting && selectedPatient
-              ? `Booking for ${selectedPatient.fullName}`
-              : "Book a new appointment for an existing or new patient"}
+              ? `Programare pentru ${selectedPatient.fullName}`
+              : "Programați o consultație pentru un pacient existent sau nou"}
           </p>
         </div>
       </div>
@@ -348,7 +348,7 @@ export default function CreateAppointmentPage({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-bold text-base">{selectedPatient.fullName}</p>
-                    <Badge variant="outline" className="text-xs border-primary/30 text-primary">Patient</Badge>
+                    <Badge variant="outline" className="text-xs border-primary/30 text-primary">Pacient</Badge>
                   </div>
                   <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-xs text-muted-foreground">
                     <span>{calculateAge(selectedPatient.dateOfBirth)} yrs · {selectedPatient.sex} · {selectedPatient.bloodType}</span>
@@ -364,7 +364,7 @@ export default function CreateAppointmentPage({
             <CardHeader className="pb-4">
               <CardTitle className="text-base flex items-center gap-2">
                 <Clock className="w-4 h-4 text-primary" />
-                Appointment Details
+                Detalii programare
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -390,11 +390,11 @@ export default function CreateAppointmentPage({
           <TabsList className="grid grid-cols-2 w-full max-w-sm">
             <TabsTrigger value="existing" className="gap-1.5">
               <Search className="w-3.5 h-3.5" />
-              Existing Patient
+              Pacient existent
             </TabsTrigger>
             <TabsTrigger value="new" className="gap-1.5">
               <UserPlus className="w-3.5 h-3.5" />
-              New Patient
+              Pacient nou
             </TabsTrigger>
           </TabsList>
 
@@ -404,13 +404,13 @@ export default function CreateAppointmentPage({
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <User className="w-4 h-4 text-primary" />
-                  Select Patient
+                  Selectați pacientul
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium">
-                    Patient <span className="text-destructive">*</span>
+                    Pacient <span className="text-destructive">*</span>
                   </Label>
                   <div className="relative">
                     <button
@@ -433,7 +433,7 @@ export default function CreateAppointmentPage({
                           </div>
                         </div>
                       ) : (
-                        <span className="text-muted-foreground">Search for a patient...</span>
+                        <span className="text-muted-foreground">Căutați un pacient...</span>
                       )}
                       <ChevronDown className={`w-4 h-4 text-muted-foreground shrink-0 ml-2 transition-transform ${patientDropdownOpen ? "rotate-180" : ""}`} />
                     </button>
@@ -447,14 +447,14 @@ export default function CreateAppointmentPage({
                               autoFocus
                               value={patientSearch}
                               onChange={(e) => setPatientSearch(e.target.value)}
-                              placeholder="Search name, CNP, phone, email…"
+                              placeholder="Caută nume, CNP, telefon, email…"
                               className="w-full text-sm pl-8 pr-3 py-1.5 bg-transparent outline-none"
                             />
                           </div>
                         </div>
                         <div className="max-h-56 overflow-y-auto">
                           {filteredPatients.length === 0 ? (
-                            <div className="py-6 text-center text-sm text-muted-foreground">No patients found</div>
+                            <div className="py-6 text-center text-sm text-muted-foreground">Niciun pacient găsit</div>
                           ) : (
                             filteredPatients.map((p) => (
                               <button
@@ -514,7 +514,7 @@ export default function CreateAppointmentPage({
                     isSubmitting={existingForm.formState.isSubmitting}
                     onCancel={handleBack}
                     canSubmit={!!selectedPatient}
-                    submitLabel={selectedPatient ? "Schedule Appointment" : "Select a patient first"}
+                    submitLabel={selectedPatient ? "Salvează programarea" : "Selectați mai întâi un pacient"}
                     isAdmin={user?.role === "admin"}
                     departments={departments}
                     doctors={doctors}
@@ -532,7 +532,7 @@ export default function CreateAppointmentPage({
               <div className="rounded-xl bg-blue-50 border border-blue-200 dark:bg-blue-950/20 dark:border-blue-800 p-4">
                 <p className="text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
                   <UserPlus className="w-4 h-4 shrink-0" />
-                  This will register the patient in the system and book their first appointment simultaneously.
+                  Pacientul va fi înregistrat în sistem și prima programare va fi salvată simultan.
                 </p>
               </div>
 
@@ -540,14 +540,14 @@ export default function CreateAppointmentPage({
               <div className="bg-card border border-border rounded-xl overflow-hidden">
                 <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-border bg-muted/30">
                   <User className="w-4 h-4 text-primary" />
-                  <h2 className="text-sm font-semibold">Personal Information</h2>
+                  <h2 className="text-sm font-semibold">Informații personale</h2>
                 </div>
                 <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div className="sm:col-span-2 space-y-1.5">
-                    <Label htmlFor="fullName">Full name <span className="text-destructive">*</span></Label>
+                    <Label htmlFor="fullName">Nume complet <span className="text-destructive">*</span></Label>
                     <Input
                       id="fullName"
-                      placeholder="e.g. Jane Elizabeth Smith"
+                      placeholder="ex. Ion Popescu"
                       {...newPatientForm.register("fullName")}
                       className={newPatientForm.formState.errors.fullName ? "border-destructive" : ""}
                     />
@@ -559,7 +559,7 @@ export default function CreateAppointmentPage({
                   <div className="space-y-1.5">
                     <Label htmlFor="dateOfBirth">
                       <CalendarDays className="w-3.5 h-3.5 inline mr-1 opacity-60" />
-                      Date of birth <span className="text-destructive">*</span>
+                      Data nașterii <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="dateOfBirth"
@@ -582,9 +582,9 @@ export default function CreateAppointmentPage({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Male">Male</SelectItem>
-                        <SelectItem value="Female">Female</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
+                        <SelectItem value="Male">Masculin</SelectItem>
+                        <SelectItem value="Female">Feminin</SelectItem>
+                        <SelectItem value="Other">Alt</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -592,7 +592,7 @@ export default function CreateAppointmentPage({
                   <div className="sm:col-span-2 space-y-1.5">
                     <Label htmlFor="nationalId">
                       <ShieldCheck className="w-3.5 h-3.5 inline mr-1 opacity-60" />
-                      CNP (Personal Numeric Code) <span className="text-destructive">*</span>
+                      CNP (Cod Numeric Personal) <span className="text-destructive">*</span>
                     </Label>
                     <CNPInput
                       id="nationalId"
@@ -614,7 +614,7 @@ export default function CreateAppointmentPage({
                   <div className="space-y-1.5">
                     <Label>
                       <Droplets className="w-3.5 h-3.5 inline mr-1 opacity-60" />
-                      Blood type <span className="text-destructive">*</span>
+                      Grupă sanguină <span className="text-destructive">*</span>
                     </Label>
                     <Select
                       value={newPatientForm.watch("bloodType")}
@@ -637,13 +637,13 @@ export default function CreateAppointmentPage({
               <div className="bg-card border border-border rounded-xl overflow-hidden">
                 <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-border bg-muted/30">
                   <Phone className="w-4 h-4 text-primary" />
-                  <h2 className="text-sm font-semibold">Contact Information</h2>
+                  <h2 className="text-sm font-semibold">Informații de contact</h2>
                 </div>
                 <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div className="space-y-1.5">
                     <Label htmlFor="phone">
                       <Phone className="w-3.5 h-3.5 inline mr-1 opacity-60" />
-                      Phone number <span className="text-destructive">*</span>
+                      Număr de telefon <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="phone"
@@ -660,12 +660,12 @@ export default function CreateAppointmentPage({
                   <div className="space-y-1.5">
                     <Label htmlFor="email">
                       <Mail className="w-3.5 h-3.5 inline mr-1 opacity-60" />
-                      Email address <span className="text-destructive">*</span>
+                      Adresă de email <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="email"
                       type="email"
-                      placeholder="patient@email.com"
+                      placeholder="pacient@email.com"
                       {...newPatientForm.register("email")}
                       className={newPatientForm.formState.errors.email ? "border-destructive" : ""}
                     />
@@ -680,18 +680,18 @@ export default function CreateAppointmentPage({
               <div className="bg-card border border-border rounded-xl overflow-hidden">
                 <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-border bg-muted/30">
                   <FileText className="w-4 h-4 text-primary" />
-                  <h2 className="text-sm font-semibold">Medical Information</h2>
-                  <Badge variant="outline" className="ml-auto text-[10px]">Optional</Badge>
+                  <h2 className="text-sm font-semibold">Informații medicale</h2>
+                  <Badge variant="outline" className="ml-auto text-[10px]">Opțional</Badge>
                 </div>
                 <div className="p-5 space-y-5">
                   <div className="space-y-1.5">
                     <Label htmlFor="allergies">
                       <ShieldCheck className="w-3.5 h-3.5 inline mr-1 opacity-60" />
-                      Known allergies
+                      Alergii cunoscute
                     </Label>
                     <Textarea
                       id="allergies"
-                      placeholder="e.g. Penicillin, Sulfonamides — or enter 'None known'"
+                      placeholder="ex. Penicilină, Sulfonamide — sau 'Niciuna'"
                       rows={3}
                       {...newPatientForm.register("allergies")}
                     />
@@ -699,11 +699,11 @@ export default function CreateAppointmentPage({
                   <div className="space-y-1.5">
                     <Label htmlFor="currentMedications">
                       <Pill className="w-3.5 h-3.5 inline mr-1 opacity-60" />
-                      Current medications
+                      Medicamente actuale
                     </Label>
                     <Textarea
                       id="currentMedications"
-                      placeholder="e.g. Lisinopril 10mg daily — or 'None'"
+                      placeholder="ex. Lisinopril 10mg zilnic — sau 'Niciunul'"
                       rows={3}
                       {...newPatientForm.register("currentMedications")}
                     />
@@ -715,7 +715,7 @@ export default function CreateAppointmentPage({
               <div className="bg-card border border-border rounded-xl overflow-hidden">
                 <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-border bg-muted/30">
                   <Clock className="w-4 h-4 text-primary" />
-                  <h2 className="text-sm font-semibold">Appointment Details</h2>
+                  <h2 className="text-sm font-semibold">Detalii programare</h2>
                 </div>
                 <div className="p-5">
                   <NewPatientAptFields
@@ -731,10 +731,10 @@ export default function CreateAppointmentPage({
               {submitError && <ErrorBanner message={submitError} />}
 
               <div className="flex justify-end gap-3 pt-2 pb-6">
-                <Button type="button" variant="outline" onClick={handleBack}>Cancel</Button>
+                <Button type="button" variant="outline" onClick={handleBack}>Anulează</Button>
                 <Button type="submit" disabled={newPatientForm.formState.isSubmitting} className="gap-2 min-w-[180px]">
                   <UserPlus className="w-4 h-4" />
-                  {newPatientForm.formState.isSubmitting ? "Saving…" : "Register & Schedule"}
+                  {newPatientForm.formState.isSubmitting ? "Se salvează…" : "Înregistrare și programare"}
                 </Button>
               </div>
             </form>
@@ -788,7 +788,7 @@ function AppointmentFields({
     <div className="space-y-5">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium">Date <span className="text-destructive">*</span></Label>
+          <Label className="text-xs font-medium">Dată <span className="text-destructive">*</span></Label>
           <Input type="date" {...form.register("date")} />
           {form.formState.errors.date && (
             <p className="text-xs text-destructive">{form.formState.errors.date.message}</p>
@@ -796,18 +796,18 @@ function AppointmentFields({
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium">Time <span className="text-destructive">*</span></Label>
+          <Label className="text-xs font-medium">Oră <span className="text-destructive">*</span></Label>
           <Select
             value={form.watch("time") || ""}
             onValueChange={(v) => form.setValue("time", v)}
             disabled={slotsLoading}
           >
             <SelectTrigger>
-              <SelectValue placeholder={slotsLoading ? "Loading slots…" : "Select time…"} />
+              <SelectValue placeholder={slotsLoading ? "Se încarcă intervalele…" : "Selectați ora…"} />
             </SelectTrigger>
             <SelectContent>
               {slots.length === 0
-                ? <div className="px-2 py-4 text-center text-sm text-muted-foreground">No available slots for this date</div>
+                ? <div className="px-2 py-4 text-center text-sm text-muted-foreground">Niciun interval disponibil pentru această dată</div>
                 : slots.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
             </SelectContent>
           </Select>
@@ -822,13 +822,13 @@ function AppointmentFields({
           <div className="space-y-1.5">
             <Label className="text-xs font-medium">
               <Building2 className="w-3.5 h-3.5 inline mr-1 opacity-60" />
-              Specialty <span className="text-destructive">*</span>
+              Specialitate <span className="text-destructive">*</span>
             </Label>
             <Select value={selectedDeptId} onValueChange={(v) => {
               setSelectedDeptId(v);
               form.setValue("doctorId", "");
             }}>
-              <SelectTrigger><SelectValue placeholder="Select specialty…" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Selectați specialitatea…" /></SelectTrigger>
               <SelectContent>
                 {departments.map((d) => (
                   <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
@@ -844,7 +844,7 @@ function AppointmentFields({
                 Doctor <span className="text-destructive">*</span>
               </Label>
               <Select value={selectedDoctorId} onValueChange={(v) => form.setValue("doctorId", v)}>
-                <SelectTrigger><SelectValue placeholder="Select doctor…" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Selectați doctorul…" /></SelectTrigger>
                 <SelectContent>
                   {filteredDoctors.map((d) => (
                     <SelectItem key={d.id} value={d.id}>{d.name} — {d.specialty}</SelectItem>
@@ -856,8 +856,8 @@ function AppointmentFields({
 
           {selectedDoctorId && (
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Appointment type <span className="text-destructive">*</span></Label>
-              <Select defaultValue={form.getValues("type") || "General Consultation"} onValueChange={(v) => form.setValue("type", v)}>
+              <Label className="text-xs font-medium">Tip programare <span className="text-destructive">*</span></Label>
+              <Select defaultValue={form.getValues("type") || "Consultație generală"} onValueChange={(v) => form.setValue("type", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {APPOINTMENT_TYPES.map((t) => (
@@ -873,8 +873,8 @@ function AppointmentFields({
         </>
       ) : (
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium">Appointment type <span className="text-destructive">*</span></Label>
-          <Select defaultValue={form.getValues("type") || "General Consultation"} onValueChange={(v) => form.setValue("type", v)}>
+          <Label className="text-xs font-medium">Tip programare <span className="text-destructive">*</span></Label>
+          <Select defaultValue={form.getValues("type") || "Consultație generală"} onValueChange={(v) => form.setValue("type", v)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               {APPOINTMENT_TYPES.map((t) => (
@@ -891,16 +891,16 @@ function AppointmentFields({
       <div className="space-y-1.5">
         <Label className="text-xs font-medium">
           <FileText className="w-3.5 h-3.5 inline mr-1 opacity-60" />
-          Reason / Notes <span className="text-muted-foreground font-normal">(optional)</span>
+          Motiv / Notițe <span className="text-muted-foreground font-normal">(opțional)</span>
         </Label>
-        <Input placeholder="e.g. Follow-up after emergency visit" {...form.register("notes")} />
+        <Input placeholder="ex. Control după vizita de urgență" {...form.register("notes")} />
       </div>
 
       <div className="flex justify-end gap-3 pt-2">
-        <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button type="button" variant="outline" onClick={onCancel}>Anulează</Button>
         <Button type="submit" disabled={isSubmitting || !canSubmit} className="gap-2 min-w-[180px]">
           <CalendarDays className="w-4 h-4" />
-          {isSubmitting ? "Scheduling…" : (submitLabel ?? "Schedule Appointment")}
+          {isSubmitting ? "Se salvează…" : (submitLabel ?? "Salvează programarea")}
         </Button>
       </div>
     </div>
@@ -940,7 +940,7 @@ function NewPatientAptFields({
     <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium">Date <span className="text-destructive">*</span></Label>
+          <Label className="text-xs font-medium">Dată <span className="text-destructive">*</span></Label>
           <Input type="date" {...form.register("date")} />
           {form.formState.errors.date && (
             <p className="text-xs text-destructive">{form.formState.errors.date.message}</p>
@@ -948,18 +948,18 @@ function NewPatientAptFields({
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium">Time <span className="text-destructive">*</span></Label>
+          <Label className="text-xs font-medium">Oră <span className="text-destructive">*</span></Label>
           <Select
             value={form.watch("time") || ""}
             onValueChange={(v) => form.setValue("time", v)}
             disabled={slotsLoading}
           >
             <SelectTrigger>
-              <SelectValue placeholder={slotsLoading ? "Loading slots…" : "Select time…"} />
+              <SelectValue placeholder={slotsLoading ? "Se încarcă intervalele…" : "Selectați ora…"} />
             </SelectTrigger>
             <SelectContent>
               {slots.length === 0
-                ? <div className="px-2 py-4 text-center text-sm text-muted-foreground">No available slots for this date</div>
+                ? <div className="px-2 py-4 text-center text-sm text-muted-foreground">Niciun interval disponibil pentru această dată</div>
                 : slots.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
             </SelectContent>
           </Select>
@@ -971,13 +971,13 @@ function NewPatientAptFields({
           <div className="space-y-1.5">
             <Label className="text-xs font-medium">
               <Building2 className="w-3.5 h-3.5 inline mr-1 opacity-60" />
-              Specialty <span className="text-destructive">*</span>
+              Specialitate <span className="text-destructive">*</span>
             </Label>
             <Select value={selectedDeptId} onValueChange={(v) => {
               setSelectedDeptId(v);
               form.setValue("doctorId", "");
             }}>
-              <SelectTrigger><SelectValue placeholder="Select specialty…" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Selectați specialitatea…" /></SelectTrigger>
               <SelectContent>
                 {departments.map((d) => (
                   <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
@@ -993,7 +993,7 @@ function NewPatientAptFields({
                 Doctor <span className="text-destructive">*</span>
               </Label>
               <Select value={selectedDoctorId} onValueChange={(v) => form.setValue("doctorId", v)}>
-                <SelectTrigger><SelectValue placeholder="Select doctor…" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Selectați doctorul…" /></SelectTrigger>
                 <SelectContent>
                   {filteredDoctors.map((d) => (
                     <SelectItem key={d.id} value={d.id}>{d.name} — {d.specialty}</SelectItem>
@@ -1005,8 +1005,8 @@ function NewPatientAptFields({
 
           {selectedDoctorId && (
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Appointment type <span className="text-destructive">*</span></Label>
-              <Select defaultValue={form.getValues("type") || "General Consultation"} onValueChange={(v) => form.setValue("type", v)}>
+              <Label className="text-xs font-medium">Tip programare <span className="text-destructive">*</span></Label>
+              <Select defaultValue={form.getValues("type") || "Consultație generală"} onValueChange={(v) => form.setValue("type", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {APPOINTMENT_TYPES.map((t) => (
@@ -1022,8 +1022,8 @@ function NewPatientAptFields({
         </>
       ) : (
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium">Appointment type <span className="text-destructive">*</span></Label>
-          <Select defaultValue={form.getValues("type") || "General Consultation"} onValueChange={(v) => form.setValue("type", v)}>
+          <Label className="text-xs font-medium">Tip programare <span className="text-destructive">*</span></Label>
+          <Select defaultValue={form.getValues("type") || "Consultație generală"} onValueChange={(v) => form.setValue("type", v)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               {APPOINTMENT_TYPES.map((t) => (
@@ -1040,9 +1040,9 @@ function NewPatientAptFields({
       <div className="space-y-1.5">
         <Label className="text-xs font-medium">
           <FileText className="w-3.5 h-3.5 inline mr-1 opacity-60" />
-          Reason / Notes <span className="text-muted-foreground font-normal">(optional)</span>
+          Motiv / Notițe <span className="text-muted-foreground font-normal">(opțional)</span>
         </Label>
-        <Input placeholder="e.g. First consultation" {...form.register("notes")} />
+        <Input placeholder="ex. Prima consultație" {...form.register("notes")} />
       </div>
     </div>
   );

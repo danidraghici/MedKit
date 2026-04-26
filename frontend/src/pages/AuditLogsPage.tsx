@@ -54,7 +54,7 @@ function AuditRow({ log }: { log: AuditLog }) {
         </td>
         <td className="px-3 py-2.5 font-mono text-xs">{log.entityType}</td>
         <td className="px-3 py-2.5 text-xs text-muted-foreground truncate max-w-[160px]">
-          {log.performedByName ?? <span className="italic">system</span>}
+          {log.performedByName ?? <span className="italic">sistem</span>}
         </td>
         <td className="px-3 py-2.5 font-mono text-xs text-muted-foreground truncate max-w-[140px]">
           {log.entityId ?? "—"}
@@ -70,9 +70,9 @@ function AuditRow({ log }: { log: AuditLog }) {
       {expanded && hasDetails && (
         <tr className="border-b border-border bg-muted/20">
           <td colSpan={6} className="px-4 py-3 space-y-2">
-            <JsonRow label="Old values" value={log.oldValues} />
-            <JsonRow label="New values" value={log.newValues} />
-            <JsonRow label="Metadata" value={log.metadata} />
+            <JsonRow label="Valori vechi" value={log.oldValues} />
+            <JsonRow label="Valori noi" value={log.newValues} />
+            <JsonRow label="Metadate" value={log.metadata} />
             {log.ipAddress && (
               <p className="text-xs text-muted-foreground">IP: <span className="font-mono">{log.ipAddress}</span></p>
             )}
@@ -105,19 +105,19 @@ export default function AuditLogsPage() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <ClipboardList className="w-6 h-6 text-primary" />
-            Audit Logs
+            Jurnale de audit
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Immutable record of every admin action. Entries cannot be edited or deleted.
+            Înregistrare imutabilă a fiecărei acțiuni de administrator. Intrările nu pot fi editate sau șterse.
           </p>
         </div>
         <Select value={filterAction} onValueChange={setFilterAction}>
           <SelectTrigger className="w-44">
-            <SelectValue placeholder="All actions" />
+            <SelectValue placeholder="Toate acțiunile" />
           </SelectTrigger>
           <SelectContent>
             {actions.map((a) => (
-              <SelectItem key={a} value={a}>{a === "all" ? "All actions" : a}</SelectItem>
+              <SelectItem key={a} value={a}>{a === "all" ? "Toate acțiunile" : a}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -134,11 +134,11 @@ export default function AuditLogsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/40 text-left">
-                <th className="px-3 py-2.5 text-xs font-semibold text-muted-foreground">When</th>
-                <th className="px-3 py-2.5 text-xs font-semibold text-muted-foreground">Action</th>
-                <th className="px-3 py-2.5 text-xs font-semibold text-muted-foreground">Entity</th>
-                <th className="px-3 py-2.5 text-xs font-semibold text-muted-foreground">Performed by</th>
-                <th className="px-3 py-2.5 text-xs font-semibold text-muted-foreground">Entity ID</th>
+                <th className="px-3 py-2.5 text-xs font-semibold text-muted-foreground">Dată/Oră</th>
+                <th className="px-3 py-2.5 text-xs font-semibold text-muted-foreground">Acțiune</th>
+                <th className="px-3 py-2.5 text-xs font-semibold text-muted-foreground">Entitate</th>
+                <th className="px-3 py-2.5 text-xs font-semibold text-muted-foreground">Efectuat de</th>
+                <th className="px-3 py-2.5 text-xs font-semibold text-muted-foreground">ID entitate</th>
                 <th className="px-3 py-2.5 w-8" />
               </tr>
             </thead>
@@ -158,7 +158,7 @@ export default function AuditLogsPage() {
                 ? (
                     <tr>
                       <td colSpan={6} className="px-3 py-10 text-center text-sm text-muted-foreground">
-                        No audit log entries found.
+                        Nicio înregistrare în jurnalul de audit.
                       </td>
                     </tr>
                   )
@@ -169,8 +169,8 @@ export default function AuditLogsPage() {
         </div>
         {!loading && filtered.length > 0 && (
           <div className="px-4 py-2 border-t border-border bg-muted/20 text-xs text-muted-foreground">
-            Showing {filtered.length} {filtered.length === 1 ? "entry" : "entries"}
-            {filterAction !== "all" ? ` · filtered by ${filterAction}` : ""}
+            Se afișează {filtered.length} {filtered.length === 1 ? "înregistrare" : "înregistrări"}
+            {filterAction !== "all" ? ` · filtrat după ${filterAction}` : ""}
           </div>
         )}
       </div>

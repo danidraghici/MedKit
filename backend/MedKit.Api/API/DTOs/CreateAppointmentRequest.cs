@@ -8,11 +8,11 @@ public class CreateAppointmentRequest
     [Required] public string DoctorId { get; set; } = "";
 
     [Required, RegularExpression(@"^\d{4}-\d{2}-\d{2}$",
-        ErrorMessage = "Date must be in yyyy-MM-dd format.")]
+        ErrorMessage = "Data trebuie să fie în formatul yyyy-MM-dd.")]
     public string Date { get; set; } = "";
 
     [Required, RegularExpression(@"^\d{2}:\d{2}$",
-        ErrorMessage = "Time must be in HH:mm format.")]
+        ErrorMessage = "Ora trebuie să fie în formatul HH:mm.")]
     public string Time { get; set; } = "";
 
     [Required] public string Type { get; set; } = "";

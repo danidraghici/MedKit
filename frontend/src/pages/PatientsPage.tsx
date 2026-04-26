@@ -140,17 +140,17 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Pacienti</h1>
+          <h1 className="text-2xl font-bold text-foreground">Pacienți</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {isLabDoctor
-              ? `${new Set(labRequests.map((r) => pid(r.patientId))).size} pacienti cu analize`
-              : `${patients.length} pacienti inrecistrati`}
+              ? `${new Set(labRequests.map((r) => pid(r.patientId))).size} pacienți cu analize`
+              : `${patients.length} pacienți înregistrați`}
           </p>
         </div>
         {canManagePatients && (
           <Button onClick={() => onNavigate("add-patient")} className="gap-2 sm:w-auto w-full">
             <UserPlus className="w-4 h-4" />
-            Adauga Pacient
+            Adaugă Pacient
           </Button>
         )}
       </div>
@@ -172,7 +172,7 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
                     : "border-transparent text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {tab}
+                {tab === "All" ? "Toate" : tab === "Pending" ? "În așteptare" : tab === "In Progress" ? "În procesare" : "Finalizat"}
                 <span className="ml-1.5 text-xs text-muted-foreground">({count})</span>
               </button>
             );
@@ -185,7 +185,7 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Cauta dupa CNP, nume, email, telefon..."
+            placeholder="Caută după CNP, nume, email, telefon..."
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
             className="pl-9"
@@ -204,7 +204,7 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
         </Select>
         <Select value={filterBloodType} onValueChange={(v) => { setFilterBloodType(v); setCurrentPage(1); }}>
           <SelectTrigger className="w-full sm:w-36">
-            <SelectValue placeholder="Grupa Sanguina" />
+            <SelectValue placeholder="Grupă sanguină" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Toate</SelectItem>
@@ -219,18 +219,18 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
       {paginatedPatients.length === 0 ? (
         <Empty>
           <EmptyHeader>
-            <EmptyTitle>Niciun pacient gasit</EmptyTitle>
+            <EmptyTitle>Niciun pacient găsit</EmptyTitle>
             <EmptyDescription>
               {searchQuery
-                ? "Try a different search term or clear filters."
+                ? "Încercați un alt termen de căutare sau eliminați filtrele."
                 : canManagePatients
-                ? "Add your first patient to get started."
-                : "No patients registered yet."}
+                ? "Adăugați primul pacient pentru a începe."
+                : "Nu există pacienți înregistrați încă."}
             </EmptyDescription>
           </EmptyHeader>
           {canManagePatients && (
             <EmptyContent>
-              <Button onClick={() => onNavigate("add-patient")} className="gap-2"><UserPlus className="w-4 h-4" />Add Patient</Button>
+              <Button onClick={() => onNavigate("add-patient")} className="gap-2"><UserPlus className="w-4 h-4" />Adaugă pacient</Button>
             </EmptyContent>
           )}
         </Empty>
@@ -252,7 +252,7 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
                   <div>
                     <p className="font-semibold text-sm leading-tight">{patient.fullName}</p>
                     <p className="text-xs text-muted-foreground">
-                      {calculateAge(patient.dateOfBirth)} yrs · {patient.sex}
+                      {calculateAge(patient.dateOfBirth)} ani · {patient.sex}
                     </p>
                   </div>
                 </div>
@@ -264,19 +264,19 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => onNavigate(`patient-${patient.id}`)}>
-                      <Eye className="w-4 h-4 mr-2" /> View details
+                      <Eye className="w-4 h-4 mr-2" /> Vezi detalii
                     </DropdownMenuItem>
                     {canManagePatients && (
                       <>
                         <DropdownMenuItem onClick={() => onNavigate(`edit-patient-${patient.id}`)}>
-                          <Edit className="w-4 h-4 mr-2" /> Edit patient
+                          <Edit className="w-4 h-4 mr-2" /> Editează pacient
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-destructive"
                           onClick={() => setDeleteConfirm(patient)}
                         >
-                          <Trash2 className="w-4 h-4 mr-2" /> Delete patient
+                          <Trash2 className="w-4 h-4 mr-2" /> Șterge pacient
                         </DropdownMenuItem>
                       </>
                     )}
@@ -308,7 +308,7 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
                       <FlaskConical className="w-3.5 h-3.5 text-muted-foreground" />
                       {labStatusByPatient.get(pid(patient.id)) && (
                         <span className={labStatusBadge(labStatusByPatient.get(pid(patient.id))!)}>
-                          {labStatusByPatient.get(pid(patient.id))}
+                          {labStatusByPatient.get(pid(patient.id)) === "Pending" ? "În așteptare" : labStatusByPatient.get(pid(patient.id)) === "In Progress" ? "În procesare" : "Finalizat"}
                         </span>
                       )}
                     </>
@@ -331,7 +331,7 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
                   className="h-7 text-xs"
                   onClick={() => onNavigate(`patient-${patient.id}`)}
                 >
-                  View record
+                  Vezi fișa
                 </Button>
               </div>
             </div>
@@ -343,7 +343,7 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-2">
           <p className="text-sm text-muted-foreground">
-            Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredPatients.length)} of {filteredPatients.length} patients
+            Se afișează {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredPatients.length)} din {filteredPatients.length} pacienți
           </p>
           <div className="flex items-center gap-1">
             <Button
@@ -381,16 +381,15 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
       <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Delete patient record?</DialogTitle>
+            <DialogTitle>Ștergeți fișa pacientului?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground py-2">
-            This will permanently delete <strong>{deleteConfirm?.fullName}</strong>'s record and all associated data.
-            This action cannot be undone.
+            Aceasta va șterge permanent fișa lui/ei <strong>{deleteConfirm?.fullName}</strong> și toate datele asociate. Această acțiune nu poate fi anulată.
           </p>
           <DialogFooter>
-            <Button variant="secondary" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
+            <Button variant="secondary" onClick={() => setDeleteConfirm(null)}>Anulează</Button>
             <Button variant="destructive" onClick={() => deleteConfirm && handleDelete(deleteConfirm)}>
-              Delete patient
+              Șterge pacient
             </Button>
           </DialogFooter>
         </DialogContent>

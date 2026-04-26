@@ -113,19 +113,19 @@ const roleConfig: Record<
   { label: string; icon: React.ReactNode; color: string; description: string }
 > = {
   specialist_doctor: {
-    label: "Specialist Doctor",
+    label: "Medic specialist",
     icon: <Stethoscope className="w-4 h-4" />,
     color:
       "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800",
     description:
-      "Can add patients, create appointments, add notes, and manage medications.",
+      "Poate adăuga pacienți, crea programări, adăuga note și gestiona medicamentele.",
   },
   lab_doctor: {
-    label: "Lab Doctor",
+    label: "Medic laborator",
     icon: <FlaskConical className="w-4 h-4" />,
     color:
       "text-purple-700 bg-purple-50 border-purple-200 dark:text-purple-400 dark:bg-purple-950/30 dark:border-purple-800",
-    description: "Can only upload and manage laboratory results for patients.",
+    description: "Poate doar încărca și gestiona rezultatele de laborator ale pacienților.",
   },
 };
 
@@ -134,19 +134,19 @@ const statusConfig: Record<
   { label: string; icon: React.ReactNode; className: string }
 > = {
   Scheduled: {
-    label: "Scheduled",
+    label: "Programat",
     icon: <AlertCircle className="w-3.5 h-3.5" />,
     className:
       "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800",
   },
   Completed: {
-    label: "Completed",
+    label: "Finalizat",
     icon: <CheckCircle2 className="w-3.5 h-3.5" />,
     className:
       "text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950/30 dark:border-emerald-800",
   },
   Cancelled: {
-    label: "Cancelled",
+    label: "Anulat",
     icon: <XCircle className="w-3.5 h-3.5" />,
     className: "text-muted-foreground bg-muted border-border",
   },
@@ -263,10 +263,10 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
   const greetingHour = new Date().getHours();
   const greeting =
     greetingHour < 12
-      ? "Good morning"
+      ? "Bună dimineața"
       : greetingHour < 17
-      ? "Good afternoon"
-      : "Good evening";
+      ? "Bună ziua"
+      : "Bună seara";
 
   // ────────────────────────────────────────────────────────────────────────────
   // PATIENTS TAB STATE
@@ -521,13 +521,13 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">
-            {greeting}, {user?.name?.split(" ")[0] ?? "Doctor"} 👋
+            {greeting}, {user?.name?.split(" ")[0] ?? "Medic"} 👋
           </h1>
           <p className="text-muted-foreground text-sm mt-0.5">
             {formatDate(new Date().toISOString(), "EEEE, dd MMMM yyyy")} —{" "}
             {isAdmin
-              ? "System overview & management"
-              : "Here's your clinical overview"}
+              ? "Prezentare generală și management sistem"
+              : "Prezentarea dvs. clinică"}
           </p>
         </div>
 
@@ -537,30 +537,30 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
       {isLabDoctor ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           <KPI
-            label="Total Lab Results"
+            label="Total rezultate laborator"
             value={stats.totalLabResults}
-            period="All time"
+            period="Din toate timpurile"
             icon={<FlaskConical className="w-7 h-7" />}
             accent="cerulean"
           />
           <KPI
-            label="Uploaded Today"
+            label="Încărcate azi"
             value={stats.todayCount}
-            period="Lab files today"
+            period="Fișiere laborator azi"
             icon={<Upload className="w-7 h-7" />}
             accent="orange"
           />
           <KPI
-            label="Patients with Labs"
+            label="Pacienți cu analize"
             value={stats.patientsWithLabWork}
-            period="Have lab results"
+            period="Au rezultate laborator"
             icon={<Users className="w-7 h-7" />}
             accent="teal"
           />
           <KPI
-            label="Upcoming Harvests"
+            label="Recoltări viitoare"
             value={stats.upcomingHarvests.length}
-            period="Scheduled samples"
+            period="Probe programate"
             icon={<CalendarDays className="w-7 h-7" />}
             accent="cerulean"
           />
@@ -574,31 +574,31 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
           }`}
         >
           <KPI
-            label="Total Patients"
+            label="Total pacienți"
             value={stats.totalPatients}
-            period="All time"
+            period="Din toate timpurile"
             icon={<Users className="w-7 h-7" />}
             accent="cerulean"
           />
           <KPI
-            label="Recent Records"
+            label="Înregistrări recente"
             value={dashboardStats?.recentRecords ?? stats.recentRecords}
-            period="Last 30 days"
+            period="Ultimele 30 de zile"
             icon={<FileText className="w-7 h-7" />}
             accent="teal"
           />
           <KPI
-            label="Upcoming Appointments"
+            label="Programări viitoare"
             value={dashboardStats?.upcomingAppointments ?? stats.upcomingAppointments}
-            period="Next 30 days"
+            period="Următoarele 30 de zile"
             icon={<CalendarDays className="w-7 h-7" />}
             accent="purple"
           />
           {isAdmin && (
             <KPI
-              label="Doctors"
+              label="Medici"
               value={dashboardStats?.activeDoctors ?? doctors.length}
-              period="Active staff"
+              period="Personal activ"
               icon={<Stethoscope className="w-7 h-7" />}
               accent="orange"
             />
@@ -611,12 +611,12 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
         <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="overview" className="gap-1.5">
             <TrendingUp className="w-3.5 h-3.5" />
-            Overview
+            Prezentare generală
           </TabsTrigger>
           {!isLabDoctor && (
             <TabsTrigger value="patients" className="gap-1.5">
               <Users className="w-3.5 h-3.5" />
-              Patients
+              Pacienți
               <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0">
                 {patients.length}
               </Badge>
@@ -625,7 +625,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
           {showAppointmentsTab && (
             <TabsTrigger value="appointments" className="gap-1.5">
               <CalendarDays className="w-3.5 h-3.5" />
-              Appointments
+              Programări
               <Badge
                 variant="secondary"
                 className="ml-1 text-[10px] px-1.5 py-0"
@@ -637,7 +637,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
           {showDoctorsTab && (
             <TabsTrigger value="doctors" className="gap-1.5">
               <Shield className="w-3.5 h-3.5" />
-              Doctors
+              Medici
               <Badge
                 variant="secondary"
                 className="ml-1 text-[10px] px-1.5 py-0"
@@ -662,10 +662,10 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 <CardHeader className="flex flex-row items-center justify-between pb-3">
                   <CardTitle className="text-base font-semibold flex items-center gap-2">
                     <FileText className="w-4 h-4 text-purple-500" />
-                    Recent Uploads
+                    Încărcări recente
                     {stats.todayCount > 0 && (
                       <Badge className="ml-1 bg-purple-100 text-purple-700 border-purple-200 text-[10px] px-1.5">
-                        {stats.todayCount} today
+                        {stats.todayCount} azi
                       </Badge>
                     )}
                   </CardTitle>
@@ -674,8 +674,8 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                   {stats.recentLabResults.length === 0 ? (
                     <div className="text-center py-10 text-muted-foreground">
                       <FlaskConical className="w-9 h-9 mx-auto mb-2 opacity-40" />
-                      <p className="text-sm font-medium">No lab files uploaded yet</p>
-                      <p className="text-xs mt-0.5">Upload a lab result from any patient's profile</p>
+                      <p className="text-sm font-medium">Nu există fișiere de laborator încărcate</p>
+                      <p className="text-xs mt-0.5">Încărcați un rezultat de laborator din profilul oricărui pacient</p>
                     </div>
                   ) : (
                     stats.recentLabResults.map((r) => {
@@ -691,7 +691,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                                 className="text-xs text-primary hover:underline flex items-center gap-1"
                               >
                                 <User className="w-3 h-3" />
-                                {patient?.fullName ?? "Unknown patient"}
+                                {patient?.fullName ?? "Pacient necunoscut"}
                               </button>
                               <span className="text-[10px] text-muted-foreground">{formatDate(r.uploadedAt)}</span>
                             </div>
@@ -708,10 +708,10 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 <CardHeader className="flex flex-row items-center justify-between pb-3">
                   <CardTitle className="text-base font-semibold flex items-center gap-2">
                     <CalendarDays className="w-4 h-4 text-primary" />
-                    Upcoming Harvests
+                    Recoltări viitoare
                     {stats.upcomingHarvests.length > 0 && (
                       <Badge className="ml-1 bg-primary/10 text-primary border-primary/20 text-[10px] px-1.5">
-                        {stats.upcomingHarvests.length} scheduled
+                        {stats.upcomingHarvests.length} programate
                       </Badge>
                     )}
                   </CardTitle>
@@ -720,8 +720,8 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                   {stats.upcomingHarvests.length === 0 ? (
                     <div className="text-center py-10 text-muted-foreground">
                       <CalendarDays className="w-9 h-9 mx-auto mb-2 opacity-30" />
-                      <p className="text-sm font-medium">No upcoming sample collections</p>
-                      <p className="text-xs mt-0.5">All scheduled harvests will appear here</p>
+                      <p className="text-sm font-medium">Nicio recoltare viitoare</p>
+                      <p className="text-xs mt-0.5">Toate recoltările programate vor apărea aici</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -730,7 +730,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                         const now = new Date();
                         const isToday = apt.date === now.toISOString().split("T")[0];
                         const isTomorrow = apt.date === new Date(now.getTime() + 86400000).toISOString().split("T")[0];
-                        const dayLabel = isToday ? "Today" : isTomorrow ? "Tomorrow" : aptDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+                        const dayLabel = isToday ? "Azi" : isTomorrow ? "Mâine" : aptDate.toLocaleDateString("ro-RO", { day: "2-digit", month: "short" });
                         return (
                           <button
                             key={apt.id}
@@ -740,7 +740,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                             {/* Date block */}
                             <div className={`flex flex-col items-center justify-center w-12 h-12 rounded-lg shrink-0 text-center ${isToday ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
                               <span className="text-[10px] font-medium uppercase leading-none opacity-80">
-                                {isToday ? "Today" : isTomorrow ? "Tmrw" : aptDate.toLocaleDateString("en-GB", { month: "short" })}
+                                {isToday ? "Azi" : isTomorrow ? "Mâine" : aptDate.toLocaleDateString("ro-RO", { month: "short" })}
                               </span>
                               {!isToday && !isTomorrow && (
                                 <span className="text-lg font-bold leading-tight">
@@ -774,7 +774,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                                   ? "bg-primary/10 text-primary border-primary/20"
                                   : "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-800"
                               }`}>
-                                {isToday ? "Today" : dayLabel}
+                                {isToday ? "Azi" : dayLabel}
                               </span>
                             </div>
                           </button>
@@ -793,17 +793,17 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                   <CardHeader className="flex flex-row items-center justify-between pb-3">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
                       <ClipboardList className="w-4 h-4 text-muted-foreground" />
-                      Recent Lab Activity
+                      Activitate recentă laborator
                     </CardTitle>
                     <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => onNavigate("patients")}>
-                      View patients
+                      Vezi pacienți
                     </Button>
                   </CardHeader>
                   <CardContent className="pt-0 space-y-2">
                     {stats.recentLabResults.length === 0 ? (
                       <div className="text-center py-8 text-muted-foreground">
                         <FlaskConical className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                        <p className="text-sm">No lab results uploaded yet</p>
+                        <p className="text-sm">Nu există rezultate de laborator încărcate</p>
                       </div>
                     ) : (
                       stats.recentLabResults.map((r) => {
@@ -821,7 +821,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                             </Avatar>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">{r.originalFileName}</p>
-                              <p className="text-xs text-muted-foreground truncate">{patient?.fullName ?? "Unknown patient"}</p>
+                              <p className="text-xs text-muted-foreground truncate">{patient?.fullName ?? "Pacient necunoscut"}</p>
                             </div>
                             <span className="text-[10px] text-muted-foreground shrink-0">{formatDate(r.uploadedAt)}</span>
                           </button>
@@ -836,20 +836,20 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base font-semibold flex items-center gap-2">
                       <Activity className="w-4 h-4 text-muted-foreground" />
-                      Workload Summary
+                      Rezumat volum de muncă
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-0 space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Total files uploaded</span>
+                      <span className="text-muted-foreground">Total fișiere încărcate</span>
                       <span className="font-semibold">{stats.totalLabResults}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Patients with lab work</span>
+                      <span className="text-muted-foreground">Pacienți cu analize</span>
                       <span className="font-semibold">{stats.patientsWithLabWork}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Uploaded today</span>
+                      <span className="text-muted-foreground">Încărcate azi</span>
                       <span className="font-semibold">{stats.todayCount}</span>
                     </div>
                   </CardContent>
@@ -862,18 +862,18 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base font-semibold flex items-center gap-2 text-amber-700 dark:text-amber-400">
                     <AlertCircle className="w-4 h-4" />
-                    HIPAA Compliance Notice
+                    Notă de conformitate HIPAA
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
                   <p className="text-sm text-amber-800 dark:text-amber-300 mb-2">
-                    All patient data is protected health information (PHI) under HIPAA regulations.
+                    Toate datele pacienților sunt informații de sănătate protejate (PHI) conform reglementărilor HIPAA.
                   </p>
                   <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs text-amber-700 dark:text-amber-400">
-                    <li>• Access only records relevant to your clinical role</li>
-                    <li>• Do not share login credentials with others</li>
-                    <li>• Log out when leaving unattended workstations</li>
-                    <li>• All access is audited and logged</li>
+                    <li>• Accesați doar înregistrările relevante pentru rolul dvs. clinic</li>
+                    <li>• Nu partajați datele de autentificare cu alții</li>
+                    <li>• Deconectați-vă când părăsiți stațiile de lucru nesupravegheate</li>
+                    <li>• Toate accesările sunt auditate și înregistrate</li>
                   </ul>
                 </CardContent>
               </Card>
@@ -892,7 +892,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
               <CardHeader className="flex flex-row items-center justify-between pb-3">
                 <CardTitle className="text-base font-semibold flex items-center gap-2">
                   <Users className="w-4 h-4 text-muted-foreground" />
-                  Recent Patients
+                  Pacienți recenți
                 </CardTitle>
                 <Button
                   variant="ghost"
@@ -900,14 +900,14 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                   className="h-8 text-xs"
                   onClick={() => setActiveTab("patients")}
                 >
-                  View all
+                  Vezi toate
                 </Button>
               </CardHeader>
               <CardContent className="space-y-2 pt-0">
                 {recentPatients.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <Users className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                    <p className="text-sm">No patients yet</p>
+                    <p className="text-sm">Niciun pacient momentan</p>
                   </div>
                 ) : (
                   recentPatients.map((patient) => (
@@ -926,7 +926,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                           {patient.fullName}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {calculateAge(patient.dateOfBirth)} yrs · {patient.sex} · {patient.bloodType}
+                          {calculateAge(patient.dateOfBirth)} ani · {patient.sex} · {patient.bloodType}
                         </p>
                       </div>
                       <Badge variant="outline" className="text-xs shrink-0">
@@ -944,7 +944,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 <CardHeader className="flex flex-row items-center justify-between pb-3">
                   <CardTitle className="text-base font-semibold flex items-center gap-2">
                     <Stethoscope className="w-4 h-4 text-muted-foreground" />
-                    Medical Staff
+                    Personal medical
                   </CardTitle>
                   <Button
                     variant="ghost"
@@ -952,14 +952,14 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                     className="h-8 text-xs"
                     onClick={() => setActiveTab("doctors")}
                   >
-                    View all
+                    Vezi toate
                   </Button>
                 </CardHeader>
                 <CardContent className="space-y-2 pt-0">
                   {(staffList ?? doctors).length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <Stethoscope className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                      <p className="text-sm">No doctors registered</p>
+                      <p className="text-sm">Niciun medic înregistrat</p>
                     </div>
                   ) : (
                     (staffList ?? doctors).slice(0, 5).map((d) => {
@@ -997,7 +997,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 <CardHeader className="flex flex-row items-center justify-between pb-3">
                   <CardTitle className="text-base font-semibold flex items-center gap-2">
                     <CalendarDays className="w-4 h-4 text-muted-foreground" />
-                    Upcoming Appointments
+                    Programări viitoare
                   </CardTitle>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">{stats.upcomingAppointments}</Badge>
@@ -1007,7 +1007,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                       className="h-8 text-xs"
                       onClick={() => setActiveTab("appointments")}
                     >
-                      View all
+                      Vezi toate
                     </Button>
                   </div>
                 </CardHeader>
@@ -1015,7 +1015,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                   {stats.upcomingList.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <CalendarDays className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                      <p className="text-sm">No upcoming appointments</p>
+                      <p className="text-sm">Nicio programare viitoare</p>
                       {!isLabDoctor && (
                         <Button
                           variant="outline"
@@ -1024,7 +1024,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                           onClick={() => onNavigate("create-appointment")}
                         >
                           <Plus className="w-3.5 h-3.5" />
-                          Schedule one
+                          Programează una
                         </Button>
                       )}
                     </div>
@@ -1060,7 +1060,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                               onClick={() => aptPatient && onNavigate(`patient-${aptPatient.id}`)}
                               className="text-sm font-medium truncate hover:text-primary transition-colors text-left block w-full"
                             >
-                              {aptPatient?.fullName ?? "Unknown Patient"}
+                              {aptPatient?.fullName ?? "Pacient necunoscut"}
                             </button>
                             <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                               <User className="w-3 h-3" />
@@ -1092,20 +1092,20 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-semibold flex items-center gap-2 text-amber-700 dark:text-amber-400">
                   <AlertCircle className="w-4 h-4" />
-                  HIPAA Compliance Notice
+                  Notă de conformitate HIPAA
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
                 <div className="flex items-start gap-2 text-sm text-amber-800 dark:text-amber-300 mb-2">
                   <p>
-                    All patient data is protected health information (PHI) under HIPAA regulations.
+                    Toate datele pacienților sunt informații de sănătate protejate (PHI) conform reglementărilor HIPAA.
                   </p>
                 </div>
                 <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs text-amber-700 dark:text-amber-400">
-                  <li>• Access only records relevant to your clinical role</li>
-                  <li>• Do not share login credentials with others</li>
-                  <li>• Log out when leaving unattended workstations</li>
-                  <li>• All access is audited and logged</li>
+                  <li>• Accesați doar înregistrările relevante pentru rolul dvs. clinic</li>
+                  <li>• Nu partajați datele de autentificare cu alții</li>
+                  <li>• Deconectați-vă când părăsiți stațiile de lucru nesupravegheate</li>
+                  <li>• Toate accesările sunt auditate și înregistrate</li>
                 </ul>
               </CardContent>
             </Card>
@@ -1120,16 +1120,15 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
           {/* Patients header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold">Patients</h2>
+              <h2 className="text-lg font-semibold">Pacienți</h2>
               <p className="text-sm text-muted-foreground">
-                {filteredPatients.length} patient
-                {filteredPatients.length !== 1 ? "s" : ""} found
+                {filteredPatients.length} {filteredPatients.length === 1 ? "pacient găsit" : "pacienți găsiți"}
               </p>
             </div>
             {canManagePatients && (
               <Button onClick={() => onNavigate("add-patient")} className="gap-2 sm:w-auto w-full">
                 <UserPlus className="w-4 h-4" />
-                Add Patient
+                Adaugă pacient
               </Button>
             )}
           </div>
@@ -1139,7 +1138,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Search by name, ID, email or phone…"
+                placeholder="Căutați după nume, ID, email sau telefon…"
                 value={patientSearch}
                 onChange={(e) => {
                   setPatientSearch(e.target.value);
@@ -1159,10 +1158,10 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 <SelectValue placeholder="Sex" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All sexes</SelectItem>
-                <SelectItem value="Male">Male</SelectItem>
-                <SelectItem value="Female">Female</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
+                <SelectItem value="all">Toate sexele</SelectItem>
+                <SelectItem value="Male">Masculin</SelectItem>
+                <SelectItem value="Female">Feminin</SelectItem>
+                <SelectItem value="Other">Alt sex</SelectItem>
               </SelectContent>
             </Select>
             <Select
@@ -1173,10 +1172,10 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
               }}
             >
               <SelectTrigger className="w-full sm:w-36">
-                <SelectValue placeholder="Blood type" />
+                <SelectValue placeholder="Grup sanguin" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All blood types</SelectItem>
+                <SelectItem value="all">Toate grupele sanguine</SelectItem>
                 {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "Unknown"].map(
                   (bt) => (
                     <SelectItem key={bt} value={bt}>
@@ -1192,20 +1191,20 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
           {paginatedPatients.length === 0 ? (
             <Empty>
               <EmptyHeader>
-                <EmptyTitle>No patients found</EmptyTitle>
+                <EmptyTitle>Niciun pacient găsit</EmptyTitle>
                 <EmptyDescription>
                   {patientSearch ||
                   patientFilterSex !== "all" ||
                   patientFilterBlood !== "all"
-                    ? "Try clearing your filters."
-                    : "Add the first patient to get started."}
+                    ? "Încercați să ștergeți filtrele."
+                    : "Adăugați primul pacient pentru a începe."}
                 </EmptyDescription>
               </EmptyHeader>
               {canManagePatients && (
                 <EmptyContent>
                   <Button onClick={() => onNavigate("add-patient")} className="gap-2">
                     <UserPlus className="w-4 h-4" />
-                    Add Patient
+                    Adaugă pacient
                   </Button>
                 </EmptyContent>
               )}
@@ -1231,7 +1230,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                             {patient.fullName}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {calculateAge(patient.dateOfBirth)} yrs · {patient.sex}
+                            {calculateAge(patient.dateOfBirth)} ani · {patient.sex}
                           </p>
                         </div>
                       </div>
@@ -1250,7 +1249,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                             onClick={() => onNavigate(`patient-${patient.id}`)}
                           >
                             <Eye className="w-4 h-4 mr-2" />
-                            View record
+                            Vezi dosar
                           </DropdownMenuItem>
                           {canManagePatients && (
                             <>
@@ -1258,7 +1257,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                                 onClick={() => openEditPatient(patient)}
                               >
                                 <Edit className="w-4 h-4 mr-2" />
-                                Edit patient
+                                Editează pacient
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
@@ -1266,7 +1265,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                                 onClick={() => setDeletePatientConfirm(patient)}
                               >
                                 <Trash2 className="w-4 h-4 mr-2" />
-                                Delete patient
+                                Șterge pacient
                               </DropdownMenuItem>
                             </>
                           )}
@@ -1286,11 +1285,11 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Droplets className="w-3.5 h-3.5 shrink-0" />
-                        <span>Blood type: {patient.bloodType}</span>
+                        <span>Grup sanguin: {patient.bloodType}</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Calendar className="w-3.5 h-3.5 shrink-0" />
-                        <span>Updated {formatDate(patient.updatedAt)}</span>
+                        <span>Actualizat {formatDate(patient.updatedAt)}</span>
                       </div>
                     </div>
 
@@ -1300,7 +1299,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                       className="w-full text-xs"
                       onClick={() => onNavigate(`patient-${patient.id}`)}
                     >
-                      View Record
+                      Vezi dosar
                     </Button>
                   </div>
                 ))}
@@ -1310,12 +1309,12 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
               {totalPatientPages > 1 && (
                 <div className="flex items-center justify-between pt-2">
                   <p className="text-xs text-muted-foreground">
-                    Showing {(patientPage - 1) * PATIENT_PAGE_SIZE + 1}–
+                    Se afișează {(patientPage - 1) * PATIENT_PAGE_SIZE + 1}–
                     {Math.min(
                       patientPage * PATIENT_PAGE_SIZE,
                       filteredPatients.length
                     )}{" "}
-                    of {filteredPatients.length}
+                    din {filteredPatients.length}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button
@@ -1358,9 +1357,9 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
             {/* Appointments header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold">Appointments</h2>
+                <h2 className="text-lg font-semibold">Programări</h2>
                 <p className="text-sm text-muted-foreground">
-                  {apptStats.scheduled} upcoming · {apptStats.today} today
+                  {apptStats.scheduled} viitoare · {apptStats.today} azi
                 </p>
               </div>
               <Button
@@ -1368,7 +1367,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 className="gap-2 sm:w-auto w-full"
               >
                 <Plus className="w-4 h-4" />
-                Schedule Appointment
+                Programează consultație
               </Button>
             </div>
 
@@ -1377,28 +1376,28 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
               <KPI
                 label="Total"
                 value={apptStats.total}
-                period="All time"
+                period="Din toate timpurile"
                 icon={<CalendarDays className="w-7 h-7" />}
                 accent="cerulean"
               />
               <KPI
-                label="Scheduled"
+                label="Programate"
                 value={apptStats.scheduled}
-                period="Upcoming"
+                period="Viitoare"
                 icon={<CalendarCheck className="w-7 h-7" />}
                 accent="teal"
               />
               <KPI
-                label="Today"
+                label="Astăzi"
                 value={apptStats.today}
-                period="Today"
+                period="Astăzi"
                 icon={<Clock className="w-7 h-7" />}
                 accent="purple"
               />
               <KPI
-                label="This Week"
+                label="Această săptămână"
                 value={apptStats.thisWeek}
-                period="Next 7 days"
+                period="Următoarele 7 zile"
                 icon={<Filter className="w-7 h-7" />}
                 accent="orange"
               />
@@ -1409,7 +1408,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search patient, type, doctor..."
+                  placeholder="Căutați pacient, tip, medic..."
                   value={apptSearch}
                   onChange={(e) => setApptSearch(e.target.value)}
                   className="pl-9"
@@ -1420,13 +1419,13 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 onValueChange={setApptFilterStatus}
               >
                 <SelectTrigger className="w-full sm:w-36">
-                  <SelectValue placeholder="Status" />
+                  <SelectValue placeholder="Stare" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="Scheduled">Scheduled</SelectItem>
-                  <SelectItem value="Completed">Completed</SelectItem>
-                  <SelectItem value="Cancelled">Cancelled</SelectItem>
+                  <SelectItem value="all">Toate stările</SelectItem>
+                  <SelectItem value="Scheduled">Programat</SelectItem>
+                  <SelectItem value="Completed">Finalizat</SelectItem>
+                  <SelectItem value="Cancelled">Anulat</SelectItem>
                 </SelectContent>
               </Select>
               <Select
@@ -1434,13 +1433,13 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 onValueChange={setApptFilterPeriod}
               >
                 <SelectTrigger className="w-full sm:w-36">
-                  <SelectValue placeholder="Period" />
+                  <SelectValue placeholder="Perioadă" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All time</SelectItem>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="upcoming">Upcoming</SelectItem>
-                  <SelectItem value="past">Past</SelectItem>
+                  <SelectItem value="all">Toate timpurile</SelectItem>
+                  <SelectItem value="today">Astăzi</SelectItem>
+                  <SelectItem value="upcoming">Viitoare</SelectItem>
+                  <SelectItem value="past">Trecute</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1449,18 +1448,18 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
             {apptLoading ? (
               <div className="flex items-center justify-center py-16 text-muted-foreground">
                 <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                <span className="text-sm">Loading appointments…</span>
+                <span className="text-sm">Se încarcă programările…</span>
               </div>
             ) : filteredAppointments.length === 0 ? (
               <Empty>
                 <EmptyHeader>
-                  <EmptyTitle>No appointments found</EmptyTitle>
+                  <EmptyTitle>Nicio programare găsită</EmptyTitle>
                   <EmptyDescription>
                     {apptSearch ||
                     apptFilterStatus !== "all" ||
                     apptFilterPeriod !== "all"
-                      ? "Try clearing your filters."
-                      : "Schedule the first appointment to get started."}
+                      ? "Încercați să ștergeți filtrele."
+                      : "Programați prima consultație pentru a începe."}
                   </EmptyDescription>
                 </EmptyHeader>
                 <EmptyContent>
@@ -1469,7 +1468,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                     className="gap-2"
                   >
                     <Plus className="w-4 h-4" />
-                    Schedule Appointment
+                    Programează consultație
                   </Button>
                 </EmptyContent>
               </Empty>
@@ -1488,9 +1487,9 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                     d.toDateString() ===
                     new Date(today.getTime() + 86400000).toDateString();
                   const dayLabel = isToday
-                    ? "Today"
+                    ? "Azi"
                     : isTomorrow
-                    ? "Tomorrow"
+                    ? "Mâine"
                     : formatDate(date, "EEEE, dd MMMM yyyy");
 
                   return (
@@ -1519,8 +1518,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                             {dayLabel}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {apts.length} appointment
-                            {apts.length !== 1 ? "s" : ""}
+                            {apts.length} {apts.length === 1 ? "programare" : "programări"}
                           </p>
                         </div>
                         <div className="flex-1 h-px bg-border" />
@@ -1593,7 +1591,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                                         }
                                       >
                                         <User className="w-4 h-4 mr-2" />
-                                        View patient record
+                                        Vezi dosar pacient
                                       </DropdownMenuItem>
                                       {apt.status !== "Completed" && (
                                         <>
@@ -1605,7 +1603,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                                               }
                                             >
                                               <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />
-                                              Mark as completed
+                                              Marchează ca finalizat
                                             </DropdownMenuItem>
                                           )}
                                           {apt.status === "Scheduled" && (
@@ -1616,7 +1614,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                                               }
                                             >
                                               <XCircle className="w-4 h-4 mr-2" />
-                                              Cancel appointment
+                                              Anulează programarea
                                             </DropdownMenuItem>
                                           )}
                                           {apt.status === "Cancelled" && (
@@ -1626,7 +1624,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                                               }
                                             >
                                               <CalendarDays className="w-4 h-4 mr-2 text-blue-600" />
-                                              Reschedule
+                                              Reprogramează
                                             </DropdownMenuItem>
                                           )}
                                         </>
@@ -1653,16 +1651,16 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
             {/* Doctors header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold">Medical Staff</h2>
+                <h2 className="text-lg font-semibold">Personal medical</h2>
                 <p className="text-sm text-muted-foreground">
                   {staffLoading
-                    ? "Loading from database…"
-                    : `${filteredDoctors.length} doctor${filteredDoctors.length !== 1 ? "s" : ""} registered${staffList === null ? " (offline)" : ""}`}
+                    ? "Se încarcă din baza de date…"
+                    : `${filteredDoctors.length} ${filteredDoctors.length === 1 ? "medic înregistrat" : "medici înregistrați"}${staffList === null ? " (offline)" : ""}`}
                 </p>
               </div>
               <Button onClick={() => onNavigate("add-doctor")} className="gap-2 sm:w-auto w-full">
                 <UserPlus className="w-4 h-4" />
-                Add Doctor
+                Adaugă medic
               </Button>
             </div>
 
@@ -1695,7 +1693,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by name, email, specialty…"
+                  placeholder="Căutați după nume, email, specialitate…"
                   value={doctorSearch}
                   onChange={(e) => setDoctorSearch(e.target.value)}
                   className="pl-9"
@@ -1706,14 +1704,14 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 onValueChange={setFilterDoctorRole}
               >
                 <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue placeholder="All roles" />
+                  <SelectValue placeholder="Toate rolurile" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All roles</SelectItem>
+                  <SelectItem value="all">Toate rolurile</SelectItem>
                   <SelectItem value="specialist_doctor">
-                    Specialist doctors
+                    Medici specialiști
                   </SelectItem>
-                  <SelectItem value="lab_doctor">Lab doctors</SelectItem>
+                  <SelectItem value="lab_doctor">Medici laborator</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1722,17 +1720,17 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
             {filteredDoctors.length === 0 ? (
               <Empty>
                 <EmptyHeader>
-                  <EmptyTitle>No doctors found</EmptyTitle>
+                  <EmptyTitle>Niciun medic găsit</EmptyTitle>
                   <EmptyDescription>
                     {doctorSearch || filterDoctorRole !== "all"
-                      ? "Try clearing your filters."
-                      : "Add a doctor to get started."}
+                      ? "Încercați să ștergeți filtrele."
+                      : "Adăugați un medic pentru a începe."}
                   </EmptyDescription>
                 </EmptyHeader>
                 <EmptyContent>
                   <Button onClick={() => onNavigate("add-doctor")} className="gap-2">
                     <UserPlus className="w-4 h-4" />
-                    Add Doctor
+                    Adaugă medic
                   </Button>
                 </EmptyContent>
               </Empty>
@@ -1776,7 +1774,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                               onClick={() => openEditDoctor(doctor)}
                             >
                               <Edit className="w-4 h-4 mr-2" />
-                              Edit doctor
+                              Editează medic
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -1784,7 +1782,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                               onClick={() => setDeleteDoctorConfirm(doctor)}
                             >
                               <Trash2 className="w-4 h-4 mr-2" />
-                              Remove doctor
+                              Elimină medic
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -1839,7 +1837,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingPatient ? "Edit Patient" : "Add New Patient"}
+              {editingPatient ? "Editează pacient" : "Adaugă pacient nou"}
             </DialogTitle>
           </DialogHeader>
           <form
@@ -1848,10 +1846,10 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2 space-y-1.5">
-                <Label htmlFor="fullName">Full name *</Label>
+                <Label htmlFor="fullName">Nume complet *</Label>
                 <Input
                   id="fullName"
-                  placeholder="e.g. John Smith"
+                  placeholder="ex. Ion Popescu"
                   {...patientForm.register("fullName")}
                 />
                 {patientForm.formState.errors.fullName && (
@@ -1861,7 +1859,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 )}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="dateOfBirth">Date of birth *</Label>
+                <Label htmlFor="dateOfBirth">Data nașterii *</Label>
                 <Input
                   id="dateOfBirth"
                   type="date"
@@ -1885,17 +1883,17 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Male">Male</SelectItem>
-                    <SelectItem value="Female">Female</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
+                    <SelectItem value="Male">Masculin</SelectItem>
+                    <SelectItem value="Female">Feminin</SelectItem>
+                    <SelectItem value="Other">Alt sex</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="nationalId">National ID *</Label>
+                <Label htmlFor="nationalId">CNP *</Label>
                 <Input
                   id="nationalId"
-                  placeholder="e.g. 1234567890"
+                  placeholder="ex. 1234567890123"
                   {...patientForm.register("nationalId")}
                 />
                 {patientForm.formState.errors.nationalId && (
@@ -1905,11 +1903,11 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 )}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="phone">Phone *</Label>
+                <Label htmlFor="phone">Telefon *</Label>
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder="+1 (555) 000-0000"
+                  placeholder="+40 755 000 000"
                   {...patientForm.register("phone")}
                 />
                 {patientForm.formState.errors.phone && (
@@ -1923,7 +1921,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 <Input
                   id="patEmail"
                   type="email"
-                  placeholder="patient@email.com"
+                  placeholder="pacient@email.com"
                   {...patientForm.register("email")}
                 />
                 {patientForm.formState.errors.email && (
@@ -1933,7 +1931,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 )}
               </div>
               <div className="space-y-1.5">
-                <Label>Blood type *</Label>
+                <Label>Grup sanguin *</Label>
                 <Select
                   value={patientForm.watch("bloodType")}
                   onValueChange={(v) =>
@@ -1963,19 +1961,19 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 </Select>
               </div>
               <div className="sm:col-span-2 space-y-1.5">
-                <Label htmlFor="allergies">Allergies</Label>
+                <Label htmlFor="allergies">Alergii</Label>
                 <Textarea
                   id="allergies"
-                  placeholder="List known allergies, or 'None'"
+                  placeholder="Listați alergiile cunoscute sau 'Niciunul'"
                   rows={2}
                   {...patientForm.register("allergies")}
                 />
               </div>
               <div className="sm:col-span-2 space-y-1.5">
-                <Label htmlFor="currentMedications">Current medications</Label>
+                <Label htmlFor="currentMedications">Medicamente curente</Label>
                 <Textarea
                   id="currentMedications"
-                  placeholder="List current medications, or 'None'"
+                  placeholder="Listați medicamentele curente sau 'Niciunul'"
                   rows={2}
                   {...patientForm.register("currentMedications")}
                 />
@@ -1990,17 +1988,17 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                   patientForm.reset();
                 }}
               >
-                Cancel
+                Anulează
               </Button>
               <Button
                 type="submit"
                 disabled={patientForm.formState.isSubmitting}
               >
                 {patientForm.formState.isSubmitting
-                  ? "Saving..."
+                  ? "Se salvează..."
                   : editingPatient
-                  ? "Save changes"
-                  : "Add patient"}
+                  ? "Salvează modificările"
+                  : "Adaugă pacient"}
               </Button>
             </DialogFooter>
           </form>
@@ -2014,19 +2012,19 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
       >
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Delete patient?</DialogTitle>
+            <DialogTitle>Șterge pacient?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground py-2">
-            This will permanently delete{" "}
-            <strong>{deletePatientConfirm?.fullName}</strong> and all their
-            records. This action cannot be undone.
+            Aceasta va șterge definitiv{" "}
+            <strong>{deletePatientConfirm?.fullName}</strong> și toate înregistrările sale.
+            Această acțiune nu poate fi anulată.
           </p>
           <DialogFooter>
             <Button
               variant="secondary"
               onClick={() => setDeletePatientConfirm(null)}
             >
-              Cancel
+              Anulează
             </Button>
             <Button
               variant="destructive"
@@ -2037,7 +2035,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 }
               }}
             >
-              Delete patient
+              Șterge pacient
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2056,7 +2054,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
         <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingDoctor ? "Edit Doctor" : "Add New Doctor"}
+              {editingDoctor ? "Editează medic" : "Adaugă medic nou"}
             </DialogTitle>
           </DialogHeader>
           <form
@@ -2064,7 +2062,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
             className="space-y-4 py-2"
           >
             <div className="space-y-1.5">
-              <Label>Doctor type *</Label>
+              <Label>Tip medic *</Label>
               <Select
                 value={doctorForm.watch("doctorRole")}
                 onValueChange={(v) =>
@@ -2078,13 +2076,13 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                   <SelectItem value="specialist_doctor">
                     <span className="flex items-center gap-2">
                       <Stethoscope className="w-4 h-4 text-blue-600" />
-                      Specialist Doctor
+                      Medic specialist
                     </span>
                   </SelectItem>
                   <SelectItem value="lab_doctor">
                     <span className="flex items-center gap-2">
                       <FlaskConical className="w-4 h-4 text-purple-600" />
-                      Lab Doctor
+                      Medic laborator
                     </span>
                   </SelectItem>
                 </SelectContent>
@@ -2096,7 +2094,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2 space-y-1.5">
-                <Label htmlFor="docName">Full name *</Label>
+                <Label htmlFor="docName">Nume complet *</Label>
                 <Input
                   id="docName"
                   placeholder="e.g. Dr. Jane Smith"
@@ -2109,7 +2107,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 )}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="docEmail">Email address *</Label>
+                <Label htmlFor="docEmail">Adresă email *</Label>
                 <Input
                   id="docEmail"
                   type="email"
@@ -2123,7 +2121,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 )}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="docPhone">Phone number *</Label>
+                <Label htmlFor="docPhone">Număr de telefon *</Label>
                 <Input
                   id="docPhone"
                   type="tel"
@@ -2137,13 +2135,13 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 )}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="docSpecialty">Specialty *</Label>
+                <Label htmlFor="docSpecialty">Specialitate *</Label>
                 <Input
                   id="docSpecialty"
                   placeholder={
                     doctorForm.watch("doctorRole") === "lab_doctor"
-                      ? "e.g. Clinical Pathology"
-                      : "e.g. Cardiology"
+                      ? "ex. Patologie clinică"
+                      : "ex. Cardiologie"
                   }
                   {...doctorForm.register("specialty")}
                 />
@@ -2154,13 +2152,13 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 )}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="docDept">Department *</Label>
+                <Label htmlFor="docDept">Departament *</Label>
                 <Input
                   id="docDept"
                   placeholder={
                     doctorForm.watch("doctorRole") === "lab_doctor"
-                      ? "e.g. Laboratory"
-                      : "e.g. Internal Medicine"
+                      ? "ex. Laborator"
+                      : "ex. Medicină internă"
                   }
                   {...doctorForm.register("department")}
                 />
@@ -2171,13 +2169,13 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 )}
               </div>
               <div className="sm:col-span-2 space-y-1.5">
-                <Label htmlFor="docLicense">License number *</Label>
+                <Label htmlFor="docLicense">Număr de licență *</Label>
                 <Input
                   id="docLicense"
                   placeholder={
                     doctorForm.watch("doctorRole") === "lab_doctor"
-                      ? "e.g. LAB-0042"
-                      : "e.g. MD-4821"
+                      ? "ex. LAB-0042"
+                      : "ex. MD-4821"
                   }
                   {...doctorForm.register("licenseNumber")}
                 />
@@ -2191,10 +2189,10 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
 
             <div className="rounded-lg bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-800 p-3">
               <p className="text-xs text-amber-700 dark:text-amber-400">
-                <strong>Note:</strong> After adding a doctor, their login
-                credentials will use the email above with the system password{" "}
+                <strong>Notă:</strong> După adăugarea unui medic, datele de autentificare
+                vor folosi emailul de mai sus cu parola de sistem{" "}
                 <span className="font-mono font-bold">MedKit2025!</span>.
-                Contact IT to set a custom password.
+                Contactați IT pentru a seta o parolă personalizată.
               </p>
             </div>
 
@@ -2207,17 +2205,17 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                   doctorForm.reset();
                 }}
               >
-                Cancel
+                Anulează
               </Button>
               <Button
                 type="submit"
                 disabled={doctorForm.formState.isSubmitting}
               >
                 {doctorForm.formState.isSubmitting
-                  ? "Saving..."
+                  ? "Se salvează..."
                   : editingDoctor
-                  ? "Save changes"
-                  : "Add doctor"}
+                  ? "Salvează modificările"
+                  : "Adaugă medic"}
               </Button>
             </DialogFooter>
           </form>
@@ -2231,19 +2229,18 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
       >
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Remove doctor?</DialogTitle>
+            <DialogTitle>Elimină medic?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground py-2">
-            This will remove <strong>{deleteDoctorConfirm?.name}</strong> from
-            the system. They will no longer be able to log in. This action
-            cannot be undone.
+            Aceasta va elimina <strong>{deleteDoctorConfirm?.name}</strong> din
+            sistem. Nu va mai putea să se autentifice. Această acțiune nu poate fi anulată.
           </p>
           <DialogFooter>
             <Button
               variant="secondary"
               onClick={() => setDeleteDoctorConfirm(null)}
             >
-              Cancel
+              Anulează
             </Button>
             <Button
               variant="destructive"
@@ -2254,7 +2251,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 }
               }}
             >
-              Remove doctor
+              Elimină medic
             </Button>
           </DialogFooter>
         </DialogContent>

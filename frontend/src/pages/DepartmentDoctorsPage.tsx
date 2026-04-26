@@ -24,7 +24,7 @@ interface DepartmentDoctorsPageProps {
 }
 
 const roleLabel = (role: DoctorRole) =>
-  role === "specialist_doctor" ? "Specialist" : "Lab Doctor";
+  role === "specialist_doctor" ? "Specialist" : "Medic laborator";
 
 const roleBadgeClass = (role: DoctorRole) =>
   role === "specialist_doctor"
@@ -90,7 +90,7 @@ export default function DepartmentDoctorsPage({
           <div>
             <h1 className="text-2xl font-bold text-foreground">{departmentName}</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              {departmentDoctors.length} doctor{departmentDoctors.length !== 1 ? "s" : ""} registered
+              {departmentDoctors.length} {departmentDoctors.length !== 1 ? "medici înregistrați" : "medic înregistrat"}
             </p>
           </div>
         </div>
@@ -99,7 +99,7 @@ export default function DepartmentDoctorsPage({
           className="gap-2 sm:w-auto w-full"
         >
           <UserCog className="w-4 h-4" />
-          Add Doctor
+          Adaugă medic
         </Button>
       </div>
 
@@ -107,7 +107,7 @@ export default function DepartmentDoctorsPage({
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
-          placeholder="Search by name, specialty or license..."
+          placeholder="Caută după nume, specialitate sau cod de identificare..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-9"
@@ -120,19 +120,19 @@ export default function DepartmentDoctorsPage({
           <div className="p-4 rounded-full bg-muted mb-4">
             <UserCog className="w-8 h-8 text-muted-foreground" />
           </div>
-          <p className="text-base font-medium text-foreground">No doctors in this department</p>
+          <p className="text-base font-medium text-foreground">Niciun medic în acest departament</p>
           <p className="text-sm text-muted-foreground mt-1 mb-4">
-            Add a doctor and assign them to {departmentName}.
+            Adaugă un medic și atribuie-l la {departmentName}.
           </p>
           <Button onClick={() => onNavigate("add-doctor")} variant="outline" className="gap-2">
             <UserCog className="w-4 h-4" />
-            Add Doctor
+            Adaugă medic
           </Button>
         </div>
       ) : filteredDoctors.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <p className="text-base font-medium text-foreground">No results</p>
-          <p className="text-sm text-muted-foreground mt-1">Try a different search term.</p>
+          <p className="text-base font-medium text-foreground">Niciun rezultat</p>
+          <p className="text-sm text-muted-foreground mt-1">Încearcă un alt termen de căutare.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -185,7 +185,7 @@ export default function DepartmentDoctorsPage({
                   className="h-7 text-xs"
                   onClick={() => onNavigate(`edit-doctor-${doctor.id}`)}
                 >
-                  Edit
+                  Editează
                 </Button>
               </div>
             </div>

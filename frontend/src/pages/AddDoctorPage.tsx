@@ -30,25 +30,25 @@ import { api } from "@/lib/api";
 import type { DoctorSummary } from "@/lib/types";
 
 const doctorSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Enter a valid email"),
-  phone: z.string().min(7, "Phone number is required"),
-  specialty: z.string().min(2, "Specialty is required"),
-  licenseNumber: z.string().min(2, "License number is required"),
-  departmentId: z.string().min(1, "Select a department"),
+  name: z.string().min(2, "Numele trebuie să aibă cel puțin 2 caractere"),
+  email: z.string().email("Introduceți un email valid"),
+  phone: z.string().min(7, "Numărul de telefon este obligatoriu"),
+  specialty: z.string().min(2, "Specialitatea este obligatorie"),
+  licenseNumber: z.string().min(2, "Codul de identificare este obligatoriu"),
+  departmentId: z.string().min(1, "Selectați un departament"),
   doctorRole: z.enum(["specialist_doctor", "lab_doctor"]),
 });
 
 type DoctorFormData = z.infer<typeof doctorSchema>;
 
-const LAB_SPECIALTY = "Laboratory Medicine";
+const LAB_SPECIALTY = "Medicină de laborator";
 
 const SPECIALTIES = [
-  "Cardiology", "Clinical Pathology", "Dermatology", "Emergency Medicine",
-  "Endocrinology", "Family Medicine", "Gastroenterology", "General Surgery",
-  "Hematology", "Internal Medicine", "Laboratory Medicine", "Microbiology",
-  "Nephrology", "Neurology", "Oncology", "Orthopedics", "Pediatrics",
-  "Psychiatry", "Pulmonology", "Radiology", "Urology", "Other",
+  "Cardiologie", "Patologie clinică", "Dermatologie", "Medicină de urgență",
+  "Endocrinologie", "Medicină de familie", "Gastroenterologie", "Chirurgie generală",
+  "Hematologie", "Medicină internă", "Medicină de laborator", "Microbiologie",
+  "Nefrologie", "Neurologie", "Oncologie", "Ortopedie", "Pediatrie",
+  "Psihiatrie", "Pneumologie", "Radiologie", "Urologie", "Altul",
 ];
 
 interface AddDoctorPageProps {
@@ -142,16 +142,16 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
       if (apiErr.status === 409) {
         const errCode = apiErr.payload?.error;
         if (errCode === "email_taken") {
-          setError("email", { message: "This email is already in use." });
+          setError("email", { message: "Acest email este deja utilizat." });
         } else if (errCode === "license_taken") {
-          setError("licenseNumber", { message: "This license number is already registered." });
+          setError("licenseNumber", { message: "Acest cod de identificare este deja înregistrat." });
         } else {
-          setServerError("A conflict occurred. Please check your inputs.");
+          setServerError("A apărut un conflict. Verificați datele introduse.");
         }
       } else if (apiErr.status === 400 && apiErr.payload?.error === "department_not_found") {
-        setError("departmentId", { message: "Selected department no longer exists." });
+        setError("departmentId", { message: "Departamentul selectat nu mai există." });
       } else {
-        setServerError(isEditing ? "Failed to update doctor. Please try again." : "Failed to create doctor. Please try again.");
+        setServerError(isEditing ? "Actualizarea medicului a eșuat. Încercați din nou." : "Crearea medicului a eșuat. Încercați din nou.");
       }
     }
   };
@@ -167,17 +167,17 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
           className="gap-1.5 text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back
+          Înapoi
         </Button>
         <div className="h-5 w-px bg-border" />
         <div>
           <h1 className="text-2xl font-bold text-foreground">
-            {isEditing ? "Edit Doctor" : "Add New Doctor"}
+            {isEditing ? "Editează medic" : "Adaugă medic nou"}
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {isEditing
-              ? `Updating profile for ${editingDoctor?.name}`
-              : "Register a new doctor in the system"}
+              ? `Actualizare profil pentru ${editingDoctor?.name}`
+              : "Înregistrează un medic nou în sistem"}
           </p>
         </div>
       </div>
@@ -187,10 +187,10 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-border bg-muted/30">
             <UserCog className="w-4 h-4 text-primary" />
-            <h2 className="text-sm font-semibold">Doctor Role</h2>
+            <h2 className="text-sm font-semibold">Rol medic</h2>
           </div>
           <div className="p-5">
-            <Label className="mb-3 block">Select role <span className="text-destructive">*</span></Label>
+            <Label className="mb-3 block">Selectează rol <span className="text-destructive">*</span></Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* Specialist card */}
               <button
@@ -207,14 +207,14 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
                     <Stethoscope className={`w-4 h-4 ${selectedRole === "specialist_doctor" ? "text-blue-600" : "text-muted-foreground"}`} />
                   </div>
                   <span className={`font-semibold text-sm ${selectedRole === "specialist_doctor" ? "text-blue-700 dark:text-blue-400" : "text-foreground"}`}>
-                    Specialist Doctor
+                    Medic specialist
                   </span>
                   {selectedRole === "specialist_doctor" && (
-                    <Badge className="ml-auto text-[10px] bg-blue-500 hover:bg-blue-500 text-white border-0">Selected</Badge>
+                    <Badge className="ml-auto text-[10px] bg-blue-500 hover:bg-blue-500 text-white border-0">Selectat</Badge>
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Full clinical access — manage patients, create appointments, add notes, prescriptions, and view lab results.
+                  Acces clinic complet — gestionează pacienți, creează programări, adaugă notițe, rețete și vizualizează rezultate de laborator.
                 </p>
               </button>
 
@@ -233,14 +233,14 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
                     <FlaskConical className={`w-4 h-4 ${selectedRole === "lab_doctor" ? "text-purple-600" : "text-muted-foreground"}`} />
                   </div>
                   <span className={`font-semibold text-sm ${selectedRole === "lab_doctor" ? "text-purple-700 dark:text-purple-400" : "text-foreground"}`}>
-                    Lab Doctor
+                    Medic laborator
                   </span>
                   {selectedRole === "lab_doctor" && (
-                    <Badge className="ml-auto text-[10px] bg-purple-500 hover:bg-purple-500 text-white border-0">Selected</Badge>
+                    <Badge className="ml-auto text-[10px] bg-purple-500 hover:bg-purple-500 text-white border-0">Selectat</Badge>
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Laboratory access only — upload and manage lab results for patients. No clinical record access.
+                  Acces exclusiv la laborator — încarcă și gestionează rezultate de laborator pentru pacienți. Fără acces la dosarul clinic.
                 </p>
               </button>
             </div>
@@ -251,15 +251,15 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-border bg-muted/30">
             <Stethoscope className="w-4 h-4 text-primary" />
-            <h2 className="text-sm font-semibold">Professional Information</h2>
+            <h2 className="text-sm font-semibold">Informații profesionale</h2>
           </div>
           <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-5">
             {/* Full name */}
             <div className="sm:col-span-2 space-y-1.5">
-              <Label htmlFor="name">Full name <span className="text-destructive">*</span></Label>
+              <Label htmlFor="name">Nume complet <span className="text-destructive">*</span></Label>
               <Input
                 id="name"
-                placeholder="e.g. Dr. Jane Smith"
+                placeholder="ex. Dr. Ion Popescu"
                 {...register("name")}
                 className={errors.name ? "border-destructive" : ""}
               />
@@ -272,7 +272,7 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
             <div className="space-y-1.5">
               <Label>
                 <Stethoscope className="w-3.5 h-3.5 inline mr-1 opacity-60" />
-                Specialty <span className="text-destructive">*</span>
+                Specialitate <span className="text-destructive">*</span>
               </Label>
               {isLabDoctor ? (
                 <div className="relative">
@@ -289,7 +289,7 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
                   onValueChange={(v) => setValue("specialty", v, { shouldValidate: true })}
                 >
                   <SelectTrigger className={errors.specialty ? "border-destructive" : ""}>
-                    <SelectValue placeholder="Select specialty" />
+                    <SelectValue placeholder="Selectează specialitate" />
                   </SelectTrigger>
                   <SelectContent>
                     {SPECIALTIES.map((s) => (
@@ -300,7 +300,7 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
               )}
               {isLabDoctor ? (
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Lock className="w-3 h-3" /> Fixed for Lab Doctor role
+                  <Lock className="w-3 h-3" /> Fixat pentru rolul Medic laborator
                 </p>
               ) : errors.specialty ? (
                 <p className="text-xs text-destructive">{errors.specialty.message}</p>
@@ -311,7 +311,7 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
             <div className="space-y-1.5">
               <Label>
                 <Building2 className="w-3.5 h-3.5 inline mr-1 opacity-60" />
-                Department <span className="text-destructive">*</span>
+                Departament <span className="text-destructive">*</span>
               </Label>
               {isLabDoctor ? (
                 <div className="relative">
@@ -328,7 +328,7 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
                   onValueChange={(v) => setValue("departmentId", v, { shouldValidate: true })}
                 >
                   <SelectTrigger className={errors.departmentId ? "border-destructive" : ""}>
-                    <SelectValue placeholder="Select department" />
+                    <SelectValue placeholder="Selectează departament" />
                   </SelectTrigger>
                   <SelectContent>
                     {departments.map((d) => (
@@ -339,7 +339,7 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
               )}
               {isLabDoctor ? (
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Lock className="w-3 h-3" /> Fixed for Lab Doctor role
+                  <Lock className="w-3 h-3" /> Fixat pentru rolul Medic laborator
                 </p>
               ) : errors.departmentId ? (
                 <p className="text-xs text-destructive">{errors.departmentId.message}</p>
@@ -350,11 +350,11 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
             <div className="sm:col-span-2 space-y-1.5">
               <Label htmlFor="licenseNumber">
                 <BadgeCheck className="w-3.5 h-3.5 inline mr-1 opacity-60" />
-                License number <span className="text-destructive">*</span>
+                Cod de identificare <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="licenseNumber"
-                placeholder="e.g. MD-4821 or LAB-0012"
+                placeholder="ex. MD-4821 sau LAB-0012"
                 {...register("licenseNumber")}
                 className={errors.licenseNumber ? "border-destructive" : ""}
               />
@@ -369,19 +369,19 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-border bg-muted/30">
             <Phone className="w-4 h-4 text-primary" />
-            <h2 className="text-sm font-semibold">Contact Information</h2>
+            <h2 className="text-sm font-semibold">Informații de contact</h2>
           </div>
           <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-5">
             {/* Phone */}
             <div className="space-y-1.5">
               <Label htmlFor="phone">
                 <Phone className="w-3.5 h-3.5 inline mr-1 opacity-60" />
-                Phone number <span className="text-destructive">*</span>
+                Număr de telefon <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="phone"
                 type="tel"
-                placeholder="+1 (555) 000-0000"
+                placeholder="+40 700 000 000"
                 {...register("phone")}
                 className={errors.phone ? "border-destructive" : ""}
               />
@@ -394,7 +394,7 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
             <div className="space-y-1.5">
               <Label htmlFor="email">
                 <Mail className="w-3.5 h-3.5 inline mr-1 opacity-60" />
-                Email address <span className="text-destructive">*</span>
+                Adresă email <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="email"
@@ -424,15 +424,15 @@ export default function AddDoctorPage({ onNavigate, editingDoctorId }: AddDoctor
             variant="outline"
             onClick={() => onNavigate("doctors")}
           >
-            Cancel
+            Anulează
           </Button>
           <Button type="submit" disabled={isSubmitting} className="gap-2 min-w-32">
             <Save className="w-4 h-4" />
             {isSubmitting
-              ? "Saving..."
+              ? "Se salvează..."
               : isEditing
-              ? "Save changes"
-              : "Add doctor"}
+              ? "Actualizează"
+              : "Adaugă medic"}
           </Button>
         </div>
       </form>

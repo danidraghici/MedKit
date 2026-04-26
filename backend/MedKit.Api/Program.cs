@@ -57,7 +57,7 @@ builder.Services.AddRateLimiter(opt =>
     {
         ctx.HttpContext.Response.ContentType = "application/json";
         await ctx.HttpContext.Response.WriteAsync(
-            "{\"error\":\"Too many login attempts. Please try again in 15 minutes.\"}");
+            "{\"error\":\"Prea multe tentative de autentificare. Vă rugăm să încercați din nou în 15 minute.\"}");
     };
 });
 

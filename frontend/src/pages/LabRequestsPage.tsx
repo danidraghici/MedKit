@@ -23,7 +23,7 @@ const resultSchema = z
     file: z.instanceof(File).optional(),
   })
   .refine((d) => (d.observations?.trim() ?? "") !== "" || d.file !== undefined, {
-    message: "Provide observations, a file, or both.",
+    message: "Furnizați observații, un fișier sau ambele.",
     path: ["observations"],
   });
 
@@ -33,16 +33,16 @@ type ResultFormData = z.infer<typeof resultSchema>;
 
 function statusBadge(status: string) {
   const base = "text-xs px-2.5 py-1 rounded-full font-semibold border";
-  if (status === "Pending")
+  if (status === "În așteptare")
     return `${base} text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950/30 dark:border-amber-800`;
-  if (status === "In Progress")
+  if (status === "În procesare")
     return `${base} text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800`;
   return `${base} text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950/30 dark:border-emerald-800`;
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-type FilterTab = "All" | "Pending" | "In Progress" | "Completed";
+type FilterTab = "Toate" | "În așteptare" | "În procesare" | "Finalizat";
 
 export default function LabRequestsPage() {
   const labRequests = useAppStore((s) => s.labRequests);
@@ -52,7 +52,7 @@ export default function LabRequestsPage() {
   const submitLabResult = useAppStore((s) => s.submitLabResult);
   const fetchUnreadLabRequestCount = useAppStore((s) => s.fetchUnreadLabRequestCount);
 
-  const [filter, setFilter] = useState<FilterTab>("All");
+  const [filter, setFilter] = useState<FilterTab>("Toate");
   const [selectedRequest, setSelectedRequest] = useState<LabRequest | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(labRequests.length === 0);
@@ -79,7 +79,7 @@ export default function LabRequestsPage() {
     return () => clearInterval(id);
   }, [fetchUnreadLabRequestCount]);
 
-  const filtered = labRequests.filter((r) => filter === "All" || r.status === filter);
+  const filtered = labRequests.filter((r) => filter === "Toate" || r.status === filter);
 
   const openRequest = async (req: LabRequest) => {
     setSelectedRequest(req);
@@ -102,11 +102,11 @@ export default function LabRequestsPage() {
     if (!selectedRequest) return;
     setIsProcessing(true);
     try {
-      await updateLabRequestStatus(selectedRequest.id, "In Progress");
-      setSelectedRequest((prev) => prev ? { ...prev, status: "In Progress" } : prev);
-      toast.success("Status updated to In Progress");
+      await updateLabRequestStatus(selectedRequest.id, "În procesare");
+      setSelectedRequest((prev) => prev ? { ...prev, status: "În procesare" } : prev);
+      toast.success("Status actualizat la În procesare");
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to update status.");
+      toast.error(err instanceof Error ? err.message : "Actualizarea statusului a eșuat.");
     } finally {
       setIsProcessing(false);
     }
@@ -120,10 +120,10 @@ export default function LabRequestsPage() {
         data.observations?.trim() || undefined,
         selectedFile ?? undefined,
       );
-      toast.success("Results submitted. Lab request marked as Completed.");
+      toast.success("Rezultatele au fost trimise. Cererea a fost marcată ca Finalizat.");
       closeSheet();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to submit results.");
+      toast.error(err instanceof Error ? err.message : "Trimiterea rezultatelor a eșuat.");
     }
   };
 
@@ -136,13 +136,13 @@ export default function LabRequestsPage() {
     <div className="space-y-6 max-w-4xl mx-auto">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Lab Requests</h1>
-        <p className="text-sm text-muted-foreground mt-1">Manage and process incoming lab sample requests.</p>
+        <h1 className="text-2xl font-bold tracking-tight">Cereri analize</h1>
+        <p className="text-sm text-muted-foreground mt-1">Gestionați și procesați cererile de analize de laborator.</p>
       </div>
 
       {/* Filter tabs */}
       <div className="flex gap-1 border-b border-border">
-        {(["All", "Pending", "In Progress", "Completed"] as FilterTab[]).map((tab) => (
+        {(["Toate", "În așteptare", "În procesare", "Finalizat"] as FilterTab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setFilter(tab)}
@@ -153,7 +153,7 @@ export default function LabRequestsPage() {
             }`}
           >
             {tab}
-            {tab !== "All" && (
+            {tab !== "Toate" && (
               <span className="ml-1.5 text-xs text-muted-foreground">
                 ({labRequests.filter((r) => r.status === tab).length})
               </span>
@@ -166,17 +166,17 @@ export default function LabRequestsPage() {
       {isLoading ? (
         <div className="flex items-center justify-center py-20 text-muted-foreground">
           <Loader2 className="w-5 h-5 animate-spin mr-2" />
-          <span className="text-sm">Loading lab requests…</span>
+          <span className="text-sm">Se încarcă cererile de analize…</span>
         </div>
       ) : filtered.length === 0 ? (
         <Empty>
           <EmptyHeader>
             <FlaskConical className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-            <EmptyTitle>No requests</EmptyTitle>
+            <EmptyTitle>Nicio cerere</EmptyTitle>
             <EmptyDescription>
-              {filter === "All"
-                ? "No pending or in-progress lab requests at the moment."
-                : `No requests with status "${filter}".`}
+              {filter === "Toate"
+                ? "Nu există cereri de analize în așteptare sau în procesare în acest moment."
+                : `Nicio cerere cu statusul "${filter}".`}
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
@@ -222,7 +222,7 @@ export default function LabRequestsPage() {
             <>
               <SheetHeader className="mb-6">
                 <SheetTitle className="flex items-center gap-2">
-                  <FlaskConical className="w-5 h-5" />Lab Request
+                  <FlaskConical className="w-5 h-5" />Cerere analize
                 </SheetTitle>
               </SheetHeader>
 
@@ -230,15 +230,15 @@ export default function LabRequestsPage() {
                 {/* Meta */}
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Patient</span>
+                    <span className="text-muted-foreground">Pacient</span>
                     <span className="font-medium">{liveRequest.patientName}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Requested by</span>
+                    <span className="text-muted-foreground">Solicitat de</span>
                     <span className="font-medium">{liveRequest.requestedByDoctorName}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Date</span>
+                    <span className="text-muted-foreground">Dată</span>
                     <span>{formatDate(liveRequest.createdAt)}</span>
                   </div>
                   <div className="flex items-center justify-between">
@@ -249,7 +249,7 @@ export default function LabRequestsPage() {
 
                 {/* Sample types */}
                 <div className="space-y-1.5">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Sample types</p>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tip probă</p>
                   <div className="flex flex-wrap gap-1.5">
                     {liveRequest.sampleTypes.map((s) => (
                       <span key={s} className="text-xs px-2.5 py-1 rounded-full bg-muted border border-border capitalize font-medium">
@@ -263,7 +263,7 @@ export default function LabRequestsPage() {
                 {liveRequest.notes && (
                   <div className="space-y-1.5">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                      <FileText className="w-3.5 h-3.5" />Specialist notes
+                      <FileText className="w-3.5 h-3.5" />Note specialist
                     </p>
                     <p className="text-sm bg-muted/50 rounded-lg border border-border px-3 py-2">
                       {liveRequest.notes}
@@ -272,24 +272,24 @@ export default function LabRequestsPage() {
                 )}
 
                 {/* Actions by status */}
-                {liveRequest.status === "Pending" && (
+                {liveRequest.status === "În așteptare" && (
                   <Button
                     onClick={() => void handleStartProcessing()}
                     disabled={isProcessing}
                     className="w-full gap-2"
                   >
                     {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <FlaskConical className="w-4 h-4" />}
-                    Start Processing
+                    Marchează ca În procesare
                   </Button>
                 )}
 
-                {liveRequest.status === "In Progress" && (
+                {liveRequest.status === "În procesare" && (
                   <form onSubmit={handleSubmit(onSubmitResult)} className="space-y-4">
                     <div className="space-y-1.5">
-                      <Label>Observations</Label>
+                      <Label>Observații</Label>
                       <Textarea
                         {...register("observations")}
-                        placeholder="Enter findings, measurements, or observations…"
+                        placeholder="Introduceți constatări, măsurători sau observații…"
                         rows={4}
                         className="resize-none"
                       />
@@ -299,7 +299,7 @@ export default function LabRequestsPage() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label>Attach file (PDF / JPEG / PNG, max 10 MB)</Label>
+                      <Label>Încarcă fișier (PDF / JPEG / PNG, max 10 MB)</Label>
                       {selectedFile ? (
                         <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg text-sm border border-border">
                           <FileText className="w-4 h-4 shrink-0 text-muted-foreground" />
@@ -324,7 +324,7 @@ export default function LabRequestsPage() {
                           className="w-full flex flex-col items-center gap-1.5 py-6 rounded-xl border-2 border-dashed border-border hover:border-primary/40 transition-colors text-muted-foreground hover:text-primary text-sm"
                         >
                           <Upload className="w-5 h-5" />
-                          Click to upload result file
+                          Apăsați pentru a încărca fișierul cu rezultate
                         </button>
                       )}
                       <input
@@ -344,15 +344,15 @@ export default function LabRequestsPage() {
 
                     <Button type="submit" disabled={isSubmitting} className="w-full gap-2">
                       {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                      Submit Results
+                      Trimite rezultat
                     </Button>
                   </form>
                 )}
 
                 {/* Completed: read-only results */}
-                {liveRequest.status === "Completed" && liveRequest.results.length > 0 && (
+                {liveRequest.status === "Finalizat" && liveRequest.results.length > 0 && (
                   <div className="space-y-3">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Submitted results</p>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Rezultate trimise</p>
                     {liveRequest.results.map((res) => (
                       <div key={res.id} className="rounded-xl border border-border bg-muted/30 p-4 space-y-2">
                         {res.observations && <p className="text-sm">{res.observations}</p>}
@@ -362,7 +362,7 @@ export default function LabRequestsPage() {
                           </p>
                         )}
                         <p className="text-xs text-muted-foreground">
-                          Submitted by {res.submitterName} · {formatDateTime(res.submittedAt)}
+                          Trimis de {res.submitterName} · {formatDateTime(res.submittedAt)}
                         </p>
                       </div>
                     ))}

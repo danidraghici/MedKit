@@ -79,10 +79,10 @@ public class AppointmentController(AppointmentService appointmentService, AppDbC
 
         return error switch
         {
-            "patient_not_found"  => NotFound(new { error = "Patient not found." }),
-            "doctor_not_found"   => NotFound(new { error = "Doctor not found." }),
+            "patient_not_found"  => NotFound(new { error = "Pacientul nu a fost găsit." }),
+            "doctor_not_found"   => NotFound(new { error = "Medicul nu a fost găsit." }),
             null when dto is not null => CreatedAtAction(nameof(GetAll), dto),
-            _ => StatusCode(500, new { error = "Unexpected error." }),
+            _ => StatusCode(500, new { error = "Eroare neașteptată." }),
         };
     }
 
@@ -99,12 +99,12 @@ public class AppointmentController(AppointmentService appointmentService, AppDbC
 
         return error switch
         {
-            "not_found"           => NotFound(new { message = "Appointment not found." }),
-            "already_completed"   => Conflict(new { message = "Appointment is already completed." }),
-            "already_cancelled"   => Conflict(new { message = "Appointment is already cancelled." }),
-            "already_scheduled"   => Conflict(new { message = "Appointment is already scheduled." }),
-            null                  => Ok(new { message = "Status updated." }),
-            _                     => StatusCode(500, new { message = "Unexpected error." }),
+            "not_found"           => NotFound(new { message = "Programarea nu a fost găsită." }),
+            "already_programat"   => Conflict(new { message = "Programarea este deja planificată." }),
+            "already_finalizat"   => Conflict(new { message = "Programarea este deja finalizată." }),
+            "already_anulat"      => Conflict(new { message = "Programarea este deja anulată." }),
+            null                  => Ok(new { message = "Statusul a fost actualizat." }),
+            _                     => StatusCode(500, new { message = "Eroare neașteptată." }),
         };
     }
 }

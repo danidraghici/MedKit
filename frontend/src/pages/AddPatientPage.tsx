@@ -32,12 +32,12 @@ import { useAppStore } from "@/lib/store";
 import type { Patient, BloodType, Sex } from "@/lib/types";
 
 const patientSchema = z.object({
-  fullName: z.string().min(2, "Full name must be at least 2 characters"),
-  dateOfBirth: z.string().min(1, "Date of birth is required"),
+  fullName: z.string().min(2, "Numele complet trebuie să aibă cel puțin 2 caractere"),
+  dateOfBirth: z.string().min(1, "Data nașterii este obligatorie"),
   sex: z.enum(["Male", "Female", "Other"]),
-  nationalId: z.string().refine(isValidCNP, "Enter a valid 13-digit CNP."),
-  phone: z.string().min(7, "Phone number is required"),
-  email: z.string().email("Enter a valid email"),
+  nationalId: z.string().refine(isValidCNP, "Introduceți un CNP valid de 13 cifre."),
+  phone: z.string().min(7, "Numărul de telefon este obligatoriu"),
+  email: z.string().email("Introduceți un email valid"),
   bloodType: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "Unknown"]),
   allergies: z.string(),
   currentMedications: z.string(),
@@ -105,7 +105,7 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
         onNavigate("patients");
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to save patient. Please try again.";
+      const message = err instanceof Error ? err.message : "Salvarea pacientului a eșuat. Vă rugăm să încercați din nou.";
       setSubmitError(message);
     }
   };
@@ -121,19 +121,19 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
           className="gap-1.5 text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back
+          Înapoi
         </Button>
         <div className="h-5 w-px bg-border" />
         <div>
           <h1 className="text-2xl font-bold text-foreground">
-            {isRestrictedEdit ? "Edit Medical Information" : isEditing ? "Edit Patient" : "Add New Patient"}
+            {isRestrictedEdit ? "Editează informații medicale" : isEditing ? "Editează pacient" : "Adaugă pacient nou"}
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {isRestrictedEdit
-              ? `Updating allergies and medications for ${editingPatient?.fullName}`
+              ? `Actualizare alergii și medicamente pentru ${editingPatient?.fullName}`
               : isEditing
-              ? `Updating record for ${editingPatient?.fullName}`
-              : "Register a new patient in the system"}
+              ? `Actualizare fișă pentru ${editingPatient?.fullName}`
+              : "Înregistrați un pacient nou în sistem"}
           </p>
         </div>
       </div>
@@ -143,18 +143,18 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-border bg-muted/30">
             <User className="w-4 h-4 text-primary" />
-            <h2 className="text-sm font-semibold">Personal Information</h2>
+            <h2 className="text-sm font-semibold">Informații personale</h2>
             {isRestrictedEdit && (
-              <span className="ml-auto text-xs text-muted-foreground">Read-only</span>
+              <span className="ml-auto text-xs text-muted-foreground">Doar citire</span>
             )}
           </div>
           <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-5">
             {/* Full name */}
             <div className="sm:col-span-2 space-y-1.5">
-              <Label htmlFor="fullName">Full name <span className="text-destructive">*</span></Label>
+              <Label htmlFor="fullName">Nume complet <span className="text-destructive">*</span></Label>
               <Input
                 id="fullName"
-                placeholder="e.g. Jane Elizabeth Smith"
+                placeholder="ex. Maria Ionescu"
                 {...register("fullName")}
                 disabled={isRestrictedEdit}
                 className={errors.fullName ? "border-destructive" : ""}
@@ -168,7 +168,7 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
             <div className="space-y-1.5">
               <Label htmlFor="dateOfBirth">
                 <CalendarDays className="w-3.5 h-3.5 inline mr-1 opacity-60" />
-                Date of birth <span className="text-destructive">*</span>
+                Data nașterii <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="dateOfBirth"
@@ -194,9 +194,9 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Male">Male</SelectItem>
-                  <SelectItem value="Female">Female</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
+                  <SelectItem value="Male">Masculin</SelectItem>
+                  <SelectItem value="Female">Feminin</SelectItem>
+                  <SelectItem value="Other">Altul</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -205,7 +205,7 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
             <div className="sm:col-span-2 space-y-1.5">
               <Label htmlFor="nationalId">
                 <ShieldCheck className="w-3.5 h-3.5 inline mr-1 opacity-60" />
-                CNP (Personal Numeric Code) <span className="text-destructive">*</span>
+                CNP <span className="text-destructive">*</span>
               </Label>
               <CNPInput
                 id="nationalId"
@@ -229,7 +229,7 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
             <div className="space-y-1.5">
               <Label>
                 <Droplets className="w-3.5 h-3.5 inline mr-1 opacity-60" />
-                Blood type <span className="text-destructive">*</span>
+                Grupă sanguină <span className="text-destructive">*</span>
               </Label>
               <Select
                 value={watch("bloodType")}
@@ -240,9 +240,10 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "Unknown"].map((bt) => (
+                  {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map((bt) => (
                     <SelectItem key={bt} value={bt}>{bt}</SelectItem>
                   ))}
+                  <SelectItem value="Unknown">Necunoscut</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -253,9 +254,9 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-border bg-muted/30">
             <Phone className="w-4 h-4 text-primary" />
-            <h2 className="text-sm font-semibold">Contact Information</h2>
+            <h2 className="text-sm font-semibold">Informații de contact</h2>
             {isRestrictedEdit && (
-              <span className="ml-auto text-xs text-muted-foreground">Read-only</span>
+              <span className="ml-auto text-xs text-muted-foreground">Doar citire</span>
             )}
           </div>
           <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -263,12 +264,12 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
             <div className="space-y-1.5">
               <Label htmlFor="phone">
                 <Phone className="w-3.5 h-3.5 inline mr-1 opacity-60" />
-                Phone number <span className="text-destructive">*</span>
+                Telefon <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="phone"
                 type="tel"
-                placeholder="+1 (555) 000-0000"
+                placeholder="+40 700 000 000"
                 {...register("phone")}
                 disabled={isRestrictedEdit}
                 className={errors.phone ? "border-destructive" : ""}
@@ -282,12 +283,12 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
             <div className="space-y-1.5">
               <Label htmlFor="email">
                 <Mail className="w-3.5 h-3.5 inline mr-1 opacity-60" />
-                Email address <span className="text-destructive">*</span>
+                Email <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="patient@email.com"
+                placeholder="dvs@email.ro"
                 {...register("email")}
                 disabled={isRestrictedEdit}
                 className={errors.email ? "border-destructive" : ""}
@@ -303,19 +304,19 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-border bg-muted/30">
             <FileText className="w-4 h-4 text-primary" />
-            <h2 className="text-sm font-semibold">Medical Information</h2>
-            <Badge variant="outline" className="ml-auto text-[10px]">Optional</Badge>
+            <h2 className="text-sm font-semibold">Informații medicale</h2>
+            <Badge variant="outline" className="ml-auto text-[10px]">Opțional</Badge>
           </div>
           <div className="p-5 space-y-5">
             {/* Allergies */}
             <div className="space-y-1.5">
               <Label htmlFor="allergies">
                 <ShieldCheck className="w-3.5 h-3.5 inline mr-1 opacity-60" />
-                Known allergies
+                Alergii cunoscute
               </Label>
               <Textarea
                 id="allergies"
-                placeholder="e.g. Penicillin, Sulfonamides, Latex — or enter 'None known'"
+                placeholder="ex. Penicilină, Sulfonamide, Latex — sau introduceți 'Fără alergii cunoscute'"
                 rows={3}
                 {...register("allergies")}
               />
@@ -325,11 +326,11 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
             <div className="space-y-1.5">
               <Label htmlFor="currentMedications">
                 <Pill className="w-3.5 h-3.5 inline mr-1 opacity-60" />
-                Current medications
+                Medicamente curente
               </Label>
               <Textarea
                 id="currentMedications"
-                placeholder="e.g. Lisinopril 10mg daily, Atorvastatin 20mg nightly"
+                placeholder="ex. Lisinopril 10mg zilnic, Atorvastatin 20mg seara"
                 rows={3}
                 {...register("currentMedications")}
               />
@@ -351,15 +352,15 @@ export default function AddPatientPage({ onNavigate, editingPatientId }: AddPati
             variant="outline"
             onClick={() => onNavigate(isEditing && editingPatient ? `patient-${editingPatient.id}` : "patients")}
           >
-            Cancel
+            Anulează
           </Button>
           <Button type="submit" disabled={isSubmitting} className="gap-2 min-w-32">
             <Save className="w-4 h-4" />
             {isSubmitting
-              ? "Saving..."
+              ? "Se salvează..."
               : isEditing
-              ? "Save changes"
-              : "Add patient"}
+              ? "Actualizează pacient"
+              : "Salvează pacient"}
           </Button>
         </div>
       </form>

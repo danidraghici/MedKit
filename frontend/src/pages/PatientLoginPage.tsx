@@ -12,8 +12,8 @@ import { useAppStore } from "@/lib/store";
 
 
 const schema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(1, "Password is required"),
+  email: z.string().email("Introduceți o adresă de email validă"),
+  password: z.string().min(1, "Parola este obligatorie"),
   rememberMe: z.boolean().optional(),
 });
 type FormValues = z.infer<typeof schema>;
@@ -42,7 +42,7 @@ export default function PatientLoginPage({ onLoginSuccess, onSwitchToDoctor }: P
     if (success) {
       onLoginSuccess();
     } else {
-      setLoginError("Invalid email or password. Please try again.");
+      setLoginError("Email sau parolă incorectă. Vă rugăm să încercați din nou.");
     }
   };
 
@@ -68,22 +68,22 @@ export default function PatientLoginPage({ onLoginSuccess, onSwitchToDoctor }: P
             </div>
             <div>
               <span className="text-white font-bold text-xl">MedKit</span>
-              <span className="text-emerald-200 text-xs block -mt-0.5">Patient Portal</span>
+              <span className="text-emerald-200 text-xs block -mt-0.5">Portal Pacient</span>
             </div>
           </div>
           <h1 className="text-4xl font-bold text-white leading-tight mb-4">
-            Your health,<br />in your hands.
+            Sănătatea ta,<br />în mâinile tale.
           </h1>
           <p className="text-emerald-100 text-lg leading-relaxed max-w-sm">
-            Access your medical history, lab results with AI-powered insights, and book appointments — all in one secure place.
+            Accesați istoricul medical, rezultatele de laborator cu analize bazate pe IA și programați consultații — totul într-un singur loc securizat.
           </p>
         </div>
         <div className="relative z-10 space-y-3">
           {[
-            { icon: "📋", text: "View your full medical history & records" },
-            { icon: "🔬", text: "AI insights on your lab results — in plain language" },
-            { icon: "📅", text: "Request appointments online, anytime" },
-            { icon: "🔔", text: "Smart reminders for follow-ups & medications" },
+            { icon: "📋", text: "Vizualizați istoricul medical complet și fișele dvs." },
+            { icon: "🔬", text: "Analize IA ale rezultatelor de laborator — pe înțelesul tuturor" },
+            { icon: "📅", text: "Solicitați programări online, oricând" },
+            { icon: "🔔", text: "Memento-uri inteligente pentru controale și medicamente" },
           ].map((item) => (
             <div key={item.text} className="flex items-center gap-3 text-emerald-100">
               <span className="text-lg">{item.icon}</span>
@@ -98,7 +98,7 @@ export default function PatientLoginPage({ onLoginSuccess, onSwitchToDoctor }: P
         <div className="w-full max-w-md">
           <Button variant="ghost" size="sm" className="mb-6 -ml-1 text-muted-foreground" onClick={onSwitchToDoctor}>
             <ArrowLeft className="w-4 h-4 mr-1.5" />
-            Doctor login
+            Autentificare medic
           </Button>
 
           {/* Logo (mobile) */}
@@ -108,13 +108,13 @@ export default function PatientLoginPage({ onLoginSuccess, onSwitchToDoctor }: P
             </div>
             <div>
               <span className="font-bold text-lg">MedKit</span>
-              <span className="text-xs text-muted-foreground block -mt-0.5">Patient Portal</span>
+              <span className="text-xs text-muted-foreground block -mt-0.5">Portal Pacient</span>
             </div>
           </div>
 
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-foreground mb-1">Patient sign in</h2>
-            <p className="text-muted-foreground text-sm">Sign in to access your health records and appointments.</p>
+            <h2 className="text-2xl font-bold text-foreground mb-1">Autentificare pacient</h2>
+            <p className="text-muted-foreground text-sm">Autentificați-vă pentru a accesa fișa medicală și programările.</p>
           </div>
 
           {loginError && (
@@ -125,14 +125,14 @@ export default function PatientLoginPage({ onLoginSuccess, onSwitchToDoctor }: P
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="email">Email address</Label>
+              <Label htmlFor="email">Adresă de email</Label>
               <Input id="email" type="email" placeholder="your@email.com" autoComplete="email" {...register("email")}
                 className={errors.email ? "border-destructive" : ""} />
               {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Parolă</Label>
               <div className="relative">
                 <Input id="password" type={showPassword ? "text" : "password"} placeholder="••••••••"
                   autoComplete="current-password" {...register("password")}
@@ -147,19 +147,19 @@ export default function PatientLoginPage({ onLoginSuccess, onSwitchToDoctor }: P
 
             <div className="flex items-center gap-2">
               <Checkbox id="rememberMe" checked={rememberMe} onCheckedChange={(v) => setValue("rememberMe", !!v)} />
-              <Label htmlFor="rememberMe" className="text-sm font-normal cursor-pointer">Remember me for 7 days</Label>
+              <Label htmlFor="rememberMe" className="text-sm font-normal cursor-pointer">Ține-mă minte 7 zile</Label>
             </div>
 
             <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white" size="lg" disabled={isSubmitting}>
               {isSubmitting ? (
-                <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Signing in...</span>
-              ) : "Sign in to Patient Portal"}
+                <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Se autentifică...</span>
+              ) : "Autentificare în Portalul Pacientului"}
             </Button>
           </form>
 
           {/* Demo accounts */}
           <div className="mt-6 p-4 bg-emerald-50 dark:bg-emerald-950/30 rounded-xl border border-emerald-200 dark:border-emerald-800">
-            <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-2">Demo patient accounts</p>
+            <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-2">Conturi demo pacient</p>
             <div className="space-y-1.5">
               {[
                 { name: "James Harrison", email: "james.harrison@email.com" },
@@ -178,7 +178,7 @@ export default function PatientLoginPage({ onLoginSuccess, onSwitchToDoctor }: P
 
           <div className="mt-6 flex items-start gap-2 text-xs text-muted-foreground">
             <ShieldCheck className="w-3.5 h-3.5 mt-0.5 text-emerald-600 shrink-0" />
-            <span>Your health data is encrypted and protected under HIPAA privacy regulations. We never share your information without your consent.</span>
+            <span>Datele dvs. de sănătate sunt criptate și protejate conform reglementărilor de confidențialitate HIPAA. Nu partajăm niciodată informațiile dvs. fără consimțământul dvs.</span>
           </div>
         </div>
       </div>

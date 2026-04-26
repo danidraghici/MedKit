@@ -96,7 +96,7 @@ export function IcdMultiSearchField({
                   type="button"
                   onClick={() => handleRemove(item)}
                   className="rounded-sm hover:bg-muted-foreground/20 p-0.5 shrink-0"
-                  aria-label={`Sterge ${item}`}
+                  aria-label={`Șterge ${item}`}
                 >
                   <X className="h-3 w-3" />
                 </button>

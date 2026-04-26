@@ -113,7 +113,7 @@ export default function DoctorsPage({ onNavigate }: DoctorsPageProps) {
 
   // ── Role helpers ──────────────────────────────────────────────────────────
   const roleLabel = (role: DoctorRole) =>
-    role === "specialist_doctor" ? "Specialist" : "Lab Doctor";
+    role === "specialist_doctor" ? "Specialist" : "Medic laborator";
 
   const roleBadgeClass = (role: DoctorRole) =>
     role === "specialist_doctor"
@@ -138,14 +138,14 @@ export default function DoctorsPage({ onNavigate }: DoctorsPageProps) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Doctors</h1>
+          <h1 className="text-2xl font-bold text-foreground">Medici</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {doctors.length} registered doctor{doctors.length !== 1 ? "s" : ""}
+            {doctors.length} {doctors.length !== 1 ? "medici înregistrați" : "medic înregistrat"}
           </p>
         </div>
         <Button onClick={() => onNavigate("add-doctor")} className="gap-2 sm:w-auto w-full">
           <UserPlus className="w-4 h-4" />
-          Add Doctor
+          Adaugă medic
         </Button>
       </div>
 
@@ -154,7 +154,7 @@ export default function DoctorsPage({ onNavigate }: DoctorsPageProps) {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search by name, email, specialty or license..."
+            placeholder="Caută după nume, email, specialitate sau cod de identificare..."
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -174,9 +174,9 @@ export default function DoctorsPage({ onNavigate }: DoctorsPageProps) {
             <SelectValue placeholder="Role" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All roles</SelectItem>
+            <SelectItem value="all">Toate rolurile</SelectItem>
             <SelectItem value="specialist_doctor">Specialist</SelectItem>
-            <SelectItem value="lab_doctor">Lab Doctor</SelectItem>
+            <SelectItem value="lab_doctor">Medic laborator</SelectItem>
           </SelectContent>
         </Select>
         <Select
@@ -190,7 +190,7 @@ export default function DoctorsPage({ onNavigate }: DoctorsPageProps) {
             <SelectValue placeholder="Department" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All departments</SelectItem>
+            <SelectItem value="all">Toate departamentele</SelectItem>
             {allDepartments.map((dept) => (
               <SelectItem key={dept} value={dept}>
                 {dept}
@@ -204,17 +204,17 @@ export default function DoctorsPage({ onNavigate }: DoctorsPageProps) {
       {paginatedDoctors.length === 0 ? (
         <Empty>
           <EmptyHeader>
-            <EmptyTitle>No doctors found</EmptyTitle>
+            <EmptyTitle>Niciun medic găsit</EmptyTitle>
             <EmptyDescription>
               {searchQuery
-                ? "Try a different search term or clear filters."
-                : "Add your first doctor to get started."}
+                ? "Încearcă un alt termen de căutare sau elimină filtrele."
+                : "Adaugă primul medic pentru a începe."}
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
             <Button onClick={() => onNavigate("add-doctor")} className="gap-2">
               <UserPlus className="w-4 h-4" />
-              Add Doctor
+              Adaugă medic
             </Button>
           </EmptyContent>
         </Empty>
@@ -254,17 +254,17 @@ export default function DoctorsPage({ onNavigate }: DoctorsPageProps) {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => onNavigate(`edit-doctor-${doctor.id}`)}>
-                      <Edit className="w-4 h-4 mr-2" /> Edit doctor
+                      <Edit className="w-4 h-4 mr-2" /> Editează medic
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onNavigate(`doctor-schedule-${doctor.id}`)}>
-                      <CalendarDays className="w-4 h-4 mr-2" /> View schedule
+                      <CalendarDays className="w-4 h-4 mr-2" /> Vezi detalii
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="text-destructive"
                       onClick={() => setDeleteConfirm(doctor)}
                     >
-                      <Trash2 className="w-4 h-4 mr-2" /> Remove doctor
+                      <Trash2 className="w-4 h-4 mr-2" /> Șterge medic
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -305,7 +305,7 @@ export default function DoctorsPage({ onNavigate }: DoctorsPageProps) {
                   className="h-7 text-xs"
                   onClick={(e) => { e.stopPropagation(); onNavigate(`edit-doctor-${doctor.id}`); }}
                 >
-                  Edit
+                  Editează
                 </Button>
               </div>
             </div>
@@ -317,9 +317,9 @@ export default function DoctorsPage({ onNavigate }: DoctorsPageProps) {
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-2">
           <p className="text-sm text-muted-foreground">
-            Showing {(currentPage - 1) * PAGE_SIZE + 1}–
-            {Math.min(currentPage * PAGE_SIZE, filteredDoctors.length)} of{" "}
-            {filteredDoctors.length} doctors
+            Afișând {(currentPage - 1) * PAGE_SIZE + 1}–
+            {Math.min(currentPage * PAGE_SIZE, filteredDoctors.length)} din{" "}
+            {filteredDoctors.length} {filteredDoctors.length !== 1 ? "medici" : "medic"}
           </p>
           <div className="flex items-center gap-1">
             <Button
@@ -360,22 +360,22 @@ export default function DoctorsPage({ onNavigate }: DoctorsPageProps) {
       >
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Remove doctor?</DialogTitle>
+            <DialogTitle>Ștergeți medicul?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground py-2">
-            This will permanently remove{" "}
-            <strong>{deleteConfirm?.name}</strong> from the system. This action
-            cannot be undone.
+            Această acțiune va elimina permanent{" "}
+            <strong>{deleteConfirm?.name}</strong> din sistem. Acțiunea nu poate
+            fi anulată.
           </p>
           <DialogFooter>
             <Button variant="secondary" onClick={() => setDeleteConfirm(null)}>
-              Cancel
+              Anulează
             </Button>
             <Button
               variant="destructive"
               onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
             >
-              Remove doctor
+              Șterge medic
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -11,8 +11,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAppStore } from "@/lib/store";
 
 const loginSchema = z.object({
-  email: z.string().min(1, "Email is required").email("Enter a valid email address"),
-  password: z.string().min(1, "Password is required"),
+  email: z.string().min(1, "Email-ul este obligatoriu").email("Introduceți o adresă de email valid"),
+  password: z.string().min(1, "Parola este obligatorie"),
   rememberMe: z.boolean().optional(),
 });
 
@@ -50,7 +50,7 @@ export default function LoginPage({ onLoginSuccess, onSwitchToPatient }: LoginPa
     if (success) {
       onLoginSuccess();
     } else {
-      setLoginError("Invalid email or password. Please try again.");
+      setLoginError("Email sau parolă incorectă. Vă rugăm să încercați din nou.");
     }
   };
 
@@ -63,15 +63,15 @@ export default function LoginPage({ onLoginSuccess, onSwitchToPatient }: LoginPa
             <ShieldCheck className="w-8 h-8 text-primary-foreground" />
           </div>
           <h1 className="text-3xl font-bold text-foreground">MedKit</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Secure Clinical Management System</p>
+          <p className="text-muted-foreground mt-1 text-sm">Sistem securizat de management clinic</p>
         </div>
 
         {/* Login Card */}
         <div className="bg-card rounded-2xl border border-border shadow-xl p-8">
           <div className="mb-6">
-            <h2 className="text-xl font-semibold text-foreground">Sign in to your account</h2>
+            <h2 className="text-xl font-semibold text-foreground">Autentificați-vă în cont</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Authorised personnel only. Unauthorised access is prohibited.
+              Doar personal autorizat. Accesul neautorizat este interzis.
             </p>
           </div>
 
@@ -85,11 +85,11 @@ export default function LoginPage({ onLoginSuccess, onSwitchToPatient }: LoginPa
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             {/* Email */}
             <div className="space-y-1.5">
-              <Label htmlFor="email">Email address</Label>
+              <Label htmlFor="email">Adresă de email</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="you@hospital.com"
+                placeholder="dvs@spital.ro"
                 autoComplete="email"
                 {...register("email")}
                 className={errors.email ? "border-destructive" : ""}
@@ -104,12 +104,12 @@ export default function LoginPage({ onLoginSuccess, onSwitchToPatient }: LoginPa
 
             {/* Password */}
             <div className="space-y-1.5">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Parolă</Label>
               <div className="relative">
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="Enter your password"
+                  placeholder="Introduceți parola"
                   autoComplete="current-password"
                   {...register("password")}
                   className={errors.password ? "border-destructive pr-10" : "pr-10"}
@@ -118,7 +118,7 @@ export default function LoginPage({ onLoginSuccess, onSwitchToPatient }: LoginPa
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-label={showPassword ? "Ascunde parola" : "Arată parola"}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -139,7 +139,7 @@ export default function LoginPage({ onLoginSuccess, onSwitchToPatient }: LoginPa
                 onCheckedChange={(checked) => setValue("rememberMe", checked === true)}
               />
               <Label htmlFor="rememberMe" className="text-sm font-normal cursor-pointer">
-                Remember me for 7 days
+                Ține-mă minte 7 zile
               </Label>
             </div>
 
@@ -148,12 +148,12 @@ export default function LoginPage({ onLoginSuccess, onSwitchToPatient }: LoginPa
               {isLoading ? (
                 <span className="flex items-center gap-2">
                   <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                  Signing in...
+                  Se autentifică...
                 </span>
               ) : (
                 <span className="flex items-center gap-2">
                   <Lock className="w-4 h-4" />
-                  Sign in securely
+                  Autentificare securizată
                 </span>
               )}
             </Button>
@@ -161,11 +161,11 @@ export default function LoginPage({ onLoginSuccess, onSwitchToPatient }: LoginPa
 
           {/* Demo credentials */}
           <div className="mt-6 p-3 bg-muted/50 rounded-lg border border-border">
-            <p className="text-xs font-medium text-muted-foreground mb-2">Demo credentials:</p>
+            <p className="text-xs font-medium text-muted-foreground mb-2">Date de acces demo:</p>
             <div className="space-y-1.5 text-xs text-muted-foreground font-mono">
               <div className="flex items-center justify-between gap-3">
                 <span>admin@medkit.com</span>
-                <span className="text-amber-600 font-semibold not-italic font-sans">Admin</span>
+                <span className="text-amber-600 font-semibold not-italic font-sans">Administrator</span>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <span>doctor@medkit.com</span>
@@ -177,20 +177,20 @@ export default function LoginPage({ onLoginSuccess, onSwitchToPatient }: LoginPa
               </div>
               <div className="flex items-center justify-between gap-3">
                 <span>lab@medkit.com</span>
-                <span className="text-purple-600 font-semibold not-italic font-sans">Lab Doctor</span>
+                <span className="text-purple-600 font-semibold not-italic font-sans">Medic laborator</span>
               </div>
-              <p className="mt-1 text-foreground font-semibold not-italic font-sans">Password: MedKit2025!</p>
+              <p className="mt-1 text-foreground font-semibold not-italic font-sans">Parolă: MedKit2025!</p>
             </div>
           </div>
         </div>
 
         {/* Footer */}
         <p className="text-center text-xs text-muted-foreground mt-6">
-          Accounts are created by system administrators only.{" "}
-          <span className="text-primary">Contact IT support</span> if you need access.
+          Conturile sunt create doar de administratorii de sistem.{" "}
+          <span className="text-primary">Contactați suportul IT</span> dacă aveți nevoie de acces.
         </p>
         <p className="text-center text-xs text-muted-foreground mt-2">
-          🔒 This system is HIPAA-compliant. All access is logged and monitored.
+          🔒 Acest sistem este conform HIPAA. Toate accesările sunt înregistrate și monitorizate.
         </p>
         {onSwitchToPatient && (
           <div className="mt-4 text-center">
@@ -199,7 +199,7 @@ export default function LoginPage({ onLoginSuccess, onSwitchToPatient }: LoginPa
               onClick={onSwitchToPatient}
               className="text-xs text-emerald-600 hover:text-emerald-700 font-medium underline underline-offset-2 transition-colors"
             >
-              Are you a patient? Sign in to the Patient Portal →
+              Ești pacient? Autentifică-te în Portalul Pacientului →
             </button>
           </div>
         )}

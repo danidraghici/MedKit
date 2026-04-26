@@ -43,8 +43,8 @@ public class NotificationDeliveryService(AppDbContext db)
               {
                   Id = Guid.NewGuid(),
                   UserId = doctorUser.Id,
-                  Title = "Schedule Change Proposed",
-                  Body = "An administrator has proposed a change to your schedule. Please review and approve or reject it.",
+                  Title = "Modificare de program propusă",
+                  Body = "Un administrator a propus o modificare a programului dvs. Vă rugăm să o examinați și să o aprobați sau respingeți.",
                   IsRead = false,
                   RelatedEntityType = "doctor_schedule",
                   RelatedEntityId = scheduleEntryId,
@@ -74,11 +74,11 @@ public class NotificationDeliveryService(AppDbContext db)
         {
             // Fallback system notification
             var defaultTitle = triggerEvent == "appointment_created"
-                ? "New Appointment Scheduled"
-                : "Appointment Status Updated";
+                ? "Programare nouă adăugată"
+                : "Status programare actualizat";
             var defaultBody = triggerEvent == "appointment_created"
-                ? "A new appointment has been booked."
-                : "An appointment status has changed.";
+                ? "A fost adăugată o nouă programare."
+                : "Statusul unei programări s-a schimbat.";
 
             // Notify the doctor
             var doctorUser = await db.Users.AsNoTracking()
@@ -143,7 +143,7 @@ public class NotificationDeliveryService(AppDbContext db)
         var now = DateTimeOffset.UtcNow;
         var notifications = rules.Count > 0
             ? rules.Select(rule => BuildNotification(patientUser.Id, rule.Id, rule.Title, rule.Description, "lab_request", labRequestId, now)).ToList()
-            : [BuildNotification(patientUser.Id, null, "Lab Result Available", "Your lab results are ready. Please contact your doctor to review them.", "lab_request", labRequestId, now)];
+            : [BuildNotification(patientUser.Id, null, "Rezultat analize disponibil", "Rezultatele analizelor dvs. sunt gata. Vă rugăm să contactați medicul pentru a le examina.", "lab_request", labRequestId, now)];
 
         db.UserNotifications.AddRange(notifications);
         await db.SaveChangesAsync();

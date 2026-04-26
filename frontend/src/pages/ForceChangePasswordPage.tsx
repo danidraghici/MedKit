@@ -20,11 +20,11 @@ export default function ForceChangePasswordPage() {
   const [success, setSuccess] = useState(false);
 
   const validatePassword = (pw: string): string | null => {
-    if (pw.length < 8) return "Password must be at least 8 characters.";
-    if (!/[A-Z]/.test(pw)) return "Password must contain an uppercase letter.";
-    if (!/[a-z]/.test(pw)) return "Password must contain a lowercase letter.";
-    if (!/\d/.test(pw)) return "Password must contain a digit.";
-    if (!/[^A-Za-z0-9]/.test(pw)) return "Password must contain a special character.";
+    if (pw.length < 8) return "Parola trebuie să aibă cel puțin 8 caractere.";
+    if (!/[A-Z]/.test(pw)) return "Parola trebuie să conțină o literă majusculă.";
+    if (!/[a-z]/.test(pw)) return "Parola trebuie să conțină o literă minusculă.";
+    if (!/\d/.test(pw)) return "Parola trebuie să conțină o cifră.";
+    if (!/[^A-Za-z0-9]/.test(pw)) return "Parola trebuie să conțină un caracter special.";
     return null;
   };
 
@@ -33,7 +33,7 @@ export default function ForceChangePasswordPage() {
     setError(null);
 
     if (newPassword !== confirmPassword) {
-      setError("New passwords do not match.");
+      setError("Parolele noi nu se potrivesc.");
       return;
     }
 
@@ -49,7 +49,7 @@ export default function ForceChangePasswordPage() {
       setSuccess(true);
       setTimeout(() => logout(), 1500);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to change password.";
+      const message = err instanceof Error ? err.message : "Schimbarea parolei a eșuat.";
       setError(message);
       setLoading(false);
     }
@@ -64,9 +64,9 @@ export default function ForceChangePasswordPage() {
             <ShieldAlert className="w-7 h-7 text-amber-600 dark:text-amber-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-foreground">Password change required</h1>
+            <h1 className="text-xl font-bold text-foreground">Schimbare parolă obligatorie</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Your account was created with a temporary password. You must set a new password before continuing.
+              Contul dvs. a fost creat cu o parolă temporară. Trebuie să setați o parolă nouă înainte de a continua.
             </p>
           </div>
         </div>
@@ -74,7 +74,7 @@ export default function ForceChangePasswordPage() {
         {/* Success banner */}
         {success && (
           <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300 text-center">
-            Password changed successfully. Redirecting to login…
+            Parola a fost schimbată cu succes. Redirecționare spre autentificare…
           </div>
         )}
 
@@ -82,8 +82,8 @@ export default function ForceChangePasswordPage() {
         <form onSubmit={handleSubmit} className={`bg-card border border-border rounded-xl p-6 space-y-4 ${success ? "opacity-50 pointer-events-none" : ""}`}>
           {/* Current password */}
           <div className="space-y-1.5">
-            <Label htmlFor="currentPassword">Current password</Label>
-            <p className="text-xs text-muted-foreground">Use the temporary password: <span className="font-mono font-medium text-foreground">MedKit2026!</span></p>
+            <Label htmlFor="currentPassword">Parola curentă</Label>
+            <p className="text-xs text-muted-foreground">Folosiți parola temporară: <span className="font-mono font-medium text-foreground">MedKit2026!</span></p>
             <div className="relative">
               <Input
                 id="currentPassword"
@@ -106,7 +106,7 @@ export default function ForceChangePasswordPage() {
 
           {/* New password */}
           <div className="space-y-1.5">
-            <Label htmlFor="newPassword">New password</Label>
+            <Label htmlFor="newPassword">Parola nouă</Label>
             <div className="relative">
               <Input
                 id="newPassword"
@@ -129,7 +129,7 @@ export default function ForceChangePasswordPage() {
 
           {/* Confirm password */}
           <div className="space-y-1.5">
-            <Label htmlFor="confirmPassword">Confirm new password</Label>
+            <Label htmlFor="confirmPassword">Confirmați parola nouă</Label>
             <div className="relative">
               <Input
                 id="confirmPassword"
@@ -152,7 +152,7 @@ export default function ForceChangePasswordPage() {
 
           {/* Requirements */}
           <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
-            Password must be at least 8 characters and include an uppercase letter, a lowercase letter, a digit, and a special character.
+            Parola trebuie să aibă cel puțin 8 caractere și să includă o literă majusculă, o literă minusculă, o cifră și un caracter special.
           </p>
 
           {/* Error */}
@@ -164,7 +164,7 @@ export default function ForceChangePasswordPage() {
 
           <Button type="submit" disabled={loading} className="w-full gap-2">
             <KeyRound className="w-4 h-4" />
-            {loading ? "Changing password..." : "Set new password"}
+            {loading ? "Se schimbă parola..." : "Setați parola nouă"}
           </Button>
         </form>
       </div>

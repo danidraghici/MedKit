@@ -7,7 +7,7 @@ public class CreatePatientRequest
     [Required] public string FullName { get; set; } = "";
     [Required, RegularExpression(@"^\d{4}-\d{2}-\d{2}$")] public string DateOfBirth { get; set; } = "";
     [Required] public string Sex { get; set; } = "";
-    [Required, RegularExpression(@"^\d{13}$", ErrorMessage = "CNP must be exactly 13 digits.")]
+    [Required, RegularExpression(@"^\d{13}$", ErrorMessage = "CNP-ul trebuie să aibă exact 13 cifre.")]
     public string NationalId { get; set; } = "";
     [Required] public string Phone { get; set; } = "";
     [Required, EmailAddress] public string Email { get; set; } = "";

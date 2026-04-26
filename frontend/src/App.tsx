@@ -56,35 +56,35 @@ type LoginMode = "doctor" | "patient";
 
 // ── Navigation by role ────────────────────────────────────────────────────────
 const specialistNavigation = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "patients", label: "Patients", icon: Users },
-  { id: "appointments", label: "Appointments", icon: Calendar },
-  { id: "chatbot", label: "Kidney Stone AI", icon: MessageSquare },
-  { id: "profile", label: "My Profile", icon: UserCircle },
+  { id: "dashboard", label: "Tablou de bord", icon: LayoutDashboard },
+  { id: "patients", label: "Pacienți", icon: Users },
+  { id: "appointments", label: "Programări", icon: Calendar },
+  { id: "chatbot", label: "AI Calculi Renali", icon: MessageSquare },
+  { id: "profile", label: "Profilul meu", icon: UserCircle },
 ];
 
 const labDoctorNavigationBase = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "patients", label: "Patients", icon: Users },
-  { id: "lab-requests", label: "Lab Requests", icon: FlaskConical },
-  { id: "profile", label: "My Profile", icon: UserCircle },
+  { id: "dashboard", label: "Tablou de bord", icon: LayoutDashboard },
+  { id: "patients", label: "Pacienți", icon: Users },
+  { id: "lab-requests", label: "Cereri analize", icon: FlaskConical },
+  { id: "profile", label: "Profilul meu", icon: UserCircle },
 ];
 
 const adminNavigation = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "patients", label: "Patients", icon: Users },
-  { id: "appointments", label: "Appointments", icon: Calendar },
-  { id: "doctors", label: "Doctors", icon: UserCog },
-  { id: "departments", label: "Departments", icon: Building2 },
-  { id: "audit-logs", label: "Audit Logs", icon: ClipboardList },
-  { id: "profile", label: "My Profile", icon: UserCircle },
+  { id: "dashboard", label: "Tablou de bord", icon: LayoutDashboard },
+  { id: "patients", label: "Pacienți", icon: Users },
+  { id: "appointments", label: "Programări", icon: Calendar },
+  { id: "doctors", label: "Medici", icon: UserCog },
+  { id: "departments", label: "Departamente", icon: Building2 },
+  { id: "audit-logs", label: "Jurnale de audit", icon: ClipboardList },
+  { id: "profile", label: "Profilul meu", icon: UserCircle },
 ];
 
 const patientNavigation = [
-  { id: "patient-overview", label: "Overview", icon: LayoutDashboard },
-  { id: "patient-history", label: "Medical history", icon: FileText },
-  { id: "patient-labs", label: "Lab results", icon: FlaskConical },
-  { id: "patient-appointments", label: "Appointments", icon: Calendar },
+  { id: "patient-overview", label: "Prezentare generală", icon: LayoutDashboard },
+  { id: "patient-history", label: "Istoric medical", icon: FileText },
+  { id: "patient-labs", label: "Rezultate analize", icon: FlaskConical },
+  { id: "patient-appointments", label: "Programări", icon: Calendar },
 ];
 
 export default function App() {
@@ -118,13 +118,13 @@ export default function App() {
 
   const notifications = [
     ...(isSpecialistDoctor && schedulePendingCount > 0
-      ? [{ id: "schedule-pending", title: "Schedule approval needed", description: `${schedulePendingCount} admin change${schedulePendingCount !== 1 ? "s" : ""} awaiting approval`, page: "profile", Icon: CalendarDays, iconColor: "text-amber-500" }]
+      ? [{ id: "schedule-pending", title: "Aprobare program necesară", description: `${schedulePendingCount} modificare${schedulePendingCount !== 1 ? "s" : ""} din admin în așteptarea aprobării`, page: "profile", Icon: CalendarDays, iconColor: "text-amber-500" }]
       : []),
     ...(isLabDoctor && labRequestUnreadCount > 0
-      ? [{ id: "lab-unread", title: "Unread lab requests", description: `${labRequestUnreadCount} new request${labRequestUnreadCount !== 1 ? "s" : ""} to review`, page: "lab-requests", Icon: FlaskConical, iconColor: "text-purple-500" }]
+      ? [{ id: "lab-unread", title: "Cereri de analize necitite", description: `${labRequestUnreadCount} cerere${labRequestUnreadCount !== 1 ? "s" : ""} nouă de revizuit`, page: "lab-requests", Icon: FlaskConical, iconColor: "text-purple-500" }]
       : []),
     ...(isAnyDoctor && unreadNotificationCount > 0
-      ? [{ id: "notif-unread", title: "New notifications", description: `${unreadNotificationCount} unread notification${unreadNotificationCount !== 1 ? "s" : ""}`, page: "profile", Icon: Bell, iconColor: "text-blue-500" }]
+      ? [{ id: "notif-unread", title: "Notificări noi", description: `${unreadNotificationCount} notificare${unreadNotificationCount !== 1 ? "s" : ""} necitită`, page: "profile", Icon: Bell, iconColor: "text-blue-500" }]
       : []),
   ];
   const totalNotificationCount =
@@ -134,13 +134,13 @@ export default function App() {
 
   // Role badge display helper
   const roleBadgeLabel = user?.role === "admin"
-    ? "Admin"
+    ? "Administrator"
     : user?.role === "specialist_doctor"
-    ? "Specialist Doctor"
+    ? "Medic specialist"
     : user?.role === "lab_doctor"
-    ? "Lab Doctor"
+    ? "Medic laborator"
     : user?.role === "patient"
-    ? "Patient"
+    ? "Pacient"
     : "";
 
   const roleBadgeColor = user?.role === "admin"
@@ -269,7 +269,7 @@ export default function App() {
         navigation={patientNavWithBadge}
         activePageId={activeNavId}
         onNavigate={handleNavigate}
-        breadcrumbItems={[{ label: "Patient Portal" }, { label: activePage.replace("patient-", "").replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) }]}
+        breadcrumbItems={[{ label: "Portal Pacient" }, { label: activePage.replace("patient-", "").replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) }]}
         showSearch={false}
         appName="MedKit"
         appLogoSrc="https://api.dicebear.com/9.x/initials/svg?seed=MK&backgroundColor=059669&fontFamily=Arial&fontSize=40&textColor=ffffff"
@@ -279,9 +279,9 @@ export default function App() {
         <div className="flex items-center justify-between px-4 sm:px-6 py-2.5 border-b border-border bg-background/60 backdrop-blur-sm shrink-0">
           <div className="flex items-center gap-2">
             <Heart className="w-3.5 h-3.5 text-emerald-600" />
-            <span className="text-xs text-muted-foreground font-medium hidden sm:inline">Patient Portal</span>
+            <span className="text-xs text-muted-foreground font-medium hidden sm:inline">Portal Pacient</span>
             <span className="w-px h-3 bg-border hidden sm:block" />
-            <span className="text-xs text-muted-foreground hidden sm:inline">Your records are encrypted and HIPAA-protected</span>
+            <span className="text-xs text-muted-foreground hidden sm:inline">Înregistrările dvs. sunt criptate și protejate HIPAA</span>
           </div>
           <div className="flex items-center gap-2">
             {reminderCount > 0 && (
@@ -307,18 +307,18 @@ export default function App() {
                 <div className="px-3 py-2 border-b border-border mb-1">
                   <p className="text-sm font-semibold">{user?.name}</p>
                   <p className="text-xs text-muted-foreground">{user?.email}</p>
-                  <Badge variant="outline" className="text-[10px] mt-0.5 border-emerald-300 text-emerald-700">Patient</Badge>
+                  <Badge variant="outline" className="text-[10px] mt-0.5 border-emerald-300 text-emerald-700">Pacient</Badge>
                 </div>
                 {patient && (
                   <div className="px-3 py-1.5 border-b border-border mb-1">
-                    <p className="text-xs text-muted-foreground">Blood type: <span className="font-medium text-foreground">{patient.bloodType}</span></p>
-                    <p className="text-xs text-muted-foreground">ID: <span className="font-medium text-foreground">{patient.nationalId}</span></p>
+                    <p className="text-xs text-muted-foreground">Grupă sanguină: <span className="font-medium text-foreground">{patient.bloodType}</span></p>
+                    <p className="text-xs text-muted-foreground">CNP: <span className="font-medium text-foreground">{patient.nationalId}</span></p>
                   </div>
                 )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => void logout()} className="text-destructive cursor-pointer">
                   <LogOut className="w-4 h-4 mr-2" />
-                  Sign out
+                  Deconectare
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -338,41 +338,41 @@ export default function App() {
 
   // ── DOCTOR / ADMIN PORTAL ─────────────────────────────────────────────────
   const getBreadcrumb = (): { label: string }[] => {
-    if (activePage === "dashboard") return [{ label: "Dashboard" }];
-    if (activePage === "patients") return [{ label: "Patients" }];
-    if (activePage === "add-patient") return [{ label: "Patients" }, { label: "Add New Patient" }];
-    if (activePage.startsWith("edit-patient-")) return [{ label: "Patients" }, { label: "Edit Patient" }];
-    if (activePage === "appointments") return [{ label: "Appointments" }];
-    if (activePage === "create-appointment") return [{ label: "Appointments" }, { label: "Schedule Appointment" }];
-    if (activePage === "chatbot") return [{ label: "Kidney Stone AI Chatbot" }];
-    if (activePage === "doctors") return [{ label: "Doctors" }];
-    if (activePage === "add-doctor") return [{ label: "Doctors" }, { label: "Add New Doctor" }];
-    if (activePage.startsWith("edit-doctor-")) return [{ label: "Doctors" }, { label: "Edit Doctor" }];
-    if (activePage === "departments") return [{ label: "Departments" }];
+    if (activePage === "dashboard") return [{ label: "Tablou de bord" }];
+    if (activePage === "patients") return [{ label: "Pacienți" }];
+    if (activePage === "add-patient") return [{ label: "Pacienți" }, { label: "Adaugă pacient nou" }];
+    if (activePage.startsWith("edit-patient-")) return [{ label: "Pacienți" }, { label: "Editează pacient" }];
+    if (activePage === "appointments") return [{ label: "Programări" }];
+    if (activePage === "create-appointment") return [{ label: "Programări" }, { label: "Programează consultație" }];
+    if (activePage === "chatbot") return [{ label: "Chatbot AI Calculi Renali" }];
+    if (activePage === "doctors") return [{ label: "Medici" }];
+    if (activePage === "add-doctor") return [{ label: "Medici" }, { label: "Adaugă medic nou" }];
+    if (activePage.startsWith("edit-doctor-")) return [{ label: "Medici" }, { label: "Editează medic" }];
+    if (activePage === "departments") return [{ label: "Departamente" }];
     if (activePage.startsWith("department-")) {
       const id = activePage.replace("department-", "");
       const dept = departments.find((d) => d.id === id);
-      return [{ label: "Departments" }, { label: dept?.name ?? "Department" }];
+      return [{ label: "Departamente" }, { label: dept?.name ?? "Departament" }];
     }
-    if (activePage === "audit-logs") return [{ label: "Audit Logs" }];
-    if (activePage === "profile") return [{ label: "My Profile" }];
-    if (activePage === "lab-requests") return [{ label: "Lab Requests" }];
+    if (activePage === "audit-logs") return [{ label: "Jurnale de audit" }];
+    if (activePage === "profile") return [{ label: "Profilul meu" }];
+    if (activePage === "lab-requests") return [{ label: "Cereri analize" }];
     if (activePage.startsWith("doctor-schedule-")) {
       const id = activePage.replace("doctor-schedule-", "");
       const doctor = doctors.find((d) => d.id === id);
-      return [{ label: "Doctors" }, { label: doctor?.name ?? "Doctor" }, { label: "Schedule" }];
+      return [{ label: "Medici" }, { label: doctor?.name ?? "Medic" }, { label: "Program" }];
     }
     if (activePage.startsWith("create-appointment-patient-")) {
       const id = activePage.replace("create-appointment-patient-", "");
       const patient = patients.find((p) => p.id === id);
-      return [{ label: "Patients" }, { label: patient?.fullName ?? "Patient" }, { label: "Schedule Appointment" }];
+      return [{ label: "Pacienți" }, { label: patient?.fullName ?? "Pacient" }, { label: "Programează consultație" }];
     }
     if (activePage.startsWith("patient-")) {
       const id = activePage.replace("patient-", "");
       const patient = patients.find((p) => p.id === id);
-      return [{ label: "Patients" }, { label: patient?.fullName ?? "Patient Detail" }];
+      return [{ label: "Pacienți" }, { label: patient?.fullName ?? "Detalii pacient" }];
     }
-    return [{ label: "Page" }];
+    return [{ label: "Pagină" }];
   };
 
   const activeNavId =
@@ -441,9 +441,9 @@ export default function App() {
       <div className="flex items-center justify-between px-4 sm:px-6 py-2.5 border-b border-border bg-background/60 backdrop-blur-sm shrink-0">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-3.5 h-3.5 text-primary" />
-          <span className="text-xs text-muted-foreground font-medium hidden sm:inline">HIPAA-Compliant</span>
+          <span className="text-xs text-muted-foreground font-medium hidden sm:inline">Conform HIPAA</span>
           <span className="w-px h-3 bg-border hidden sm:block" />
-          <span className="text-xs text-muted-foreground hidden sm:inline">All access is logged and monitored</span>
+          <span className="text-xs text-muted-foreground hidden sm:inline">Toate accesările sunt înregistrate și monitorizate</span>
         </div>
         <div className="flex items-center gap-1">
           {/* Notification Bell */}
@@ -463,12 +463,12 @@ export default function App() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-72">
               <div className="px-3 py-2 border-b border-border">
-                <p className="text-sm font-semibold">Notifications</p>
+                <p className="text-sm font-semibold">Notificări</p>
               </div>
               {notifications.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 px-3 py-6">
                   <Bell className="w-8 h-8 text-muted-foreground/40" />
-                  <p className="text-sm text-muted-foreground">No new notifications</p>
+                  <p className="text-sm text-muted-foreground">Nicio notificare nouă</p>
                 </div>
               ) : (
                 notifications.map((notif) => (
@@ -510,12 +510,12 @@ export default function App() {
               </div>
               <DropdownMenuItem className="cursor-pointer" onClick={() => handleNavigate("profile")}>
                 <User className="w-4 h-4 mr-2" />
-                My profile
+                Profilul meu
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={logout} className="text-destructive cursor-pointer">
                 <LogOut className="w-4 h-4 mr-2" />
-                Sign out
+                Deconectare
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

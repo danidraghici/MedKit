@@ -94,7 +94,7 @@ export function IcdSearchField({
                   onClick={handleClear}
                   onKeyDown={(e) => e.key === "Enter" && handleClear(e as unknown as React.MouseEvent)}
                   className="rounded-sm p-0.5 hover:bg-accent"
-                  aria-label="Sterge selectia"
+                  aria-label="Șterge selecția"
                 >
                   <X className="h-3.5 w-3.5 text-muted-foreground" />
                 </span>

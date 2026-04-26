@@ -50,10 +50,10 @@ public class DepartmentController(DepartmentService departmentService) : Control
 
         return error switch
         {
-            "not_found"           => NotFound(new { error = "Department not found." }),
+            "not_found"           => NotFound(new { error = "Departamentul nu a fost găsit." }),
             "name_taken"          => Conflict(new { error = "name_taken" }),
             null when dto is not null => Ok(dto),
-            _ => StatusCode(500, new { error = "Unexpected error." })
+            _ => StatusCode(500, new { error = "Eroare neașteptată." })
         };
     }
 }

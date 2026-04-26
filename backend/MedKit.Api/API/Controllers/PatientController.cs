@@ -63,10 +63,10 @@ public class PatientController(PatientService patientService, AppDbContext ctx) 
 
         return error switch
         {
-            "email_taken"       => Conflict(new { error = "A user with this email already exists." }),
-            "national_id_taken" => Conflict(new { error = "A patient with this national ID already exists." }),
+            "email_taken"       => Conflict(new { error = "Există deja un utilizator cu acest email." }),
+            "national_id_taken" => Conflict(new { error = "Există deja un pacient cu acest CNP." }),
             null when dto is not null => Ok(dto),
-            _ => StatusCode(500, new { error = "Unexpected error." })
+            _ => StatusCode(500, new { error = "Eroare neașteptată." })
         };
     }
 }

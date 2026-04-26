@@ -34,7 +34,7 @@ public class DoctorScheduleController(DoctorScheduleService scheduleService, App
     public async Task<IActionResult> GetActive(Guid doctorId)
     {
         if (!await IsOwnerOrAdmin(doctorId))
-            return StatusCode(403, new { error = "You cannot access another doctor's schedule." });
+            return StatusCode(403, new { error = "Nu puteți accesa programul altui medic." });
 
         var entries = await scheduleService.GetActiveAsync(doctorId);
         return Ok(entries);
@@ -45,7 +45,7 @@ public class DoctorScheduleController(DoctorScheduleService scheduleService, App
     public async Task<IActionResult> Create(Guid doctorId, [FromBody] CreateScheduleEntryRequest request)
     {
         if (!await IsOwnerOrAdmin(doctorId))
-            return StatusCode(403, new { error = "You cannot modify another doctor's schedule." });
+            return StatusCode(403, new { error = "Nu puteți modifica programul altui medic." });
 
         var userId = CurrentUserId;
         if (userId == null) return Unauthorized();
@@ -54,13 +54,13 @@ public class DoctorScheduleController(DoctorScheduleService scheduleService, App
 
         return error switch
         {
-            "invalid_type"        => BadRequest(new { error = "schedule_type must be 'working_hours' or 'block'." }),
-            "invalid_day"         => BadRequest(new { error = "day_of_week must be 0–6 for working_hours entries." }),
-            "start_time_required" => BadRequest(new { error = "start_time is required when is_working_day is true." }),
-            "invalid_time_format" => BadRequest(new { error = "Times must be in HH:mm format." }),
-            "invalid_date_format" => BadRequest(new { error = "specific_date must be a valid date string (yyyy-MM-dd)." }),
+            "invalid_type"        => BadRequest(new { error = "schedule_type trebuie să fie 'working_hours' sau 'block'." }),
+            "invalid_day"         => BadRequest(new { error = "day_of_week trebuie să fie între 0 și 6 pentru intrările de tip working_hours." }),
+            "start_time_required" => BadRequest(new { error = "start_time este obligatoriu când is_working_day este true." }),
+            "invalid_time_format" => BadRequest(new { error = "Orele trebuie să fie în formatul HH:mm." }),
+            "invalid_date_format" => BadRequest(new { error = "specific_date trebuie să fie o dată validă (yyyy-MM-dd)." }),
             null when dto is not null => Ok(dto),
-            _ => StatusCode(500, new { error = "An unexpected error occurred." }),
+            _ => StatusCode(500, new { error = "A apărut o eroare neașteptată." }),
         };
     }
 
@@ -78,15 +78,15 @@ public class DoctorScheduleController(DoctorScheduleService scheduleService, App
 
         return error switch
         {
-            "not_found"           => NotFound(new { error = "Schedule entry not found." }),
-            "forbidden"           => StatusCode(403, new { error = "You cannot modify this schedule entry." }),
-            "invalid_type"        => BadRequest(new { error = "schedule_type must be 'working_hours' or 'block'." }),
-            "invalid_day"         => BadRequest(new { error = "day_of_week must be 0–6 for working_hours entries." }),
-            "start_time_required" => BadRequest(new { error = "start_time is required when is_working_day is true." }),
-            "invalid_time_format" => BadRequest(new { error = "Times must be in HH:mm format." }),
-            "invalid_date_format" => BadRequest(new { error = "specific_date must be a valid date string (yyyy-MM-dd)." }),
+            "not_found"           => NotFound(new { error = "Intrarea din program nu a fost găsită." }),
+            "forbidden"           => StatusCode(403, new { error = "Nu puteți modifica această intrare din program." }),
+            "invalid_type"        => BadRequest(new { error = "schedule_type trebuie să fie 'working_hours' sau 'block'." }),
+            "invalid_day"         => BadRequest(new { error = "day_of_week trebuie să fie între 0 și 6 pentru intrările de tip working_hours." }),
+            "start_time_required" => BadRequest(new { error = "start_time este obligatoriu când is_working_day este true." }),
+            "invalid_time_format" => BadRequest(new { error = "Orele trebuie să fie în formatul HH:mm." }),
+            "invalid_date_format" => BadRequest(new { error = "specific_date trebuie să fie o dată validă (yyyy-MM-dd)." }),
             null when dto is not null => Ok(dto),
-            _ => StatusCode(500, new { error = "An unexpected error occurred." }),
+            _ => StatusCode(500, new { error = "A apărut o eroare neașteptată." }),
         };
     }
 
@@ -101,10 +101,10 @@ public class DoctorScheduleController(DoctorScheduleService scheduleService, App
 
         return error switch
         {
-            "not_found" => NotFound(new { error = "Schedule entry not found." }),
-            "forbidden" => StatusCode(403, new { error = "Admins cannot directly delete active schedule entries. Propose a change instead." }),
+            "not_found" => NotFound(new { error = "Intrarea din program nu a fost găsită." }),
+            "forbidden" => StatusCode(403, new { error = "Administratorii nu pot șterge direct intrările active din program. Propuneți o modificare." }),
             null        => NoContent(),
-            _           => StatusCode(500, new { error = "An unexpected error occurred." }),
+            _           => StatusCode(500, new { error = "A apărut o eroare neașteptată." }),
         };
     }
 
@@ -114,7 +114,7 @@ public class DoctorScheduleController(DoctorScheduleService scheduleService, App
     {
         if (!DateOnly.TryParseExact(date, "yyyy-MM-dd", null,
                 System.Globalization.DateTimeStyles.None, out var parsedDate))
-            return BadRequest(new { error = "Invalid date format. Use yyyy-MM-dd." });
+            return BadRequest(new { error = "Format de dată invalid. Folosiți yyyy-MM-dd." });
 
         var slots = await scheduleService.GetAvailableSlotsAsync(doctorId, parsedDate);
         return Ok(new { slots });
@@ -125,10 +125,10 @@ public class DoctorScheduleController(DoctorScheduleService scheduleService, App
     public async Task<IActionResult> GetPending(Guid doctorId)
     {
         if (CurrentRole == "admin")
-            return StatusCode(403, new { error = "Admins cannot access this endpoint." });
+            return StatusCode(403, new { error = "Administratorii nu pot accesa acest endpoint." });
 
         if (!await IsOwnerOrAdmin(doctorId))
-            return StatusCode(403, new { error = "You cannot access another doctor's schedule." });
+            return StatusCode(403, new { error = "Nu puteți accesa programul altui medic." });
 
         var entries = await scheduleService.GetPendingForDoctorAsync(doctorId);
         return Ok(entries);
@@ -139,10 +139,10 @@ public class DoctorScheduleController(DoctorScheduleService scheduleService, App
     public async Task<IActionResult> GetPendingCount(Guid doctorId)
     {
         if (CurrentRole == "admin")
-            return StatusCode(403, new { error = "Admins cannot access this endpoint." });
+            return StatusCode(403, new { error = "Administratorii nu pot accesa acest endpoint." });
 
         if (!await IsOwnerOrAdmin(doctorId))
-            return StatusCode(403, new { error = "You cannot access another doctor's schedule." });
+            return StatusCode(403, new { error = "Nu puteți accesa programul altui medic." });
 
         var count = await scheduleService.GetPendingCountAsync(doctorId);
         return Ok(new { count });
@@ -153,7 +153,7 @@ public class DoctorScheduleController(DoctorScheduleService scheduleService, App
     public async Task<IActionResult> Approve(Guid doctorId, Guid id)
     {
         if (CurrentRole == "admin")
-            return StatusCode(403, new { error = "Admins cannot approve schedule changes." });
+            return StatusCode(403, new { error = "Administratorii nu pot aproba modificările de program." });
 
         if (!await IsOwnerOrAdmin(doctorId))
             return StatusCode(403, new { error = "You cannot modify another doctor's schedule." });
@@ -165,10 +165,10 @@ public class DoctorScheduleController(DoctorScheduleService scheduleService, App
 
         return error switch
         {
-            "not_found"   => NotFound(new { error = "Schedule entry not found." }),
-            "not_pending" => BadRequest(new { error = "Entry is not awaiting approval." }),
+            "not_found"   => NotFound(new { error = "Intrarea din program nu a fost găsită." }),
+            "not_pending" => BadRequest(new { error = "Intrarea nu este în așteptarea aprobării." }),
             null when dto is not null => Ok(dto),
-            _ => StatusCode(500, new { error = "An unexpected error occurred." }),
+            _ => StatusCode(500, new { error = "A apărut o eroare neașteptată." }),
         };
     }
 
@@ -177,7 +177,7 @@ public class DoctorScheduleController(DoctorScheduleService scheduleService, App
     public async Task<IActionResult> Reject(Guid doctorId, Guid id)
     {
         if (CurrentRole == "admin")
-            return StatusCode(403, new { error = "Admins cannot reject schedule changes." });
+            return StatusCode(403, new { error = "Administratorii nu pot respinge modificările de program." });
 
         if (!await IsOwnerOrAdmin(doctorId))
             return StatusCode(403, new { error = "You cannot modify another doctor's schedule." });
@@ -186,10 +186,10 @@ public class DoctorScheduleController(DoctorScheduleService scheduleService, App
 
         return error switch
         {
-            "not_found"   => NotFound(new { error = "Schedule entry not found." }),
-            "not_pending" => BadRequest(new { error = "Entry is not awaiting approval." }),
+            "not_found"   => NotFound(new { error = "Intrarea din program nu a fost găsită." }),
+            "not_pending" => BadRequest(new { error = "Intrarea nu este în așteptarea aprobării." }),
             null          => NoContent(),
-            _             => StatusCode(500, new { error = "An unexpected error occurred." }),
+            _             => StatusCode(500, new { error = "A apărut o eroare neașteptată." }),
         };
     }
 }

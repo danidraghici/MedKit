@@ -46,7 +46,7 @@ public class LabRequestController(LabRequestService labRequestService) : Control
     {
         var lookup = await labRequestService.GetByMedicalRecordIdsAsync([medicalRecordId]);
         if (!lookup.TryGetValue(medicalRecordId, out var dto))
-            return NotFound(new { error = "No lab request found for this medical record." });
+            return NotFound(new { error = "Nicio cerere de analize pentru această fișă medicală." });
         return Ok(dto);
     }
 
@@ -61,11 +61,11 @@ public class LabRequestController(LabRequestService labRequestService) : Control
         var (dto, error) = await labRequestService.UpdateStatusAsync(id, request.Status, userId.Value);
         return error switch
         {
-            "not_found"          => NotFound(new { error = "Lab request not found." }),
-            "invalid_status"     => BadRequest(new { error = "Invalid status value." }),
-            "invalid_transition" => BadRequest(new { error = "Status can only move forward: Pending → In Progress → Completed." }),
+            "not_found"          => NotFound(new { error = "Cererea de analize nu a fost găsită." }),
+            "invalid_status"     => BadRequest(new { error = "Valoare de status invalidă." }),
+            "invalid_transition" => BadRequest(new { error = "Statusul poate avansa doar înainte: În așteptare → În procesare → Finalizat." }),
             null when dto is not null => Ok(dto),
-            _ => StatusCode(500, new { error = "Update failed." }),
+            _ => StatusCode(500, new { error = "Actualizarea a eșuat." }),
         };
     }
 
@@ -80,7 +80,7 @@ public class LabRequestController(LabRequestService labRequestService) : Control
         var error = await labRequestService.MarkReadAsync(id, userId.Value);
         return error switch
         {
-            "not_found" => NotFound(new { error = "Lab request not found." }),
+            "not_found" => NotFound(new { error = "Cererea de analize nu a fost găsită." }),
             _ => NoContent(),
         };
     }
@@ -100,14 +100,14 @@ public class LabRequestController(LabRequestService labRequestService) : Control
         var (dto, error) = await labRequestService.SubmitResultAsync(id, userId.Value, observations, file);
         return error switch
         {
-            "not_found"                    => NotFound(new { error = "Lab request not found." }),
-            "observations_or_file_required" => BadRequest(new { error = "At least one of observations or a file must be provided." }),
-            "must_start_processing_first"  => BadRequest(new { error = "Lab request must be In Progress before submitting results." }),
-            "invalid_content_type"         => BadRequest(new { error = "Only PDF, JPEG, and PNG files are accepted." }),
-            "file_too_large"               => BadRequest(new { error = "File must not exceed 10 MB." }),
-            "patient_not_found"            => NotFound(new { error = "Patient not found." }),
+            "not_found"                    => NotFound(new { error = "Cererea de analize nu a fost găsită." }),
+            "observations_or_file_required" => BadRequest(new { error = "Trebuie furnizate cel puțin observații sau un fișier." }),
+            "must_start_processing_first"  => BadRequest(new { error = "Cererea de analize trebuie să fie În procesare înainte de a trimite rezultatele." }),
+            "invalid_content_type"         => BadRequest(new { error = "Sunt acceptate doar fișiere PDF, JPEG și PNG." }),
+            "file_too_large"               => BadRequest(new { error = "Fișierul nu trebuie să depășească 10 MB." }),
+            "patient_not_found"            => NotFound(new { error = "Pacientul nu a fost găsit." }),
             null when dto is not null => Ok(dto),
-            _ => StatusCode(500, new { error = "Submit failed." }),
+            _ => StatusCode(500, new { error = "Trimiterea a eșuat." }),
         };
     }
 }

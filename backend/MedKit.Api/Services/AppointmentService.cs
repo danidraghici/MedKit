@@ -20,15 +20,15 @@ public class AppointmentService(AppDbContext db, NotificationDeliveryService not
                           && (doctorId == null || a.DoctorId == doctorId));
 
         var completedLast30Days = await db.Appointments
-            .CountAsync(a => a.Status == "Completed" && a.AppointmentDate >= thirtyDaysAgo
+            .CountAsync(a => a.Status == "Finalizat" && a.AppointmentDate >= thirtyDaysAgo
                           && (doctorId == null || a.DoctorId == doctorId));
 
         var todayCount = await db.Appointments
-            .CountAsync(a => a.AppointmentDate == today && a.Status == "Scheduled"
+            .CountAsync(a => a.AppointmentDate == today && a.Status == "Programat"
                           && (doctorId == null || a.DoctorId == doctorId));
 
         var nextWeekCount = await db.Appointments
-            .CountAsync(a => a.AppointmentDate >= today && a.AppointmentDate <= nextWeek && a.Status == "Scheduled"
+            .CountAsync(a => a.AppointmentDate >= today && a.AppointmentDate <= nextWeek && a.Status == "Programat"
                           && (doctorId == null || a.DoctorId == doctorId));
 
         return new AppointmentStatsDto(totalNext30Days, completedLast30Days, todayCount, nextWeekCount);
@@ -127,7 +127,7 @@ public class AppointmentService(AppDbContext db, NotificationDeliveryService not
             AppointmentTime = request.Time,
             Type            = request.Type,
             Notes           = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes,
-            Status          = "Scheduled",
+            Status          = "Programat",
             CreatedAt       = now,
             UpdatedAt       = now,
         };

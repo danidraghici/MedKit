@@ -144,10 +144,10 @@ function specialtyToTitle(specialty: string | null | undefined): string {
 
 function formatTimeAgo(iso: string): string {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (diff < 60) return "Just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
-  return `${Math.floor(diff / 86400)} days ago`;
+  if (diff < 60) return "Acum";
+  if (diff < 3600) return `${Math.floor(diff / 60)} min în urmă`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} ore în urmă`;
+  return `${Math.floor(diff / 86400)} zile în urmă`;
 }
 
 function formatJoinDate(iso: string): string {
@@ -326,11 +326,11 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
   };
 
   const triggerLabel: Record<string, string> = {
-    general: "Announcement",
-    schedule_change: "Schedule change",
-    appointment_created: "Appointment created",
-    appointment_updated: "Appointment updated",
-    lab_result_completed: "Lab result ready",
+    general: "Anunț general",
+    schedule_change: "Modificare program",
+    appointment_created: "Programare creată",
+    appointment_updated: "Programare actualizată",
+    lab_result_completed: "Rezultat laborator disponibil",
   };
 
   // ── Profile form ────────────────────────────────────────────────────────
@@ -430,7 +430,7 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
 // ── Role badge ────────────────────────────────────────────────────────────
   const roleBadge =
     user?.role === "admin" ? (
-      <Badge variant="warning">Admin</Badge>
+      <Badge variant="warning">Administrator</Badge>
     ) : (
       <Badge variant="info">{specialtyToTitle(profile?.specialty)}</Badge>
     );
@@ -439,8 +439,8 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
     return (
       <div className="space-y-6 max-w-5xl mx-auto">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">My Profile</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Loading profile…</p>
+          <h1 className="text-2xl font-bold text-foreground">Profilul meu</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Se încarcă profilul…</p>
         </div>
       </div>
     );
@@ -450,9 +450,9 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
     <div className="space-y-6 max-w-5xl mx-auto">
       {/* ── Page header ─────────────────────────────────────────────────── */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">My Profile</h1>
+        <h1 className="text-2xl font-bold text-foreground">Profilul meu</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Manage your personal information, credentials, and account settings
+          Gestionați informațiile personale, acreditările și setările contului
         </p>
       </div>
 
@@ -494,16 +494,16 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5" />
-                  Member since {profile?.joinedDate ? formatJoinDate(profile.joinedDate) : "—"}
+                  Membru din {profile?.joinedDate ? formatJoinDate(profile.joinedDate) : "—"}
                 </span>
               </div>
             </div>
 
             {/* Last login */}
             <div className="text-right shrink-0 hidden sm:block">
-              <p className="text-xs text-muted-foreground">Last login</p>
+              <p className="text-xs text-muted-foreground">Ultima autentificare</p>
               <p className="text-sm font-medium text-foreground">
-                {profile?.lastLoginAt ? formatTimeAgo(profile.lastLoginAt) : "Unknown"}
+                {profile?.lastLoginAt ? formatTimeAgo(profile.lastLoginAt) : "Necunoscut"}
               </p>
             </div>
           </div>
@@ -514,9 +514,9 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
       {user?.role !== "admin" && (
         <div className="grid grid-cols-3 gap-4">
           {[
-            { icon: Activity, label: "Consultations", value: doctorStats?.totalConsultations ?? "—", accent: "bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400" },
-            { icon: Users, label: "Patients managed", value: doctorStats?.totalPatients ?? "—", accent: "bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400" },
-            { icon: FileText, label: "Records created", value: doctorStats?.totalRecords ?? "—", accent: "bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400" },
+            { icon: Activity, label: "Consultații", value: doctorStats?.totalConsultations ?? "—", accent: "bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400" },
+            { icon: Users, label: "Pacienți gestionați", value: doctorStats?.totalPatients ?? "—", accent: "bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400" },
+            { icon: FileText, label: "Înregistrări create", value: doctorStats?.totalRecords ?? "—", accent: "bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400" },
           ].map(({ icon: Icon, label, value, accent }) => (
             <Card key={label}>
               <CardContent className="pt-5 pb-4 flex items-center gap-3">
@@ -538,26 +538,26 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
         <TabsList className="mb-4">
           <TabsTrigger value="profile">
             <User className="w-4 h-4 mr-1.5" />
-            Profile
+            Profil
           </TabsTrigger>
           {user?.role !== "admin" && (
             <TabsTrigger value="credentials">
               <Shield className="w-4 h-4 mr-1.5" />
-              Credentials
+              Acreditări
             </TabsTrigger>
           )}
           <TabsTrigger value="security">
             <KeyRound className="w-4 h-4 mr-1.5" />
-            Security
+            Securitate
           </TabsTrigger>
           <TabsTrigger value="notifications">
             <Bell className="w-4 h-4 mr-1.5" />
-            Notifications
+            Notificări
           </TabsTrigger>
           {user?.role !== "admin" && (
             <TabsTrigger value="schedule" className="relative">
               <CalendarDays className="w-4 h-4 mr-1.5" />
-              Schedule
+              Program
               {schedulePendingCount > 0 && (
                 <Badge
                   variant="destructive"
@@ -575,27 +575,27 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
           {profileSaved && (
             <Alert variant="success">
               <CheckCircle2 className="w-4 h-4" />
-              <AlertDescription>Profile updated successfully.</AlertDescription>
+              <AlertDescription>Profil actualizat cu succes.</AlertDescription>
             </Alert>
           )}
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
-              <CardTitle className="text-base">Personal Information</CardTitle>
+              <CardTitle className="text-base">Informații personale</CardTitle>
               {!isEditingProfile ? (
                 <Button variant="outline" size="sm" onClick={() => setIsEditingProfile(true)} className="gap-1.5">
                   <Edit3 className="w-3.5 h-3.5" />
-                  Edit profile
+                  Editează profilul
                 </Button>
               ) : (
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={onCancelEdit} className="gap-1.5">
                     <X className="w-3.5 h-3.5" />
-                    Cancel
+                    Anulează
                   </Button>
                   <Button size="sm" onClick={profileForm.handleSubmit(onSaveProfile)} className="gap-1.5">
                     <Save className="w-3.5 h-3.5" />
-                    Save changes
+                    Salvează modificările
                   </Button>
                 </div>
               )}
@@ -606,13 +606,13 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
                 /* ── Read-only view ─── */
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                   {[
-                    { icon: User, label: "Full name", value: profile?.name ?? user?.name ?? "" },
-                    { icon: Mail, label: "Email address", value: profile?.email ?? user?.email ?? "" },
-                    { icon: Phone, label: "Phone number", value: profile?.phone ?? "—" },
-                    { icon: MapPin, label: "Location", value: profile?.location ?? "—" },
-                    { icon: Building2, label: "Hospital / clinic", value: profile?.hospital ?? "—" },
-                    { icon: Clock, label: "Years of experience", value: profile?.yearsExperience ? `${profile.yearsExperience} years` : "—" },
-                    { icon: BookOpen, label: "Languages spoken", value: profile?.languages ?? "—" },
+                    { icon: User, label: "Nume complet", value: profile?.name ?? user?.name ?? "" },
+                    { icon: Mail, label: "Adresă email", value: profile?.email ?? user?.email ?? "" },
+                    { icon: Phone, label: "Număr de telefon", value: profile?.phone ?? "—" },
+                    { icon: MapPin, label: "Locație", value: profile?.location ?? "—" },
+                    { icon: Building2, label: "Spital / clinică", value: profile?.hospital ?? "—" },
+                    { icon: Clock, label: "Ani de experiență", value: profile?.yearsExperience ? `${profile.yearsExperience} ani` : "—" },
+                    { icon: BookOpen, label: "Limbi vorbite", value: profile?.languages ?? "—" },
                   ].map(({ icon: Icon, label, value }) => (
                     <div key={label} className="flex items-start gap-3">
                       <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
@@ -631,7 +631,7 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
                         <FileText className="w-4 h-4 text-muted-foreground" />
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">Bio</p>
+                        <p className="text-xs text-muted-foreground">Biografie</p>
                         <p className="text-sm text-foreground leading-relaxed">{profile.bio}</p>
                       </div>
                     </div>
@@ -645,7 +645,7 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
                 >
                   {/* Full name */}
                   <div className="space-y-1.5">
-                    <Label htmlFor="name">Full name</Label>
+                    <Label htmlFor="name">Nume complet</Label>
                     <Input id="name" {...profileForm.register("name")} />
                     {profileForm.formState.errors.name && (
                       <p className="text-xs text-destructive">{profileForm.formState.errors.name.message}</p>
@@ -654,14 +654,14 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
 
                   {/* Email */}
                   <div className="space-y-1.5">
-                    <Label htmlFor="email">Email address</Label>
+                    <Label htmlFor="email">Adresă email</Label>
                     <Input id="email" type="email" {...profileForm.register("email")} disabled />
-                    <p className="text-xs text-muted-foreground">Email cannot be changed here. Contact admin.</p>
+                    <p className="text-xs text-muted-foreground">Emailul nu poate fi modificat aici. Contactați administratorul.</p>
                   </div>
 
                   {/* Phone */}
                   <div className="space-y-1.5">
-                    <Label htmlFor="phone">Phone number</Label>
+                    <Label htmlFor="phone">Număr de telefon</Label>
                     <Input id="phone" {...profileForm.register("phone")} />
                     {profileForm.formState.errors.phone && (
                       <p className="text-xs text-destructive">{profileForm.formState.errors.phone.message}</p>
@@ -670,13 +670,13 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
 
                   {/* Location */}
                   <div className="space-y-1.5">
-                    <Label htmlFor="location">Location</Label>
-                    <Input id="location" placeholder="City, State, Country" {...profileForm.register("location")} />
+                    <Label htmlFor="location">Locație</Label>
+                    <Input id="location" placeholder="Oraș, Județ, Țară" {...profileForm.register("location")} />
                   </div>
 
                   {/* Hospital */}
                   <div className="space-y-1.5">
-                    <Label htmlFor="hospital">Hospital / clinic</Label>
+                    <Label htmlFor="hospital">Spital / clinică</Label>
                     <Input id="hospital" {...profileForm.register("hospital")} />
                     {profileForm.formState.errors.hospital && (
                       <p className="text-xs text-destructive">{profileForm.formState.errors.hospital.message}</p>
@@ -685,18 +685,18 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
 
                   {/* Years of experience */}
                   <div className="space-y-1.5">
-                    <Label htmlFor="yearsExperience">Years of experience</Label>
+                    <Label htmlFor="yearsExperience">Ani de experiență</Label>
                     <Select
                       defaultValue={profile?.yearsExperience ?? ""}
                       onValueChange={(v) => profileForm.setValue("yearsExperience", v)}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select years" />
+                        <SelectValue placeholder="Selectați ani" />
                       </SelectTrigger>
                       <SelectContent>
                         {Array.from({ length: 40 }, (_, i) => i + 1).map((y) => (
                           <SelectItem key={y} value={String(y)}>
-                            {y} {y === 1 ? "year" : "years"}
+                            {y} {y === 1 ? "an" : "ani"}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -705,17 +705,17 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
 
                   {/* Languages */}
                   <div className="space-y-1.5">
-                    <Label htmlFor="languages">Languages spoken</Label>
-                    <Input id="languages" placeholder="e.g. English, French" {...profileForm.register("languages")} />
+                    <Label htmlFor="languages">Limbi vorbite</Label>
+                    <Input id="languages" placeholder="ex. Română, Engleză" {...profileForm.register("languages")} />
                   </div>
 
                   {/* Bio */}
                   <div className="sm:col-span-2 space-y-1.5">
-                    <Label htmlFor="bio">Bio</Label>
+                    <Label htmlFor="bio">Biografie</Label>
                     <Textarea
                       id="bio"
                       rows={3}
-                      placeholder="Brief professional biography..."
+                      placeholder="Scurtă biografie profesională..."
                       {...profileForm.register("bio")}
                     />
                     {profileForm.formState.errors.bio && (
@@ -732,19 +732,19 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
         {user?.role !== "admin" && <TabsContent value="credentials" className="space-y-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
-              <CardTitle className="text-base">Medical Credentials</CardTitle>
+              <CardTitle className="text-base">Acreditări medicale</CardTitle>
               <Badge variant="success" className="gap-1">
                 <CheckCircle2 className="w-3 h-3" />
-                Verified
+                Verificat
               </Badge>
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                 {[
-                  { icon: Stethoscope, label: "Medical specialty", value: credSpecialty || "—" },
-                  { icon: Shield, label: "License number", value: credLicense || "—" },
-                  { icon: Building2, label: "Department", value: credDepartment || "—" },
-                  { icon: Award, label: "Years of experience", value: profile?.yearsExperience ? `${profile.yearsExperience} years` : "—" },
+                  { icon: Stethoscope, label: "Specialitate medicală", value: credSpecialty || "—" },
+                  { icon: Shield, label: "Număr de licență", value: credLicense || "—" },
+                  { icon: Building2, label: "Departament", value: credDepartment || "—" },
+                  { icon: Award, label: "Ani de experiență", value: profile?.yearsExperience ? `${profile.yearsExperience} ani` : "—" },
                 ].map(({ icon: Icon, label, value }) => (
                   <div key={label} className="flex items-start gap-3">
                     <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0">
@@ -763,28 +763,28 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
               {/* Credential edit fields */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                 <div className="space-y-1.5">
-                  <Label>Specialty</Label>
+                  <Label>Specialitate</Label>
                   <Input
                     value={credSpecialty}
                     onChange={(e) => setCredSpecialty(e.target.value)}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>License number</Label>
+                  <Label>Număr de licență</Label>
                   <Input
                     value={credLicense}
                     onChange={(e) => setCredLicense(e.target.value)}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Department</Label>
+                  <Label>Departament</Label>
                   <Input
                     value={credDepartment}
                     onChange={(e) => setCredDepartment(e.target.value)}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Hospital / clinic</Label>
+                  <Label>Spital / clinică</Label>
                   <Input
                     value={credHospital}
                     onChange={(e) => setCredHospital(e.target.value)}
@@ -799,14 +799,14 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
                   className="gap-1.5"
                 >
                   <Save className="w-3.5 h-3.5" />
-                  Save credentials
+                  Salvează acreditările
                 </Button>
               </div>
 
               {credSaved && (
                 <Alert variant="success">
                   <CheckCircle2 className="w-4 h-4" />
-                  <AlertDescription>Credentials updated successfully.</AlertDescription>
+                  <AlertDescription>Acreditări actualizate cu succes.</AlertDescription>
                 </Alert>
               )}
             </CardContent>
@@ -815,14 +815,14 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
           {/* Access info */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">System Access</CardTitle>
+              <CardTitle className="text-base">Acces sistem</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {[
-                  { label: "Role", value: specialtyToTitle(profile?.specialty), icon: Shield },
-                  { label: "Account status", value: "Active", icon: CheckCircle2 },
-                  { label: "Last login", value: profile?.lastLoginAt ? formatTimeAgo(profile.lastLoginAt) : "Unknown", icon: Clock },
+                  { label: "Rol", value: specialtyToTitle(profile?.specialty), icon: Shield },
+                  { label: "Stare cont", value: "Activ", icon: CheckCircle2 },
+                  { label: "Ultima autentificare", value: profile?.lastLoginAt ? formatTimeAgo(profile.lastLoginAt) : "Necunoscut", icon: Clock },
                 ].map(({ label, value, icon: Icon }) => (
                   <div key={label} className="rounded-lg border border-border bg-muted/30 p-3">
                     <div className="flex items-center gap-2 mb-1">
@@ -836,7 +836,7 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
 
               <Alert variant="info" size="compact">
                 <AlertDescription>
-                  Account creation and role changes are managed by your system administrator.
+                  Crearea conturilor și modificările de rol sunt gestionate de administratorul sistemului.
                 </AlertDescription>
               </Alert>
             </CardContent>
@@ -848,7 +848,7 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
           {pwSaved && (
             <Alert variant="success">
               <CheckCircle2 className="w-4 h-4" />
-              <AlertDescription>Password changed successfully.</AlertDescription>
+              <AlertDescription>Parolă schimbată cu succes.</AlertDescription>
             </Alert>
           )}
           {pwError && (
@@ -863,14 +863,14 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
                 <KeyRound className="w-4 h-4 text-muted-foreground" />
-                <CardTitle className="text-base">Change Password</CardTitle>
+                <CardTitle className="text-base">Schimbă parola</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
               <form onSubmit={passwordForm.handleSubmit(onChangePassword)} className="space-y-4 max-w-md">
                 {/* Current password */}
                 <div className="space-y-1.5">
-                  <Label htmlFor="currentPassword">Current password</Label>
+                  <Label htmlFor="currentPassword">Parola curentă</Label>
                   <div className="relative">
                     <Input
                       id="currentPassword"
@@ -895,7 +895,7 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
 
                 {/* New password */}
                 <div className="space-y-1.5">
-                  <Label htmlFor="newPassword">New password</Label>
+                  <Label htmlFor="newPassword">Parolă nouă</Label>
                   <div className="relative">
                     <Input
                       id="newPassword"
@@ -915,16 +915,16 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
                     <p className="text-xs text-destructive">{passwordForm.formState.errors.newPassword.message}</p>
                   )}
                   <ul className="text-xs text-muted-foreground space-y-0.5 mt-1 ml-1">
-                    <li>• Minimum 8 characters</li>
-                    <li>• At least one uppercase letter</li>
-                    <li>• At least one number</li>
-                    <li>• At least one special character (!@#$…)</li>
+                    <li>• Minimum 8 caractere</li>
+                    <li>• Cel puțin o literă majusculă</li>
+                    <li>• Cel puțin un număr</li>
+                    <li>• Cel puțin un caracter special (!@#$…)</li>
                   </ul>
                 </div>
 
                 {/* Confirm password */}
                 <div className="space-y-1.5">
-                  <Label htmlFor="confirmPassword">Confirm new password</Label>
+                  <Label htmlFor="confirmPassword">Confirmați parola nouă</Label>
                   <div className="relative">
                     <Input
                       id="confirmPassword"
@@ -949,7 +949,7 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
 
                 <Button type="submit" className="gap-1.5">
                   <KeyRound className="w-4 h-4" />
-                  Change password
+                  Schimbă parola
                 </Button>
               </form>
             </CardContent>
@@ -960,15 +960,15 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
                 <Lock className="w-4 h-4 text-muted-foreground" />
-                <CardTitle className="text-base">Security & Compliance</CardTitle>
+                <CardTitle className="text-base">Securitate și conformitate</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
               {[
-                { label: "Session timeout", value: "Auto-logout after 30 min of inactivity" },
-                { label: "Audit logging", value: "All data access is logged for HIPAA compliance" },
-                { label: "Encryption", value: "Data encrypted at rest (AES-256) and in transit (TLS 1.3)" },
-                { label: "Access control", value: "Role-based access — only authorised staff see PHI" },
+                { label: "Expirare sesiune", value: "Deconectare automată după 30 min de inactivitate" },
+                { label: "Jurnalizare audit", value: "Toate accesările de date sunt înregistrate pentru conformitate HIPAA" },
+                { label: "Criptare", value: "Date criptate în repaus (AES-256) și în tranzit (TLS 1.3)" },
+                { label: "Control acces", value: "Acces bazat pe rol — doar personalul autorizat vede PHI" },
               ].map(({ label, value }) => (
                 <div key={label} className="flex items-start justify-between gap-4 py-2 border-b border-border last:border-0">
                   <div>
@@ -977,7 +977,7 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
                   </div>
                   <Badge variant="success" className="shrink-0 gap-1">
                     <CheckCircle2 className="w-3 h-3" />
-                    Active
+                    Activ
                   </Badge>
                 </div>
               ))}
@@ -993,17 +993,17 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
             <>
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-3">
-                  <CardTitle className="text-base">Notification Rules</CardTitle>
+                  <CardTitle className="text-base">Reguli de notificare</CardTitle>
                   <Button size="sm" onClick={openCreateDialog} className="gap-1.5">
                     <Plus className="w-3.5 h-3.5" />
-                    New rule
+                    Regulă nouă
                   </Button>
                 </CardHeader>
                 <CardContent>
                   {rulesLoading ? (
-                    <p className="text-sm text-muted-foreground">Loading…</p>
+                    <p className="text-sm text-muted-foreground">Se încarcă…</p>
                   ) : rules.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No notification rules yet. Create one to get started.</p>
+                    <p className="text-sm text-muted-foreground">Nu există reguli de notificare. Creați una pentru a începe.</p>
                   ) : (
                     <div className="divide-y divide-border">
                       {rules.map((rule) => (
@@ -1020,7 +1020,7 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
                             </Badge>
                             {audienceBadge(rule.targetAudience)}
                             <Badge variant={rule.isActive ? "success" : "secondary"}>
-                              {rule.isActive ? "Active" : "Inactive"}
+                              {rule.isActive ? "Activ" : "Inactiv"}
                             </Badge>
                             <Button variant="ghost" size="icon" onClick={() => openEditDialog(rule)}>
                               <Edit3 className="w-4 h-4" />
@@ -1036,69 +1036,69 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
               <Dialog open={ruleDialogOpen} onOpenChange={setRuleDialogOpen}>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>{editingRule ? "Edit rule" : "New notification rule"}</DialogTitle>
+                    <DialogTitle>{editingRule ? "Editează regulă" : "Regulă de notificare nouă"}</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 py-2">
                     <div className="space-y-1.5">
-                      <Label>Title</Label>
+                      <Label>Titlu</Label>
                       <Input
                         value={ruleTitle}
                         onChange={(e) => setRuleTitle(e.target.value)}
-                        placeholder="e.g. New appointment booked"
+                        placeholder="ex. Programare nouă adăugată"
                       />
                     </div>
                     <div className="space-y-1.5">
                       <Label>
-                        Description{" "}
-                        <span className="text-muted-foreground font-normal">(optional)</span>
+                        Descriere{" "}
+                        <span className="text-muted-foreground font-normal">(opțional)</span>
                       </Label>
                       <Textarea
                         rows={3}
                         value={ruleDesc}
                         onChange={(e) => setRuleDesc(e.target.value)}
-                        placeholder="Describe when this notification fires…"
+                        placeholder="Descrieți când se declanșează această notificare…"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Trigger</Label>
+                      <Label>Declanșator</Label>
                       <Select value={ruleTrigger} onValueChange={setRuleTrigger}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="general">General announcement</SelectItem>
-                          <SelectItem value="schedule_change">Doctor schedule change</SelectItem>
-                          <SelectItem value="appointment_created">Appointment created</SelectItem>
-                          <SelectItem value="appointment_updated">Appointment status update</SelectItem>
-                          <SelectItem value="lab_result_completed">Lab result completed</SelectItem>
+                          <SelectItem value="general">Anunț general</SelectItem>
+                          <SelectItem value="schedule_change">Modificare program medic</SelectItem>
+                          <SelectItem value="appointment_created">Programare creată</SelectItem>
+                          <SelectItem value="appointment_updated">Actualizare stare programare</SelectItem>
+                          <SelectItem value="lab_result_completed">Rezultat laborator finalizat</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Target audience</Label>
+                      <Label>Audiență țintă</Label>
                       <Select value={ruleAudience} onValueChange={setRuleAudience}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">All users</SelectItem>
-                          <SelectItem value="patients">Patients</SelectItem>
-                          <SelectItem value="doctors">Doctors</SelectItem>
-                          <SelectItem value="admins">Admins</SelectItem>
+                          <SelectItem value="all">Toți utilizatorii</SelectItem>
+                          <SelectItem value="patients">Pacienți</SelectItem>
+                          <SelectItem value="doctors">Medici</SelectItem>
+                          <SelectItem value="admins">Administratori</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="flex items-center justify-between">
-                      <Label>Active</Label>
+                      <Label>Activ</Label>
                       <Switch checked={ruleActive} onCheckedChange={setRuleActive} />
                     </div>
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setRuleDialogOpen(false)}>
-                      Cancel
+                      Anulează
                     </Button>
                     <Button onClick={saveRule} disabled={!ruleTitle.trim() || ruleSaving}>
-                      {ruleSaving ? "Saving…" : "Save rule"}
+                      {ruleSaving ? "Se salvează…" : "Salvează regula"}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -1115,10 +1115,10 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <div className="flex items-center gap-2">
                 <Bell className="w-4 h-4 text-muted-foreground" />
-                <CardTitle className="text-base">Received Notifications</CardTitle>
+                <CardTitle className="text-base">Notificări primite</CardTitle>
                 {unreadNotificationCount > 0 && (
                   <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                    {unreadNotificationCount} unread
+                    {unreadNotificationCount} necitite
                   </Badge>
                 )}
               </div>
@@ -1129,7 +1129,7 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
                   onClick={() => void markAllNotificationsRead()}
                   className="gap-1.5 text-xs"
                 >
-                  Mark all read
+                  Marchează toate ca citite
                 </Button>
               )}
             </CardHeader>
@@ -1137,9 +1137,9 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
               {notifications.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 py-8 text-center">
                   <Bell className="w-8 h-8 text-muted-foreground/30" />
-                  <p className="text-sm text-muted-foreground">No notifications yet.</p>
+                  <p className="text-sm text-muted-foreground">Nicio notificare momentan.</p>
                   <p className="text-xs text-muted-foreground">
-                    When an administrator sends a notification or proposes schedule changes, you'll see them here.
+                    Când un administrator trimite o notificare sau propune modificări de program, le veți vedea aici.
                   </p>
                 </div>
               ) : (
@@ -1173,13 +1173,13 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
                         {notif.relatedEntityType === "doctor_schedule" && (
                           <Badge variant="secondary" className="text-[10px] mt-1.5 px-1.5 py-0 gap-1">
                             <CalendarDays className="w-3 h-3" />
-                            Schedule change
+                            Modificare program
                           </Badge>
                         )}
                         {notif.relatedEntityType === "appointment" && (
                           <Badge variant="secondary" className="text-[10px] mt-1.5 px-1.5 py-0 gap-1">
                             <Calendar className="w-3 h-3" />
-                            Appointment
+                            Programare
                           </Badge>
                         )}
                       </div>
@@ -1194,16 +1194,16 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
                 <Bell className="w-4 h-4 text-muted-foreground" />
-                <CardTitle className="text-base">Active Notification Rules</CardTitle>
+                <CardTitle className="text-base">Reguli de notificare active</CardTitle>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Configured by your administrator — these are the events that will trigger in-app notifications for you.
+                Configurate de administratorul dumneavoastră — acestea sunt evenimentele care vor declanșa notificări în aplicație.
               </p>
             </CardHeader>
             <CardContent>
               {applicableRules.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-4 text-center">
-                  No active notification rules apply to your role.
+                  Nicio regulă de notificare activă nu se aplică rolului dumneavoastră.
                 </p>
               ) : (
                 <div className="divide-y divide-border">
@@ -1239,7 +1239,7 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
             {user?.doctorId ? (
               <DoctorScheduleTab doctorId={user.doctorId} />
             ) : (
-              <p className="text-sm text-muted-foreground">No doctor record is linked to your account.</p>
+              <p className="text-sm text-muted-foreground">Niciun dosar de medic nu este asociat contului dumneavoastră.</p>
             )}
           </TabsContent>
         )}

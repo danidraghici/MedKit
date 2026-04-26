@@ -20,9 +20,9 @@ export class ErrorBoundary extends React.Component<React.PropsWithChildren, Stat
       return (
         <div className="flex min-h-screen items-center justify-center bg-background p-8">
           <div className="max-w-xl w-full rounded-xl border border-destructive/40 bg-destructive/5 p-6">
-            <h1 className="text-lg font-semibold text-destructive mb-2">Application Error</h1>
+            <h1 className="text-lg font-semibold text-destructive mb-2">Eroare de aplicație</h1>
             <p className="text-sm text-muted-foreground mb-4">
-              The app crashed with the following error:
+              Aplicația a întâmpinat o eroare:
             </p>
             <pre className="text-xs bg-muted rounded-lg p-4 overflow-auto whitespace-pre-wrap break-all text-foreground">
               {this.state.error?.toString()}

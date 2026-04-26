@@ -67,7 +67,7 @@ public class UserNotificationController(AppDbContext db) : ControllerBase
 
         var notif = await db.UserNotifications.FindAsync(id);
         if (notif is null || notif.UserId != userId)
-            return NotFound(new { error = "Notification not found." });
+            return NotFound(new { error = "Notificarea nu a fost găsită." });
 
         notif.IsRead = true;
         await db.SaveChangesAsync();

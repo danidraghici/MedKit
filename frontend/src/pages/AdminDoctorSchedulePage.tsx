@@ -18,8 +18,8 @@ export default function AdminDoctorSchedulePage({ doctorId, doctorName, onNaviga
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h1 className="text-xl font-semibold">Schedule — {doctorName}</h1>
-          <p className="text-sm text-muted-foreground">View and propose changes to this doctor's schedule</p>
+          <h1 className="text-xl font-semibold">Program — {doctorName}</h1>
+          <p className="text-sm text-muted-foreground">Vizualizați și propuneți modificări la programul acestui medic</p>
         </div>
       </div>
 
@@ -27,7 +27,7 @@ export default function AdminDoctorSchedulePage({ doctorId, doctorName, onNaviga
       <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800">
         <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
         <AlertDescription className="text-blue-800 dark:text-blue-300">
-          Any changes you submit will be sent to the doctor for approval before taking effect.
+          Orice modificare trimisă va fi comunicată medicului pentru aprobare înainte de a intra în vigoare.
         </AlertDescription>
       </Alert>
 

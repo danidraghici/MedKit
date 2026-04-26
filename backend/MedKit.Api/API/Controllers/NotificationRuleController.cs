@@ -38,7 +38,7 @@ public class NotificationRuleController(NotificationRuleService svc) : Controlle
         if (!Guid.TryParse(userIdClaim, out var userId)) return Unauthorized();
 
         var (dto, error) = await svc.CreateAsync(req, userId);
-        if (error is not null) return StatusCode(500, new { error = "Unexpected error." });
+        if (error is not null) return StatusCode(500, new { error = "Eroare neașteptată." });
 
         return Ok(dto);
     }
@@ -55,7 +55,7 @@ public class NotificationRuleController(NotificationRuleService svc) : Controlle
         var (dto, error) = await svc.UpdateAsync(id, req, userId);
         return error switch
         {
-            "not_found" => NotFound(new { error = "Notification rule not found." }),
+            "not_found" => NotFound(new { error = "Regula de notificare nu a fost găsită." }),
             not null    => StatusCode(500, new { error }),
             _           => Ok(dto)
         };

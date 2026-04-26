@@ -38,12 +38,12 @@ import type { Attachment, MedicalRecord, PrescribedDrug, RouteOfAdministration, 
 // ─── Zod schemas ──────────────────────────────────────────────────────────────
 
 const drugSchema = z.object({
-  name: z.string().min(1, "Drug name required"),
+  name: z.string().min(1, "Denumirea medicamentului este obligatorie"),
   genericName: z.string().optional(),
-  dose: z.string().min(1, "Dose required"),
-  route: z.string().min(1, "Route required"),
-  frequency: z.string().min(1, "Frequency required"),
-  duration: z.string().min(1, "Duration required"),
+  dose: z.string().min(1, "Doza este obligatorie"),
+  route: z.string().min(1, "Calea de administrare este obligatorie"),
+  frequency: z.string().min(1, "Frecvența este obligatorie"),
+  duration: z.string().min(1, "Durata este obligatorie"),
   quantity: z.string().optional(),
   refills: z.string().optional(),
   instructions: z.string().optional(),
@@ -53,14 +53,14 @@ const drugSchema = z.object({
 });
 
 const medicalRecordSchema = z.object({
-  date: z.string().min(1, "Date required"),
-  doctor: z.string().min(2, "Doctor name required"),
+  date: z.string().min(1, "Data este obligatorie"),
+  doctor: z.string().min(2, "Numele medicului este obligatoriu"),
   visitType: z.enum(["In-person", "Telemedicine", "Emergency", "Follow-up", "Procedure"]),
-  chiefComplaint: z.string().min(2, "Chief complaint required"),
-  diagnosis: z.string().min(2, "Diagnosis required"),
+  chiefComplaint: z.string().min(2, "Acuza principală este obligatorie"),
+  diagnosis: z.string().min(2, "Diagnosticul este obligatoriu"),
   icdCode: z.string().optional(),
   secondaryDiagnoses: z.string().optional(),
-  symptoms: z.string().min(2, "Symptoms required"),
+  symptoms: z.string().min(2, "Simptomele sunt obligatorii"),
   physicalExam: z.string().optional(),
   bp: z.string().optional(),
   hr: z.string().optional(),
@@ -69,7 +69,7 @@ const medicalRecordSchema = z.object({
   spo2: z.string().optional(),
   weight: z.string().optional(),
   height: z.string().optional(),
-  treatment: z.string().min(2, "Treatment plan required"),
+  treatment: z.string().min(2, "Planul de tratament este obligatoriu"),
   prescribedDrugs: z.array(drugSchema),
   procedures: z.string().optional(),
   urgency: z.enum(["Routine", "Semi-urgent", "Urgent", "Emergency"]),
@@ -80,7 +80,7 @@ const medicalRecordSchema = z.object({
 });
 
 const noteSchema = z.object({
-  content: z.string().min(5, "Note must be at least 5 characters"),
+  content: z.string().min(5, "Nota trebuie să aibă cel puțin 5 caractere"),
 });
 
 type MedicalRecordFormData = z.infer<typeof medicalRecordSchema>;
@@ -157,7 +157,7 @@ function DrugCard({ drug }: { drug: PrescribedDrug }) {
             {drug.quantity && <><span>·</span><span>{drug.quantity}</span></>}
           </div>
           {drug.indication && (
-            <p className="text-xs text-muted-foreground mt-0.5 italic">For: {drug.indication}</p>
+            <p className="text-xs text-muted-foreground mt-0.5 italic">Pentru: {drug.indication}</p>
           )}
         </div>
         <div className="shrink-0 text-muted-foreground">
@@ -170,19 +170,19 @@ function DrugCard({ drug }: { drug: PrescribedDrug }) {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
             {drug.refills && (
               <div>
-                <p className="text-muted-foreground mb-0.5 uppercase tracking-wide font-medium">Refills</p>
+                <p className="text-muted-foreground mb-0.5 uppercase tracking-wide font-medium">Reaprovizionări</p>
                 <p>{drug.refills}</p>
               </div>
             )}
             {drug.startDate && (
               <div>
-                <p className="text-muted-foreground mb-0.5 uppercase tracking-wide font-medium">Start date</p>
+                <p className="text-muted-foreground mb-0.5 uppercase tracking-wide font-medium">Data de început</p>
                 <p>{formatDate(drug.startDate)}</p>
               </div>
             )}
             {drug.endDate && (
               <div>
-                <p className="text-muted-foreground mb-0.5 uppercase tracking-wide font-medium">End date</p>
+                <p className="text-muted-foreground mb-0.5 uppercase tracking-wide font-medium">Data de sfârșit</p>
                 <p>{formatDate(drug.endDate)}</p>
               </div>
             )}

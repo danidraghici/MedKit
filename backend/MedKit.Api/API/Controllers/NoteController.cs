@@ -31,11 +31,11 @@ public class NoteController(NoteService noteService) : ControllerBase
 
         return error switch
         {
-            "not_a_doctor"      => BadRequest(new { error = "User is not associated with a doctor profile." }),
-            "patient_not_found" => NotFound(new { error = "Patient not found." }),
-            "invalid_patient_id" => BadRequest(new { error = "Invalid patient ID." }),
+            "not_a_doctor"      => BadRequest(new { error = "Utilizatorul nu este asociat cu un profil de medic." }),
+            "patient_not_found" => NotFound(new { error = "Pacientul nu a fost găsit." }),
+            "invalid_patient_id" => BadRequest(new { error = "ID pacient invalid." }),
             null when dto is not null => CreatedAtAction(nameof(GetByPatient), new { patientId = dto.PatientId }, dto),
-            _ => StatusCode(500, new { error = "Unexpected error." }),
+            _ => StatusCode(500, new { error = "Eroare neașteptată." }),
         };
     }
 
@@ -52,10 +52,10 @@ public class NoteController(NoteService noteService) : ControllerBase
 
         return error switch
         {
-            "not_found" => NotFound(new { error = "Note not found." }),
-            "forbidden"  => StatusCode(403, new { error = "You can only edit your own notes." }),
-            null         => Ok(new { message = "Note updated." }),
-            _            => StatusCode(500, new { error = "Unexpected error." }),
+            "not_found" => NotFound(new { error = "Nota nu a fost găsită." }),
+            "forbidden"  => StatusCode(403, new { error = "Puteți edita doar propriile note." }),
+            null         => Ok(new { message = "Nota a fost actualizată." }),
+            _            => StatusCode(500, new { error = "Eroare neașteptată." }),
         };
     }
 
@@ -70,10 +70,10 @@ public class NoteController(NoteService noteService) : ControllerBase
 
         return error switch
         {
-            "not_found" => NotFound(new { error = "Note not found." }),
-            "forbidden"  => StatusCode(403, new { error = "You can only delete your own notes." }),
-            null         => Ok(new { message = "Note deleted." }),
-            _            => StatusCode(500, new { error = "Unexpected error." }),
+            "not_found" => NotFound(new { error = "Nota nu a fost găsită." }),
+            "forbidden"  => StatusCode(403, new { error = "Puteți șterge doar propriile note." }),
+            null         => Ok(new { message = "Nota a fost ștearsă." }),
+            _            => StatusCode(500, new { error = "Eroare neașteptată." }),
         };
     }
 }
