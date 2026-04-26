@@ -35,6 +35,17 @@ public class AppointmentController(AppointmentService appointmentService, AppDbC
         return Ok(stats);
     }
 
+    [HttpGet("profile-stats")]
+    public async Task<IActionResult> GetProfileStats()
+    {
+        var (doctorId, error) = await ResolveCallerDoctorIdAsync();
+        if (error is not null) return error;
+        if (doctorId is null) return Forbid();
+
+        var stats = await appointmentService.GetProfileStatsAsync(doctorId.Value);
+        return Ok(stats);
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {

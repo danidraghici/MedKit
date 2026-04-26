@@ -154,4 +154,21 @@ public class AppointmentService(AppDbContext db, NotificationDeliveryService not
             Notes       = appointment.Notes,
         }, null);
     }
+
+    public async Task<DoctorProfileStatsDto> GetProfileStatsAsync(Guid doctorId)
+    {
+        var totalConsultations = await db.Appointments
+            .CountAsync(a => a.DoctorId == doctorId);
+
+        var totalPatients = await db.Appointments
+            .Where(a => a.DoctorId == doctorId)
+            .Select(a => a.PatientId)
+            .Distinct()
+            .CountAsync();
+
+        var totalRecords = await db.MedicalRecords
+            .CountAsync(r => r.DoctorId == doctorId);
+
+        return new DoctorProfileStatsDto(totalConsultations, totalPatients, totalRecords);
+    }
 }

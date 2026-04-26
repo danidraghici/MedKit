@@ -4,7 +4,7 @@ import type {
   Patient, MedicalRecord, LabResult, LabRequest, LabRequestStatus, Note, Appointment,
   ChatSession, ChatMessage, User, AppointmentRequest, LabAIInsight, ConsultationReminder,
   Doctor, DoctorRole, Department, DoctorScheduleEntry, CreateScheduleEntryPayload,
-  UserNotification,
+  UserNotification, DoctorProfileStats,
 } from "./types";
 import { api, configureApiClient } from "./api";
 import {
@@ -129,6 +129,10 @@ interface AppState {
   fetchUnreadNotificationCount: () => Promise<void>;
   markNotificationRead: (id: string) => Promise<void>;
   markAllNotificationsRead: () => Promise<void>;
+
+  // Doctor Profile Stats
+  doctorStats: DoctorProfileStats | null;
+  fetchDoctorStats: () => Promise<void>;
 }
 
 const DEMO_USERS: User[] = [
@@ -818,6 +822,17 @@ export const useAppStore = create<AppState>()(
           }));
         } catch {
           // silently ignore
+        }
+      },
+
+      // Doctor Profile Stats
+      doctorStats: null,
+      fetchDoctorStats: async () => {
+        try {
+          const data = await api.get<DoctorProfileStats>("/api/appointments/profile-stats");
+          set({ doctorStats: data });
+        } catch {
+          // silently ignore — UI keeps showing "—"
         }
       },
     }),

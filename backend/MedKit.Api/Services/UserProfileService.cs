@@ -15,7 +15,11 @@ public class UserProfileService(AppDbContext ctx)
 
         if (user is null) return null;
 
-        return ToDto(user);
+        var doctor = user.DoctorId.HasValue
+            ? await ctx.Doctors.Include(d => d.DepartmentNav).FirstOrDefaultAsync(d => d.Id == user.DoctorId.Value)
+            : null;
+
+        return ToDto(user, doctor);
     }
 
     public async Task<UserProfileDto?> UpdateProfileAsync(Guid userId, UpdateUserProfileRequest req)
@@ -25,6 +29,10 @@ public class UserProfileService(AppDbContext ctx)
             .FirstOrDefaultAsync(u => u.Id == userId);
 
         if (user is null) return null;
+
+        var doctor = user.DoctorId.HasValue
+            ? await ctx.Doctors.Include(d => d.DepartmentNav).FirstOrDefaultAsync(d => d.Id == user.DoctorId.Value)
+            : null;
 
         user.Name = req.Name;
         user.UpdatedAt = DateTimeOffset.UtcNow;
@@ -52,7 +60,7 @@ public class UserProfileService(AppDbContext ctx)
         p.UpdatedAt = DateTimeOffset.UtcNow;
 
         await ctx.SaveChangesAsync();
-        return ToDto(user);
+        return ToDto(user, doctor);
     }
 
     public async Task UpdateLastLoginAsync(Guid userId)
@@ -76,7 +84,7 @@ public class UserProfileService(AppDbContext ctx)
         await ctx.SaveChangesAsync();
     }
 
-    private static UserProfileDto ToDto(Models.Entities.UserEntity user)
+    private static UserProfileDto ToDto(Models.Entities.UserEntity user, Models.Entities.DoctorEntity? doctor = null)
     {
         var p = user.Profile;
         return new UserProfileDto
@@ -86,9 +94,9 @@ public class UserProfileService(AppDbContext ctx)
             Email = user.Email,
             Role = user.Role,
             Phone = p?.Phone,
-            Specialty = p?.Specialty,
-            LicenseNumber = p?.LicenseNumber,
-            Department = p?.Department,
+            Specialty = p?.Specialty ?? doctor?.Specialty,
+            LicenseNumber = p?.LicenseNumber ?? doctor?.LicenseNumber,
+            Department = p?.Department ?? doctor?.DepartmentNav?.Name,
             Hospital = p?.Hospital,
             Location = p?.Location,
             Bio = p?.Bio,

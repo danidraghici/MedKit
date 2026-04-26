@@ -225,6 +225,12 @@ export interface User {
   mustChangePassword?: boolean;
 }
 
+export interface DoctorProfileStats {
+  totalConsultations: number;
+  totalPatients: number;
+  totalRecords: number;
+}
+
 // ─── Patient Portal ────────────────────────────────────────────────────────
 
 export type AppointmentStatus = "Scheduled" | "Completed" | "Cancelled" | "Pending";

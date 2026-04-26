@@ -121,6 +121,27 @@ interface NotificationRuleDto {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
+function specialtyToTitle(specialty: string | null | undefined): string {
+  if (!specialty) return "Physician";
+  const map: Record<string, string> = {
+    "Pediatrics": "Pediatrician",
+    "Psychiatry": "Psychiatrist",
+    "Surgery": "Surgeon",
+    "General Surgery": "Surgeon",
+    "Orthopedics": "Orthopedist",
+    "Orthopaedics": "Orthopedist",
+    "Internal Medicine": "Internist",
+    "Family Medicine": "Family Physician",
+    "Emergency Medicine": "Emergency Physician",
+    "General Practice": "General Practitioner",
+    "Obstetrics and Gynecology": "OB-GYN",
+    "Obstetrics & Gynecology": "OB-GYN",
+  };
+  if (map[specialty]) return map[specialty];
+  if (specialty.endsWith("ology")) return specialty.slice(0, -5) + "ologist";
+  return specialty;
+}
+
 function formatTimeAgo(iso: string): string {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
   if (diff < 60) return "Just now";
@@ -144,6 +165,8 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
   const markNotificationRead = useAppStore((s) => s.markNotificationRead);
   const markAllNotificationsRead = useAppStore((s) => s.markAllNotificationsRead);
   const unreadNotificationCount = useAppStore((s) => s.unreadNotificationCount);
+  const doctorStats = useAppStore((s) => s.doctorStats);
+  const fetchDoctorStats = useAppStore((s) => s.fetchDoctorStats);
 
   useEffect(() => {
     if (user?.doctorId && user.role !== "admin") {
@@ -151,6 +174,13 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.doctorId, user?.role]);
+
+  useEffect(() => {
+    if (user?.role !== "admin") {
+      void fetchDoctorStats();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.role]);
 
   // Profile data fetched from API
   const [profile, setProfile] = useState<UserProfileDto | null>(null);
@@ -402,7 +432,7 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
     user?.role === "admin" ? (
       <Badge variant="warning">Admin</Badge>
     ) : (
-      <Badge variant="info">Physician</Badge>
+      <Badge variant="info">{specialtyToTitle(profile?.specialty)}</Badge>
     );
 
   if (profileLoading) {
@@ -484,9 +514,9 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
       {user?.role !== "admin" && (
         <div className="grid grid-cols-3 gap-4">
           {[
-            { icon: Activity, label: "Consultations", value: "—", accent: "bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400" },
-            { icon: Users, label: "Patients managed", value: "—", accent: "bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400" },
-            { icon: FileText, label: "Records created", value: "—", accent: "bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400" },
+            { icon: Activity, label: "Consultations", value: doctorStats?.totalConsultations ?? "—", accent: "bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400" },
+            { icon: Users, label: "Patients managed", value: doctorStats?.totalPatients ?? "—", accent: "bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400" },
+            { icon: FileText, label: "Records created", value: doctorStats?.totalRecords ?? "—", accent: "bg-teal-50 dark:bg-teal-950/30 text-teal-600 dark:text-teal-400" },
           ].map(({ icon: Icon, label, value, accent }) => (
             <Card key={label}>
               <CardContent className="pt-5 pb-4 flex items-center gap-3">
@@ -790,7 +820,7 @@ export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: 
             <CardContent className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {[
-                  { label: "Role", value: "Physician", icon: Shield },
+                  { label: "Role", value: specialtyToTitle(profile?.specialty), icon: Shield },
                   { label: "Account status", value: "Active", icon: CheckCircle2 },
                   { label: "Last login", value: profile?.lastLoginAt ? formatTimeAgo(profile.lastLoginAt) : "Unknown", icon: Clock },
                 ].map(({ label, value, icon: Icon }) => (
