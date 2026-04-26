@@ -4,6 +4,7 @@ import type {
   Patient, MedicalRecord, LabResult, LabRequest, LabRequestStatus, Note, Appointment,
   ChatSession, ChatMessage, User, AppointmentRequest, LabAIInsight, ConsultationReminder,
   Doctor, DoctorRole, Department, DoctorScheduleEntry, CreateScheduleEntryPayload,
+  UserNotification,
 } from "./types";
 import { api, configureApiClient } from "./api";
 import {
@@ -120,6 +121,14 @@ interface AppState {
   deleteScheduleEntry: (doctorId: string, entryId: string) => Promise<void>;
   approveScheduleEntry: (doctorId: string, entryId: string) => Promise<DoctorScheduleEntry>;
   rejectScheduleEntry: (doctorId: string, entryId: string) => Promise<void>;
+
+  // User Notifications
+  notifications: UserNotification[];
+  unreadNotificationCount: number;
+  fetchNotifications: () => Promise<void>;
+  fetchUnreadNotificationCount: () => Promise<void>;
+  markNotificationRead: (id: string) => Promise<void>;
+  markAllNotificationsRead: () => Promise<void>;
 }
 
 const DEMO_USERS: User[] = [
@@ -765,10 +774,56 @@ export const useAppStore = create<AppState>()(
       rejectScheduleEntry: async (doctorId, entryId) => {
         await api.post(`/api/doctors/${doctorId}/schedule/${entryId}/reject`);
       },
+
+      // User Notifications
+      notifications: [],
+      unreadNotificationCount: 0,
+
+      fetchNotifications: async () => {
+        try {
+          const data = await api.get<UserNotification[]>("/api/notifications");
+          set({ notifications: data });
+        } catch {
+          // silently keep existing state
+        }
+      },
+
+      fetchUnreadNotificationCount: async () => {
+        try {
+          const data = await api.get<{ count: number }>("/api/notifications/count");
+          set({ unreadNotificationCount: data.count });
+        } catch {
+          // silent — badge stays at last known count
+        }
+      },
+
+      markNotificationRead: async (id) => {
+        try {
+          const updated = await api.put<UserNotification>(`/api/notifications/${id}/read`);
+          set((state) => ({
+            notifications: state.notifications.map((n) => n.id === id ? updated : n),
+            unreadNotificationCount: Math.max(0, state.unreadNotificationCount - 1),
+          }));
+        } catch {
+          // silently ignore
+        }
+      },
+
+      markAllNotificationsRead: async () => {
+        try {
+          await api.put("/api/notifications/read-all");
+          set((state) => ({
+            notifications: state.notifications.map((n) => ({ ...n, isRead: true })),
+            unreadNotificationCount: 0,
+          }));
+        } catch {
+          // silently ignore
+        }
+      },
     }),
     {
       name: "medkit-storage",
-      version: 7,
+      version: 8,
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as Record<string, unknown>;
         if (version < 2) {
@@ -802,6 +857,11 @@ export const useAppStore = create<AppState>()(
         if (version < 7) {
           state.labRequests = [];
           state.labRequestUnreadCount = 0;
+        }
+        if (version < 8) {
+          // notifications are always fetched fresh — initialize to empty
+          state.notifications = [];
+          state.unreadNotificationCount = 0;
         }
         return state;
       },

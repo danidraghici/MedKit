@@ -100,6 +100,8 @@ export default function App() {
   const fetchLabRequests = useAppStore((s) => s.fetchLabRequests);
   const schedulePendingCount = useAppStore((s) => s.schedulePendingCount);
   const fetchSchedulePendingCount = useAppStore((s) => s.fetchSchedulePendingCount);
+  const unreadNotificationCount = useAppStore((s) => s.unreadNotificationCount);
+  const fetchUnreadNotificationCount = useAppStore((s) => s.fetchUnreadNotificationCount);
   const doctors = useAppStore((s) => s.doctors);
 
   const [activePage, setActivePage] = useState<PageId>("dashboard");
@@ -121,8 +123,14 @@ export default function App() {
     ...(isLabDoctor && labRequestUnreadCount > 0
       ? [{ id: "lab-unread", title: "Unread lab requests", description: `${labRequestUnreadCount} new request${labRequestUnreadCount !== 1 ? "s" : ""} to review`, page: "lab-requests", Icon: FlaskConical, iconColor: "text-purple-500" }]
       : []),
+    ...(isAnyDoctor && unreadNotificationCount > 0
+      ? [{ id: "notif-unread", title: "New notifications", description: `${unreadNotificationCount} unread notification${unreadNotificationCount !== 1 ? "s" : ""}`, page: "profile", Icon: Bell, iconColor: "text-blue-500" }]
+      : []),
   ];
-  const totalNotificationCount = (isSpecialistDoctor ? schedulePendingCount : 0) + (isLabDoctor ? labRequestUnreadCount : 0);
+  const totalNotificationCount =
+    (isSpecialistDoctor ? schedulePendingCount : 0) +
+    (isLabDoctor ? labRequestUnreadCount : 0) +
+    (isAnyDoctor ? unreadNotificationCount : 0);
 
   // Role badge display helper
   const roleBadgeLabel = user?.role === "admin"
@@ -185,6 +193,14 @@ export default function App() {
     const id = setInterval(() => void fetchSchedulePendingCount(user.doctorId!), 30_000);
     return () => clearInterval(id);
   }, [isAnyDoctor, user?.doctorId, fetchSchedulePendingCount]);
+
+  // Poll unread notification count every 30 s for all doctor roles
+  useEffect(() => {
+    if (!isAnyDoctor) return;
+    void fetchUnreadNotificationCount();
+    const id = setInterval(() => void fetchUnreadNotificationCount(), 30_000);
+    return () => clearInterval(id);
+  }, [isAnyDoctor, fetchUnreadNotificationCount]);
 
   // Attempt silent re-auth on mount via httpOnly refresh cookie
   useEffect(() => {
@@ -403,7 +419,7 @@ export default function App() {
     if (activePage === "chatbot") return <ChatbotPage onNavigate={handleNavigate} />;
     if (activePage === "lab-requests" && isLabDoctor) return <LabRequestsPage />;
     if (activePage === "audit-logs" && isAdmin) return <AuditLogsPage />;
-    if (activePage === "profile") return <DoctorProfilePage />;
+    if (activePage === "profile") return <DoctorProfilePage onNavigate={handleNavigate} />;
     if (activePage.startsWith("patient-")) {
       return <PatientDetailPage patientId={activePage.replace("patient-", "")} onNavigate={handleNavigate} />;
     }

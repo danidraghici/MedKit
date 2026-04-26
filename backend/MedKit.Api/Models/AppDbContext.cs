@@ -23,6 +23,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<PrescribedDrugEntity> PrescribedDrugs => Set<PrescribedDrugEntity>();
     public DbSet<AttachmentEntity> Attachments => Set<AttachmentEntity>();
     public DbSet<DoctorScheduleEntity> DoctorSchedules => Set<DoctorScheduleEntity>();
+    public DbSet<UserNotificationEntity> UserNotifications => Set<UserNotificationEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -163,6 +164,22 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
              .WithMany()
              .HasForeignKey(rr => rr.LabResultId)
              .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<UserNotificationEntity>(e =>
+        {
+            e.HasOne<UserEntity>()
+             .WithMany()
+             .HasForeignKey(n => n.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne<NotificationRuleEntity>()
+             .WithMany()
+             .HasForeignKey(n => n.NotificationRuleId)
+             .OnDelete(DeleteBehavior.SetNull);
+
+            e.Property(n => n.CreatedAt)
+             .HasDefaultValueSql("SYSDATETIMEOFFSET()");
         });
 
         modelBuilder.Entity<DoctorScheduleEntity>(e =>

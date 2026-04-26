@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MedKit.Api.Services;
 
-public class AppointmentService(AppDbContext db)
+public class AppointmentService(AppDbContext db, NotificationDeliveryService notificationService)
 {
     public async Task<AppointmentStatsDto> GetStatsAsync(Guid? doctorId = null)
     {
@@ -97,6 +97,8 @@ public class AppointmentService(AppDbContext db)
             await db.SaveChangesAsync();
         });
 
+        await notificationService.DeliverAppointmentAsync(id, "appointment_updated");
+
         return null;
     }
 
@@ -135,6 +137,8 @@ public class AppointmentService(AppDbContext db)
             db.Appointments.Add(appointment);
             await db.SaveChangesAsync();
         });
+
+        await notificationService.DeliverAppointmentAsync(appointment.Id, "appointment_created");
 
         return (new AppointmentDto
         {

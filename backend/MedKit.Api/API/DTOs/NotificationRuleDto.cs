@@ -7,6 +7,7 @@ public class NotificationRuleDto
     public string? Description { get; set; }
     public string TargetAudience { get; set; } = "all";
     public bool IsActive { get; set; }
+    public string TriggerEvent { get; set; } = "general";
     public string CreatedById { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }

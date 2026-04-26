@@ -8,17 +8,28 @@ namespace MedKit.Api.API.Controllers;
 
 [ApiController]
 [Route("api/notification-rules")]
-[Authorize(Roles = "admin")]
+[Authorize]
 public class NotificationRuleController(NotificationRuleService svc) : ControllerBase
 {
     [HttpGet]
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> GetAll()
     {
         var rules = await svc.GetAllAsync();
         return Ok(rules);
     }
 
+    [HttpGet("applicable")]
+    [Authorize(Roles = "admin,specialist_doctor,lab_doctor")]
+    public async Task<IActionResult> GetApplicable()
+    {
+        var role = User.FindFirstValue(ClaimTypes.Role) ?? "";
+        var rules = await svc.GetApplicableAsync(role);
+        return Ok(rules);
+    }
+
     [HttpPost]
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> Create([FromBody] CreateNotificationRuleRequest req)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -33,6 +44,7 @@ public class NotificationRuleController(NotificationRuleService svc) : Controlle
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateNotificationRuleRequest req)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);

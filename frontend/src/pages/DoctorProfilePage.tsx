@@ -20,7 +20,6 @@ import {
   X,
   KeyRound,
   Bell,
-  BellOff,
   Eye,
   EyeOff,
   CheckCircle2,
@@ -112,21 +111,13 @@ interface NotificationRuleDto {
   description: string | null;
   targetAudience: "patients" | "doctors" | "admins" | "all";
   isActive: boolean;
+  triggerEvent: "general" | "schedule_change" | "appointment_created" | "appointment_updated" | "lab_result_completed";
   createdById: string;
   createdAt: string;
   updatedAt: string;
 }
 
-// ─── Notifications config ────────────────────────────────────────────────────
 
-interface NotifSettings {
-  newPatient: boolean;
-  appointmentReminder: boolean;
-  labResultsReady: boolean;
-  criticalAlert: boolean;
-  systemUpdates: boolean;
-  chatbotExports: boolean;
-}
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -144,10 +135,15 @@ function formatJoinDate(iso: string): string {
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
-export default function DoctorProfilePage() {
+export default function DoctorProfilePage({ onNavigate }: { onNavigate?: (page: string) => void }) {
   const user = useAppStore((s) => s.user);
   const schedulePendingCount = useAppStore((s) => s.schedulePendingCount);
   const fetchSchedulePendingCount = useAppStore((s) => s.fetchSchedulePendingCount);
+  const notifications = useAppStore((s) => s.notifications);
+  const fetchNotifications = useAppStore((s) => s.fetchNotifications);
+  const markNotificationRead = useAppStore((s) => s.markNotificationRead);
+  const markAllNotificationsRead = useAppStore((s) => s.markAllNotificationsRead);
+  const unreadNotificationCount = useAppStore((s) => s.unreadNotificationCount);
 
   useEffect(() => {
     if (user?.doctorId && user.role !== "admin") {
@@ -178,16 +174,11 @@ export default function DoctorProfilePage() {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  // Notifications state
-  const [notif, setNotif] = useState<NotifSettings>({
-    newPatient: true,
-    appointmentReminder: true,
-    labResultsReady: true,
-    criticalAlert: true,
-    systemUpdates: false,
-    chatbotExports: true,
-  });
-  const [notifSaved, setNotifSaved] = useState(false);
+  // Active profile tab (controlled so we can jump to schedule from notifications)
+  const [activeTab, setActiveTab] = useState("profile");
+
+  // Applicable notification rules (non-admin doctors)
+  const [applicableRules, setApplicableRules] = useState<NotificationRuleDto[]>([]);
 
   // Notification rules state (admin only)
   const [rules, setRules] = useState<NotificationRuleDto[]>([]);
@@ -197,6 +188,7 @@ export default function DoctorProfilePage() {
   const [ruleTitle, setRuleTitle] = useState("");
   const [ruleDesc, setRuleDesc] = useState("");
   const [ruleAudience, setRuleAudience] = useState("all");
+  const [ruleTrigger, setRuleTrigger] = useState("general");
   const [ruleActive, setRuleActive] = useState(true);
   const [ruleSaving, setRuleSaving] = useState(false);
 
@@ -238,10 +230,20 @@ export default function DoctorProfilePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ── Fetch received notifications + applicable rules on mount (non-admin) ───
+  useEffect(() => {
+    if (user?.role === "admin") return;
+    void fetchNotifications();
+    api.get<NotificationRuleDto[]>("/api/notification-rules/applicable")
+      .then(setApplicableRules)
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── Notification rule dialog helpers ──────────────────────────────────────
   const openCreateDialog = () => {
     setEditingRule(null);
-    setRuleTitle(""); setRuleDesc(""); setRuleAudience("all"); setRuleActive(true);
+    setRuleTitle(""); setRuleDesc(""); setRuleAudience("all"); setRuleTrigger("general"); setRuleActive(true);
     setRuleDialogOpen(true);
   };
 
@@ -250,6 +252,7 @@ export default function DoctorProfilePage() {
     setRuleTitle(rule.title);
     setRuleDesc(rule.description ?? "");
     setRuleAudience(rule.targetAudience);
+    setRuleTrigger(rule.triggerEvent);
     setRuleActive(rule.isActive);
     setRuleDialogOpen(true);
   };
@@ -262,6 +265,7 @@ export default function DoctorProfilePage() {
         title: ruleTitle.trim(),
         description: ruleDesc.trim() || null,
         targetAudience: ruleAudience,
+        triggerEvent: ruleTrigger,
         isActive: ruleActive,
       };
       if (editingRule) {
@@ -289,6 +293,14 @@ export default function DoctorProfilePage() {
       all: "success",
     };
     return <Badge variant={variantMap[audience] ?? "secondary"}>{audience}</Badge>;
+  };
+
+  const triggerLabel: Record<string, string> = {
+    general: "Announcement",
+    schedule_change: "Schedule change",
+    appointment_created: "Appointment created",
+    appointment_updated: "Appointment updated",
+    lab_result_completed: "Lab result ready",
   };
 
   // ── Profile form ────────────────────────────────────────────────────────
@@ -385,13 +397,7 @@ export default function DoctorProfilePage() {
     setTimeout(() => setCredSaved(false), 3500);
   };
 
-  // ── Notifications save ────────────────────────────────────────────────────
-  const saveNotifications = () => {
-    setNotifSaved(true);
-    setTimeout(() => setNotifSaved(false), 3500);
-  };
-
-  // ── Role badge ────────────────────────────────────────────────────────────
+// ── Role badge ────────────────────────────────────────────────────────────
   const roleBadge =
     user?.role === "admin" ? (
       <Badge variant="warning">Admin</Badge>
@@ -498,7 +504,7 @@ export default function DoctorProfilePage() {
       )}
 
       {/* ── Tabs ──────────────────────────────────────────────────────── */}
-      <Tabs defaultValue="profile">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-4">
           <TabsTrigger value="profile">
             <User className="w-4 h-4 mr-1.5" />
@@ -979,6 +985,9 @@ export default function DoctorProfilePage() {
                             )}
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
+                            <Badge variant="outline" className="text-xs">
+                              {triggerLabel[rule.triggerEvent] ?? rule.triggerEvent}
+                            </Badge>
                             {audienceBadge(rule.targetAudience)}
                             <Badge variant={rule.isActive ? "success" : "secondary"}>
                               {rule.isActive ? "Active" : "Inactive"}
@@ -1021,6 +1030,21 @@ export default function DoctorProfilePage() {
                       />
                     </div>
                     <div className="space-y-1.5">
+                      <Label>Trigger</Label>
+                      <Select value={ruleTrigger} onValueChange={setRuleTrigger}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="general">General announcement</SelectItem>
+                          <SelectItem value="schedule_change">Doctor schedule change</SelectItem>
+                          <SelectItem value="appointment_created">Appointment created</SelectItem>
+                          <SelectItem value="appointment_updated">Appointment status update</SelectItem>
+                          <SelectItem value="lab_result_completed">Lab result completed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
                       <Label>Target audience</Label>
                       <Select value={ruleAudience} onValueChange={setRuleAudience}>
                         <SelectTrigger>
@@ -1055,101 +1079,126 @@ export default function DoctorProfilePage() {
           {/* ── Non-admin: personal notification preferences ── */}
           {user?.role !== "admin" && (
           <>
-          {notifSaved && (
-            <Alert variant="success">
-              <CheckCircle2 className="w-4 h-4" />
-              <AlertDescription>Notification preferences saved.</AlertDescription>
-            </Alert>
-          )}
+
+          {/* Received notifications */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <div className="flex items-center gap-2">
+                <Bell className="w-4 h-4 text-muted-foreground" />
+                <CardTitle className="text-base">Received Notifications</CardTitle>
+                {unreadNotificationCount > 0 && (
+                  <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                    {unreadNotificationCount} unread
+                  </Badge>
+                )}
+              </div>
+              {notifications.length > 0 && unreadNotificationCount > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void markAllNotificationsRead()}
+                  className="gap-1.5 text-xs"
+                >
+                  Mark all read
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent>
+              {notifications.length === 0 ? (
+                <div className="flex flex-col items-center gap-2 py-8 text-center">
+                  <Bell className="w-8 h-8 text-muted-foreground/30" />
+                  <p className="text-sm text-muted-foreground">No notifications yet.</p>
+                  <p className="text-xs text-muted-foreground">
+                    When an administrator sends a notification or proposes schedule changes, you'll see them here.
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {notifications.map((notif) => (
+                    <div
+                      key={notif.id}
+                      className={`flex items-start gap-3 py-3 px-1 rounded cursor-pointer hover:bg-muted/40 transition-colors ${!notif.isRead ? "bg-blue-50/50 dark:bg-blue-950/20" : ""}`}
+                      onClick={() => {
+                        if (!notif.isRead) void markNotificationRead(notif.id);
+                        if (notif.relatedEntityType === "appointment") {
+                          onNavigate?.("appointments");
+                        } else if (notif.relatedEntityType === "doctor_schedule") {
+                          setActiveTab("schedule");
+                        }
+                      }}
+                    >
+                      <div className={`w-2 h-2 rounded-full mt-2 shrink-0 ${!notif.isRead ? "bg-blue-500" : "bg-transparent"}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className={`text-sm leading-tight ${!notif.isRead ? "font-semibold" : "font-medium"}`}>
+                            {notif.title}
+                          </p>
+                          <span className="text-xs text-muted-foreground shrink-0 mt-0.5">
+                            {formatTimeAgo(notif.createdAt)}
+                          </span>
+                        </div>
+                        {notif.body && (
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{notif.body}</p>
+                        )}
+                        {notif.relatedEntityType === "doctor_schedule" && (
+                          <Badge variant="secondary" className="text-[10px] mt-1.5 px-1.5 py-0 gap-1">
+                            <CalendarDays className="w-3 h-3" />
+                            Schedule change
+                          </Badge>
+                        )}
+                        {notif.relatedEntityType === "appointment" && (
+                          <Badge variant="secondary" className="text-[10px] mt-1.5 px-1.5 py-0 gap-1">
+                            <Calendar className="w-3 h-3" />
+                            Appointment
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
                 <Bell className="w-4 h-4 text-muted-foreground" />
-                <CardTitle className="text-base">Notification Preferences</CardTitle>
+                <CardTitle className="text-base">Active Notification Rules</CardTitle>
               </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Configured by your administrator — these are the events that will trigger in-app notifications for you.
+              </p>
             </CardHeader>
-            <CardContent className="space-y-1">
-              {(
-                [
-                  {
-                    key: "criticalAlert" as const,
-                    label: "Critical alerts",
-                    description: "Urgent patient alerts and emergency notifications",
-                    locked: true,
-                  },
-                  {
-                    key: "newPatient" as const,
-                    label: "New patient added",
-                    description: "Notify when a new patient is registered in the system",
-                  },
-                  {
-                    key: "appointmentReminder" as const,
-                    label: "Appointment reminders",
-                    description: "Reminders 24 hours and 1 hour before scheduled appointments",
-                  },
-                  {
-                    key: "labResultsReady" as const,
-                    label: "Lab results ready",
-                    description: "Notify when new lab results are added to a patient record",
-                  },
-                  {
-                    key: "chatbotExports" as const,
-                    label: "Chatbot exports",
-                    description: "Notify when a chatbot conversation is attached to a patient record",
-                  },
-                  {
-                    key: "systemUpdates" as const,
-                    label: "System updates",
-                    description: "MedKit platform announcements and feature updates",
-                  },
-                ] as const
-              ).map((item) => {
-                const { key, label, description } = item;
-                const locked = 'locked' in item ? item.locked : false;
-                return (
-                  <div
-                    key={key}
-                    className="flex items-center justify-between py-3.5 border-b border-border last:border-0"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0">
-                        {notif[key] ? (
-                          <Bell className="w-4 h-4 text-primary" />
-                        ) : (
-                          <BellOff className="w-4 h-4 text-muted-foreground" />
-                        )}
+            <CardContent>
+              {applicableRules.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">
+                  No active notification rules apply to your role.
+                </p>
+              ) : (
+                <div className="divide-y divide-border">
+                  {applicableRules.map((rule) => (
+                    <div key={rule.id} className="flex items-start gap-3 py-3.5">
+                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
+                        <Bell className="w-4 h-4 text-primary" />
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                          {label}
-                          {locked ? (
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                              Required
-                            </Badge>
-                          ) : null}
-                        </p>
-                        <p className="text-xs text-muted-foreground">{description}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground">{rule.title}</p>
+                        {rule.description && (
+                          <p className="text-xs text-muted-foreground mt-0.5">{rule.description}</p>
+                        )}
+                        <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                            {triggerLabel[rule.triggerEvent] ?? rule.triggerEvent}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
-                    <Switch
-                      checked={notif[key]}
-                      disabled={locked}
-                      onCheckedChange={(v) => setNotif((p) => ({ ...p, [key]: v }))}
-                      className="ml-4 shrink-0"
-                    />
-                  </div>
-                );
-              })}
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
-
-          <div className="flex justify-end">
-            <Button onClick={saveNotifications} className="gap-1.5">
-              <Save className="w-4 h-4" />
-              Save preferences
-            </Button>
-          </div>
           </>
           )}
         </TabsContent>

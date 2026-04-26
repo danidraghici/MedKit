@@ -342,3 +342,17 @@ export interface CreateScheduleEntryPayload {
   isFullDay: boolean;
   reason?: string;
 }
+
+// ─── User Notifications ────────────────────────────────────────────────────
+
+export interface UserNotification {
+  id: string;
+  userId: string;
+  notificationRuleId: string | null;
+  title: string;
+  body: string | null;
+  isRead: boolean;
+  relatedEntityType: string | null;
+  relatedEntityId: string | null;
+  createdAt: string;
+}

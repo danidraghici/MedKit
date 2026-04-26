@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MedKit.Api.Services;
 
-public class DoctorScheduleService(AppDbContext db)
+public class DoctorScheduleService(AppDbContext db, NotificationDeliveryService notificationService)
 {
     private static readonly System.Text.RegularExpressions.Regex TimeRegex =
         new(@"^\d{2}:\d{2}$", System.Text.RegularExpressions.RegexOptions.Compiled);
@@ -186,6 +186,7 @@ public class DoctorScheduleService(AppDbContext db)
         {
             var proposer = await db.Users.FindAsync(actingUserId);
             proposerName = proposer?.Name;
+            await notificationService.DeliverScheduleChangeAsync(doctorId, entry.Id);
         }
 
         return (ToDto(entry, proposerName), null);
@@ -250,6 +251,8 @@ public class DoctorScheduleService(AppDbContext db)
             };
             db.DoctorSchedules.Add(pending);
             await db.SaveChangesAsync();
+
+            await notificationService.DeliverScheduleChangeAsync(doctorId, pending.Id);
 
             var proposer = await db.Users.FindAsync(actingUserId);
             return (ToDto(pending, proposer?.Name), null);

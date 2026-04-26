@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MedKit.Api.Services;
 
-public class LabRequestService(AppDbContext db, LabResultService labResultService)
+public class LabRequestService(AppDbContext db, LabResultService labResultService, NotificationDeliveryService notificationService)
 {
     private static readonly HashSet<string> ValidStatuses = ["Pending", "In Progress", "Completed"];
     private static readonly Dictionary<string, int> StatusOrder = new()
@@ -115,6 +115,8 @@ public class LabRequestService(AppDbContext db, LabResultService labResultServic
             entity.UpdatedAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync();
         });
+
+        await notificationService.DeliverLabResultAsync(entity.Id);
 
         var dtos = await FetchDtosAsync(db.LabRequests.Where(r => r.Id == requestId));
         return (dtos.FirstOrDefault(), null);
