@@ -88,6 +88,8 @@ builder.Services.AddScoped<NoteService>();
 builder.Services.AddScoped<LabResultService>();
 builder.Services.AddScoped<LabRequestService>();
 builder.Services.AddScoped<MedicalRecordService>();
+builder.Services.AddScoped<AttachmentService>();
+builder.Services.AddScoped<DoctorScheduleService>();
 
 // ── Build App ─────────────────────────────────────────────────────────────────
 var app = builder.Build();

@@ -16,6 +16,7 @@ import {
   UserCog,
   Building2,
   ClipboardList,
+  CalendarDays,
 } from "lucide-react";
 import { PrimaryTemplate } from "@/components/blocks/primary-template";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,7 @@ import DepartmentsPage from "@/pages/DepartmentsPage";
 import DepartmentDoctorsPage from "@/pages/DepartmentDoctorsPage";
 import AuditLogsPage from "@/pages/AuditLogsPage";
 import LabRequestsPage from "@/pages/LabRequestsPage";
+import AdminDoctorSchedulePage from "@/pages/AdminDoctorSchedulePage";
 
 type PageId = string;
 type LoginMode = "doctor" | "patient";
@@ -96,6 +98,9 @@ export default function App() {
   const labRequestUnreadCount = useAppStore((s) => s.labRequestUnreadCount);
   const fetchUnreadLabRequestCount = useAppStore((s) => s.fetchUnreadLabRequestCount);
   const fetchLabRequests = useAppStore((s) => s.fetchLabRequests);
+  const schedulePendingCount = useAppStore((s) => s.schedulePendingCount);
+  const fetchSchedulePendingCount = useAppStore((s) => s.fetchSchedulePendingCount);
+  const doctors = useAppStore((s) => s.doctors);
 
   const [activePage, setActivePage] = useState<PageId>("dashboard");
   const [loginMode, setLoginMode] = useState<LoginMode>("doctor");
@@ -108,6 +113,16 @@ export default function App() {
   const isLabDoctor = user?.role === "lab_doctor";
   const isSpecialistDoctor = user?.role === "specialist_doctor";
   const isAnyDoctor = isLabDoctor || isSpecialistDoctor;
+
+  const notifications = [
+    ...(isSpecialistDoctor && schedulePendingCount > 0
+      ? [{ id: "schedule-pending", title: "Schedule approval needed", description: `${schedulePendingCount} admin change${schedulePendingCount !== 1 ? "s" : ""} awaiting approval`, page: "profile", Icon: CalendarDays, iconColor: "text-amber-500" }]
+      : []),
+    ...(isLabDoctor && labRequestUnreadCount > 0
+      ? [{ id: "lab-unread", title: "Unread lab requests", description: `${labRequestUnreadCount} new request${labRequestUnreadCount !== 1 ? "s" : ""} to review`, page: "lab-requests", Icon: FlaskConical, iconColor: "text-purple-500" }]
+      : []),
+  ];
+  const totalNotificationCount = (isSpecialistDoctor ? schedulePendingCount : 0) + (isLabDoctor ? labRequestUnreadCount : 0);
 
   // Role badge display helper
   const roleBadgeLabel = user?.role === "admin"
@@ -135,12 +150,19 @@ export default function App() {
       : item
   );
 
+  // Specialist doctor nav with pending schedule badge on "profile"
+  const specialistNavigationWithBadge = specialistNavigation.map((item) =>
+    item.id === "profile" && schedulePendingCount > 0
+      ? { ...item, badge: schedulePendingCount }
+      : item
+  );
+
   // Select navigation based on role
   const staffNavigation = isAdmin
     ? adminNavigation
     : isLabDoctor
     ? labDoctorNavigation
-    : specialistNavigation;
+    : specialistNavigationWithBadge;
 
   // Reminder count badge
   const reminderCount = isPatient && user?.patientId
@@ -155,6 +177,14 @@ export default function App() {
     const id = setInterval(() => void fetchUnreadLabRequestCount(), 30_000);
     return () => clearInterval(id);
   }, [isLabDoctor, fetchLabRequests, fetchUnreadLabRequestCount]);
+
+  // Poll schedule pending count every 30 s for specialist and lab doctors
+  useEffect(() => {
+    if (!isAnyDoctor || !user?.doctorId) return;
+    void fetchSchedulePendingCount(user.doctorId);
+    const id = setInterval(() => void fetchSchedulePendingCount(user.doctorId!), 30_000);
+    return () => clearInterval(id);
+  }, [isAnyDoctor, user?.doctorId, fetchSchedulePendingCount]);
 
   // Attempt silent re-auth on mount via httpOnly refresh cookie
   useEffect(() => {
@@ -311,6 +341,11 @@ export default function App() {
     if (activePage === "audit-logs") return [{ label: "Audit Logs" }];
     if (activePage === "profile") return [{ label: "My Profile" }];
     if (activePage === "lab-requests") return [{ label: "Lab Requests" }];
+    if (activePage.startsWith("doctor-schedule-")) {
+      const id = activePage.replace("doctor-schedule-", "");
+      const doctor = doctors.find((d) => d.id === id);
+      return [{ label: "Doctors" }, { label: doctor?.name ?? "Doctor" }, { label: "Schedule" }];
+    }
     if (activePage.startsWith("create-appointment-patient-")) {
       const id = activePage.replace("create-appointment-patient-", "");
       const patient = patients.find((p) => p.id === id);
@@ -336,6 +371,8 @@ export default function App() {
       ? "doctors"
       : activePage.startsWith("department-")
       ? "departments"
+      : activePage.startsWith("doctor-schedule-")
+      ? "doctors"
       : activePage;
 
   const renderPage = () => {
@@ -349,6 +386,11 @@ export default function App() {
     }
     if (activePage === "add-doctor" && isAdmin) return <AddDoctorPage onNavigate={handleNavigate} />;
     if (activePage.startsWith("edit-doctor-") && isAdmin) return <AddDoctorPage onNavigate={handleNavigate} editingDoctorId={activePage.replace("edit-doctor-", "")} />;
+    if (activePage.startsWith("doctor-schedule-") && isAdmin) {
+      const doctorId = activePage.replace("doctor-schedule-", "");
+      const doctor = doctors.find((d) => d.id === doctorId);
+      return <AdminDoctorSchedulePage doctorId={doctorId} doctorName={doctor?.name ?? "Doctor"} onNavigate={handleNavigate} />;
+    }
     if (activePage === "patients") return <PatientsPage onNavigate={handleNavigate} />;
     if (activePage === "add-patient") return <AddPatientPage onNavigate={handleNavigate} />;
     if (activePage.startsWith("edit-patient-") && !activePage.startsWith("patient-")) return <AddPatientPage onNavigate={handleNavigate} editingPatientId={activePage.replace("edit-patient-", "")} />;
@@ -387,36 +429,81 @@ export default function App() {
           <span className="w-px h-3 bg-border hidden sm:block" />
           <span className="text-xs text-muted-foreground hidden sm:inline">All access is logged and monitored</span>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 gap-2 px-2 text-sm hover:bg-muted">
-              <Avatar className="w-6 h-6">
-                <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-semibold">
-                  {user ? getInitials(user.name) : "DR"}
-                </AvatarFallback>
-              </Avatar>
-              <span className="hidden sm:inline text-sm font-medium">{user?.name}</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <div className="px-3 py-2 border-b border-border mb-1">
-              <p className="text-sm font-semibold">{user?.name}</p>
-              <p className="text-xs text-muted-foreground">{user?.email}</p>
-              <Badge variant="outline" className={`text-[10px] mt-1 ${roleBadgeColor}`}>
-                {roleBadgeLabel}
-              </Badge>
-            </div>
-            <DropdownMenuItem className="cursor-pointer" onClick={() => handleNavigate("profile")}>
-              <User className="w-4 h-4 mr-2" />
-              My profile
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={logout} className="text-destructive cursor-pointer">
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-1">
+          {/* Notification Bell */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="relative h-8 w-8 p-0">
+                <Bell className="w-4 h-4" />
+                {totalNotificationCount > 0 && (
+                  <Badge
+                    variant="destructive"
+                    className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px]"
+                  >
+                    {totalNotificationCount > 9 ? "9+" : totalNotificationCount}
+                  </Badge>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-72">
+              <div className="px-3 py-2 border-b border-border">
+                <p className="text-sm font-semibold">Notifications</p>
+              </div>
+              {notifications.length === 0 ? (
+                <div className="flex flex-col items-center gap-2 px-3 py-6">
+                  <Bell className="w-8 h-8 text-muted-foreground/40" />
+                  <p className="text-sm text-muted-foreground">No new notifications</p>
+                </div>
+              ) : (
+                notifications.map((notif) => (
+                  <DropdownMenuItem
+                    key={notif.id}
+                    className="flex items-start gap-3 px-3 py-3 cursor-pointer"
+                    onClick={() => handleNavigate(notif.page)}
+                  >
+                    <notif.Icon className={`w-4 h-4 mt-0.5 shrink-0 ${notif.iconColor}`} />
+                    <div>
+                      <p className="text-sm font-medium leading-tight">{notif.title}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{notif.description}</p>
+                    </div>
+                  </DropdownMenuItem>
+                ))
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* User profile dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 gap-2 px-2 text-sm hover:bg-muted">
+                <Avatar className="w-6 h-6">
+                  <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-semibold">
+                    {user ? getInitials(user.name) : "DR"}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="hidden sm:inline text-sm font-medium">{user?.name}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <div className="px-3 py-2 border-b border-border mb-1">
+                <p className="text-sm font-semibold">{user?.name}</p>
+                <p className="text-xs text-muted-foreground">{user?.email}</p>
+                <Badge variant="outline" className={`text-[10px] mt-1 ${roleBadgeColor}`}>
+                  {roleBadgeLabel}
+                </Badge>
+              </div>
+              <DropdownMenuItem className="cursor-pointer" onClick={() => handleNavigate("profile")}>
+                <User className="w-4 h-4 mr-2" />
+                My profile
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={logout} className="text-destructive cursor-pointer">
+                <LogOut className="w-4 h-4 mr-2" />
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* Doctor page content */}

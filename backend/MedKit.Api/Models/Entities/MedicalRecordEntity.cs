@@ -65,4 +65,5 @@ public class MedicalRecordEntity
 
     public VitalSignEntity? VitalSign { get; set; }
     public List<PrescribedDrugEntity> PrescribedDrugs { get; set; } = [];
+    public List<AttachmentEntity> Attachments { get; set; } = [];
 }

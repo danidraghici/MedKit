@@ -558,22 +558,26 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setAttachments((prev) => [
-          ...prev,
-          {
-            id: `att-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            name: file.name,
-            type: file.type,
-            url: event.target?.result as string,
-            size: file.size,
-          },
-        ]);
-      };
-      reader.readAsDataURL(file);
-    });
+    const newAttachments = files.map((file) => ({
+      id: `pending-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: file.name,
+      type: file.type,
+      url: URL.createObjectURL(file),
+      size: file.size,
+      file,
+    }));
+    setAttachments((prev) => [...prev, ...newAttachments]);
+    // Reset input so the same file can be re-selected if removed
+    e.target.value = "";
+  };
+
+  const openAddModal = () => {
+    setEditingRecord(null);
+    reset({ date: new Date().toISOString().split("T")[0], visitType: "In-person", urgency: "Routine", prescribedDrugs: [] });
+    setAttachments([]);
+    setSelectedSamples([]);
+    setLabRequestNotes("");
+    setIsRecordModalOpen(true);
   };
 
   const closeModal = () => {
@@ -621,24 +625,37 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
   const onSaveRecord = async (data: MedicalRecordFormData) => {
     try {
       const samplePayload = selectedSamples.length > 0 ? selectedSamples : undefined;
+      let savedRecord: import("@/lib/types").MedicalRecord;
       if (editingRecord) {
-        await updateMedicalRecord(editingRecord.id, {
+        savedRecord = await updateMedicalRecord(editingRecord.id, {
           ...buildRecordPayload(data),
           sampleTypes: samplePayload,
           labRequestNotes: labRequestNotes.trim() || undefined,
         });
       } else {
-        await addMedicalRecord({
+        savedRecord = await addMedicalRecord({
           patientId,
           date: data.date,
           doctor: data.doctor,
           doctorId: user?.doctorId ?? "",
           ...buildRecordPayload(data),
-          attachments,
           sampleTypes: samplePayload,
           labRequestNotes: labRequestNotes.trim() || undefined,
         });
       }
+
+      const pendingFiles = attachments.filter((a) => a.file);
+      if (pendingFiles.length > 0) {
+        await Promise.all(
+          pendingFiles.map((a) => {
+            const form = new FormData();
+            form.append("file", a.file!);
+            return api.postFile(`/api/medical-records/${savedRecord.id}/attachments`, form);
+          })
+        );
+        await fetchMedicalRecords(patientId);
+      }
+
       closeModal();
       void fetchLabRequestsByPatient(patientId);
     } catch (err: unknown) {
@@ -694,6 +711,15 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
       setSelectedSamples([]);
       setLabRequestNotes("");
     }
+    setAttachments(
+      (record.attachments ?? []).map((a) => ({
+        id: a.id,
+        name: a.name,
+        type: a.type,
+        url: `/api/attachments/${a.id}/file`,
+        size: a.size,
+      }))
+    );
     setEditingRecord(record);
     setIsRecordModalOpen(true);
   };
@@ -768,9 +794,14 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
     }
   };
 
-  const downloadAttachment = (att: Attachment) => {
+  const downloadAttachment = async (att: Attachment) => {
+    let href = att.url;
+    if (!att.file) {
+      const blob = await api.getFile(`/api/attachments/${att.id}/file`);
+      href = URL.createObjectURL(blob);
+    }
     const a = document.createElement("a");
-    a.href = att.url;
+    a.href = href;
     a.download = att.name;
     a.click();
   };
@@ -989,7 +1020,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
               Medical History Timeline
             </h3>
             {canAddRecords && (
-              <Button size="sm" onClick={() => setIsRecordModalOpen(true)} className="gap-1.5">
+              <Button size="sm" onClick={openAddModal} className="gap-1.5">
                 <Plus className="w-4 h-4" />Add record
               </Button>
             )}
@@ -1008,7 +1039,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
               </EmptyHeader>
               {canAddRecords && (
                 <EmptyContent>
-                  <Button onClick={() => setIsRecordModalOpen(true)} className="gap-2">
+                  <Button onClick={openAddModal} className="gap-2">
                     <Plus className="w-4 h-4" />Add record
                   </Button>
                 </EmptyContent>
@@ -1172,16 +1203,16 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                           )}
 
                           {/* Attachments */}
-                          {record.attachments?.length > 0 && (
+                          {(record.attachments?.length ?? 0) > 0 && (
                             <div>
                               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5">
-                                Attachments ({record.attachments.length})
+                                Attachments ({record.attachments!.length})
                               </p>
                               <div className="flex flex-wrap gap-2">
-                                {record.attachments.map((att) => (
+                                {record.attachments!.map((att) => (
                                   <button
                                     key={att.id}
-                                    onClick={() => downloadAttachment(att)}
+                                    onClick={() => void downloadAttachment(att)}
                                     className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs bg-muted hover:bg-muted/80 rounded-lg border border-border transition-colors"
                                   >
                                     <Paperclip className="w-3 h-3" />

@@ -139,8 +139,9 @@ export interface Attachment {
   id: string;
   name: string;
   type: string; // MIME type
-  url: string; // base64 data URL or blob URL
+  url: string; // API download URL for saved attachments; blob URL for pending
   size: number;
+  file?: File; // present only before upload (pending attachments)
 }
 
 export interface LabResult {
@@ -304,4 +305,40 @@ export interface AuditLog {
   ipAddress: string | null;
   metadata: string | null;
   performedAt: string;
+}
+
+// ─── Doctor Schedule ───────────────────────────────────────────────────────
+
+export type ScheduleType = "working_hours" | "block";
+export type ScheduleStatus = "active" | "pending_approval";
+
+export interface DoctorScheduleEntry {
+  id: string;
+  doctorId: string;
+  scheduleType: ScheduleType;
+  dayOfWeek?: number;
+  specificDate?: string;
+  startTime?: string;
+  endTime?: string;
+  isWorkingDay: boolean;
+  isFullDay: boolean;
+  reason?: string;
+  status: ScheduleStatus;
+  proposedByUserId?: string;
+  proposedByName?: string;
+  replacesScheduleId?: string;
+  createdByUserId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateScheduleEntryPayload {
+  scheduleType: ScheduleType;
+  dayOfWeek?: number;
+  specificDate?: string;
+  startTime?: string;
+  endTime?: string;
+  isWorkingDay: boolean;
+  isFullDay: boolean;
+  reason?: string;
 }

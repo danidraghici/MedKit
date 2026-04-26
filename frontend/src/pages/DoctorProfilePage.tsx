@@ -14,6 +14,7 @@ import {
   BookOpen,
   Building2,
   Calendar,
+  CalendarDays,
   Edit3,
   Save,
   X,
@@ -46,6 +47,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useAppStore } from "@/lib/store";
 import { api } from "@/lib/api";
 import { getInitials } from "@/lib/utils";
+import { DoctorScheduleTab } from "@/components/DoctorScheduleTab";
 
 // ─── Zod schemas ────────────────────────────────────────────────────────────
 
@@ -144,6 +146,15 @@ function formatJoinDate(iso: string): string {
 
 export default function DoctorProfilePage() {
   const user = useAppStore((s) => s.user);
+  const schedulePendingCount = useAppStore((s) => s.schedulePendingCount);
+  const fetchSchedulePendingCount = useAppStore((s) => s.fetchSchedulePendingCount);
+
+  useEffect(() => {
+    if (user?.doctorId && user.role !== "admin") {
+      void fetchSchedulePendingCount(user.doctorId);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.doctorId, user?.role]);
 
   // Profile data fetched from API
   const [profile, setProfile] = useState<UserProfileDto | null>(null);
@@ -507,6 +518,20 @@ export default function DoctorProfilePage() {
             <Bell className="w-4 h-4 mr-1.5" />
             Notifications
           </TabsTrigger>
+          {user?.role !== "admin" && (
+            <TabsTrigger value="schedule" className="relative">
+              <CalendarDays className="w-4 h-4 mr-1.5" />
+              Schedule
+              {schedulePendingCount > 0 && (
+                <Badge
+                  variant="destructive"
+                  className="absolute -top-1.5 -right-1.5 h-4 w-4 p-0 flex items-center justify-center text-[10px]"
+                >
+                  {schedulePendingCount}
+                </Badge>
+              )}
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* ══ TAB: Profile ══════════════════════════════════════════════ */}
@@ -1128,6 +1153,17 @@ export default function DoctorProfilePage() {
           </>
           )}
         </TabsContent>
+
+        {/* ══ TAB: Schedule ════════════════════════════════════════════════ */}
+        {user?.role !== "admin" && (
+          <TabsContent value="schedule" className="space-y-4">
+            {user?.doctorId ? (
+              <DoctorScheduleTab doctorId={user.doctorId} />
+            ) : (
+              <p className="text-sm text-muted-foreground">No doctor record is linked to your account.</p>
+            )}
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

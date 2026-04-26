@@ -3,7 +3,7 @@ import { persist } from "zustand/middleware";
 import type {
   Patient, MedicalRecord, LabResult, LabRequest, LabRequestStatus, Note, Appointment,
   ChatSession, ChatMessage, User, AppointmentRequest, LabAIInsight, ConsultationReminder,
-  Doctor, DoctorRole, Department,
+  Doctor, DoctorRole, Department, DoctorScheduleEntry, CreateScheduleEntryPayload,
 } from "./types";
 import { api, configureApiClient } from "./api";
 import {
@@ -109,6 +109,17 @@ interface AppState {
   generateLabAIInsight: (labResultId: string, patientId: string) => LabAIInsight;
   getPatientReminders: (patientId: string) => ConsultationReminder[];
   dismissReminder: (reminderId: string) => void;
+
+  // Doctor Schedule
+  schedulePendingCount: number;
+  fetchSchedulePendingCount: (doctorId: string) => Promise<void>;
+  fetchDoctorSchedule: (doctorId: string) => Promise<DoctorScheduleEntry[]>;
+  fetchPendingScheduleEntries: (doctorId: string) => Promise<DoctorScheduleEntry[]>;
+  createScheduleEntry: (doctorId: string, payload: CreateScheduleEntryPayload) => Promise<DoctorScheduleEntry>;
+  updateScheduleEntry: (doctorId: string, entryId: string, payload: CreateScheduleEntryPayload) => Promise<DoctorScheduleEntry>;
+  deleteScheduleEntry: (doctorId: string, entryId: string) => Promise<void>;
+  approveScheduleEntry: (doctorId: string, entryId: string) => Promise<DoctorScheduleEntry>;
+  rejectScheduleEntry: (doctorId: string, entryId: string) => Promise<void>;
 }
 
 const DEMO_USERS: User[] = [
@@ -709,6 +720,50 @@ export const useAppStore = create<AppState>()(
             r.id === reminderId ? { ...r, dismissed: true } : r
           ),
         }));
+      },
+
+      // Doctor Schedule
+      schedulePendingCount: 0,
+
+      fetchSchedulePendingCount: async (doctorId) => {
+        try {
+          const data = await api.get<{ count: number }>(
+            `/api/doctors/${doctorId}/schedule/pending-count`
+          );
+          set({ schedulePendingCount: data.count });
+        } catch {
+          // silent — badge stays at last known count
+        }
+      },
+
+      fetchDoctorSchedule: async (doctorId) => {
+        return api.get<DoctorScheduleEntry[]>(`/api/doctors/${doctorId}/schedule`);
+      },
+
+      fetchPendingScheduleEntries: async (doctorId) => {
+        return api.get<DoctorScheduleEntry[]>(`/api/doctors/${doctorId}/schedule/pending`);
+      },
+
+      createScheduleEntry: async (doctorId, payload) => {
+        return api.post<DoctorScheduleEntry>(`/api/doctors/${doctorId}/schedule`, payload);
+      },
+
+      updateScheduleEntry: async (doctorId, entryId, payload) => {
+        return api.put<DoctorScheduleEntry>(`/api/doctors/${doctorId}/schedule/${entryId}`, payload);
+      },
+
+      deleteScheduleEntry: async (doctorId, entryId) => {
+        await api.delete(`/api/doctors/${doctorId}/schedule/${entryId}`);
+      },
+
+      approveScheduleEntry: async (doctorId, entryId) => {
+        return api.post<DoctorScheduleEntry>(
+          `/api/doctors/${doctorId}/schedule/${entryId}/approve`
+        );
+      },
+
+      rejectScheduleEntry: async (doctorId, entryId) => {
+        await api.post(`/api/doctors/${doctorId}/schedule/${entryId}/reject`);
       },
     }),
     {

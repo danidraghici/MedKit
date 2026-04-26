@@ -13,7 +13,9 @@ import {
   Mail,
   Building2,
   Stethoscope,
+  Loader2,
 } from "lucide-react";
+import { api } from "@/lib/api";
 import {
   Dialog,
   DialogContent,
@@ -58,6 +60,30 @@ const APPOINTMENT_TIMES = [
   "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
   "17:00",
 ];
+
+// ── Available slots hook ─────────────────────────────────────────────────────
+
+function useAvailableSlots(doctorId: string | undefined, date: string | undefined) {
+  const [slots, setSlots] = useState<string[]>(APPOINTMENT_TIMES);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!doctorId || !date) {
+      setSlots(APPOINTMENT_TIMES);
+      return;
+    }
+    let cancelled = false;
+    setIsLoading(true);
+    api
+      .get<{ slots: string[] }>(`/api/doctors/${doctorId}/schedule/available-slots?date=${date}`)
+      .then((res) => { if (!cancelled) setSlots(res.slots); })
+      .catch(() => { if (!cancelled) setSlots(APPOINTMENT_TIMES); })
+      .finally(() => { if (!cancelled) setIsLoading(false); });
+    return () => { cancelled = true; };
+  }, [doctorId, date]);
+
+  return { slots, isLoading };
+}
 
 // ── Schema for an appointment with an existing patient ──────────────────────
 const existingPatientAptSchema = z.object({
@@ -587,6 +613,16 @@ function AppointmentFields({
     ? doctors.filter((d) => d.departmentId === selectedDeptId)
     : [];
   const selectedDoctor = form.watch("doctor");
+  const selectedDoctorId = doctors.find((d) => d.name === selectedDoctor)?.id;
+  const watchedDate = form.watch("date");
+  const { slots, isLoading: slotsLoading } = useAvailableSlots(selectedDoctorId, watchedDate);
+
+  useEffect(() => {
+    const currentTime = form.getValues("time");
+    if (currentTime && slots.length > 0 && !slots.includes(currentTime)) {
+      form.setValue("time", "");
+    }
+  }, [slots, form]);
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -605,14 +641,18 @@ function AppointmentFields({
           <div className="space-y-1.5">
             <Label className="text-xs">Time <span className="text-destructive">*</span></Label>
             <Select
-              defaultValue={form.getValues("time") || "09:00"}
+              value={form.watch("time") || ""}
               onValueChange={(v) => form.setValue("time", v)}
+              disabled={slotsLoading}
             >
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder={slotsLoading ? "Loading slots…" : "Select time…"} />
+                {slotsLoading && <Loader2 className="w-3.5 h-3.5 animate-spin ml-auto text-muted-foreground" />}
+              </SelectTrigger>
               <SelectContent>
-                {APPOINTMENT_TIMES.map((t) => (
-                  <SelectItem key={t} value={t}>{t}</SelectItem>
-                ))}
+                {slots.length === 0
+                  ? <div className="px-2 py-4 text-center text-sm text-muted-foreground">No available slots for this date</div>
+                  : slots.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -719,6 +759,16 @@ function NewPatientAptFields({
     ? doctors.filter((d) => d.departmentId === selectedDeptId)
     : [];
   const selectedDoctor = form.watch("doctor");
+  const selectedDoctorId = doctors.find((d) => d.name === selectedDoctor)?.id;
+  const watchedDate = form.watch("date");
+  const { slots, isLoading: slotsLoading } = useAvailableSlots(selectedDoctorId, watchedDate);
+
+  useEffect(() => {
+    const currentTime = form.getValues("time");
+    if (currentTime && slots.length > 0 && !slots.includes(currentTime)) {
+      form.setValue("time", "");
+    }
+  }, [slots, form]);
 
   return (
     <div className="space-y-3">
@@ -733,14 +783,18 @@ function NewPatientAptFields({
         <div className="space-y-1.5">
           <Label className="text-xs">Time <span className="text-destructive">*</span></Label>
           <Select
-            defaultValue={form.getValues("time") || "09:00"}
+            value={form.watch("time") || ""}
             onValueChange={(v) => form.setValue("time", v)}
+            disabled={slotsLoading}
           >
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder={slotsLoading ? "Loading slots…" : "Select time…"} />
+              {slotsLoading && <Loader2 className="w-3.5 h-3.5 animate-spin ml-auto text-muted-foreground" />}
+            </SelectTrigger>
             <SelectContent>
-              {APPOINTMENT_TIMES.map((t) => (
-                <SelectItem key={t} value={t}>{t}</SelectItem>
-              ))}
+              {slots.length === 0
+                ? <div className="px-2 py-4 text-center text-sm text-muted-foreground">No available slots for this date</div>
+                : slots.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>

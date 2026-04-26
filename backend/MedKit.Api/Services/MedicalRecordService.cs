@@ -41,12 +41,22 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
 
         var labRequestsByRecord = await labRequestService.GetByMedicalRecordIdsAsync(recordIds);
 
+        var attachmentsByRecord = await db.Attachments
+            .Where(a => recordIds.Contains(a.MedicalRecordId))
+            .OrderBy(a => a.UploadedAt)
+            .ToListAsync();
+
+        var attachmentLookup = attachmentsByRecord
+            .GroupBy(a => a.MedicalRecordId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
         return records.Select(x =>
         {
             var r = x.Record;
             vitalsByRecord.TryGetValue(r.Id, out var vs);
             drugLookup.TryGetValue(r.Id, out var drugs);
             labRequestsByRecord.TryGetValue(r.Id, out var labRequest);
+            attachmentLookup.TryGetValue(r.Id, out var attachments);
 
             return new MedicalRecordDto
             {
@@ -98,6 +108,15 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
                     PrescribedBy = d.DoctorName,
                 }).ToList(),
                 LabRequest = labRequest,
+                Attachments = (attachments ?? []).Select(a => new AttachmentDto
+                {
+                    Id              = a.Id.ToString(),
+                    MedicalRecordId = a.MedicalRecordId.ToString(),
+                    Name            = a.Name,
+                    Type            = a.MimeType,
+                    Size            = a.SizeBytes,
+                    UploadedAt      = a.UploadedAt.ToString("o"),
+                }).ToList(),
             };
         }).ToList();
     }
@@ -140,8 +159,8 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
             Treatment          = request.Treatment,
             Procedures         = request.Procedures,
             Urgency            = request.Urgency,
-            FollowUpIn         = request.FollowUpIn,
-            FollowUpType       = request.FollowUpType,
+            FollowUpIn         = string.IsNullOrEmpty(request.FollowUpIn) ? null : request.FollowUpIn,
+            FollowUpType       = string.IsNullOrEmpty(request.FollowUpType) ? null : request.FollowUpType,
             Referral           = request.Referral,
             PatientEducation   = request.PatientEducation,
             CreatedAt          = now,
@@ -313,8 +332,8 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
         record.Treatment          = request.Treatment;
         record.Procedures         = request.Procedures;
         record.Urgency            = request.Urgency;
-        record.FollowUpIn         = request.FollowUpIn;
-        record.FollowUpType       = request.FollowUpType;
+        record.FollowUpIn         = string.IsNullOrEmpty(request.FollowUpIn) ? null : request.FollowUpIn;
+        record.FollowUpType       = string.IsNullOrEmpty(request.FollowUpType) ? null : request.FollowUpType;
         record.Referral           = request.Referral;
         record.PatientEducation   = request.PatientEducation;
 

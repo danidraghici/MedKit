@@ -21,6 +21,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<LabRequestResultEntity> LabRequestResults => Set<LabRequestResultEntity>();
     public DbSet<VitalSignEntity> VitalSigns => Set<VitalSignEntity>();
     public DbSet<PrescribedDrugEntity> PrescribedDrugs => Set<PrescribedDrugEntity>();
+    public DbSet<AttachmentEntity> Attachments => Set<AttachmentEntity>();
+    public DbSet<DoctorScheduleEntity> DoctorSchedules => Set<DoctorScheduleEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -123,6 +125,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.ToTable(t => t.UseSqlOutputClause(false));
         });
 
+        modelBuilder.Entity<AttachmentEntity>(e =>
+        {
+            e.ToTable(t => t.UseSqlOutputClause(false));
+
+            e.HasOne<MedicalRecordEntity>()
+             .WithMany(r => r.Attachments)
+             .HasForeignKey(a => a.MedicalRecordId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<LabResultEntity>(e =>
         {
             e.ToTable(t => t.UseSqlOutputClause(false));
@@ -151,6 +163,30 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
              .WithMany()
              .HasForeignKey(rr => rr.LabResultId)
              .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<DoctorScheduleEntity>(e =>
+        {
+            e.HasOne(s => s.Doctor)
+             .WithMany()
+             .HasForeignKey(s => s.DoctorId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            // Self-referencing FK — must be NO ACTION to avoid multiple cascade paths in SQL Server
+            e.HasOne<DoctorScheduleEntity>()
+             .WithMany()
+             .HasForeignKey(s => s.ReplacesScheduleId)
+             .OnDelete(DeleteBehavior.NoAction);
+
+            e.HasOne<UserEntity>()
+             .WithMany()
+             .HasForeignKey(s => s.ProposedByUserId)
+             .OnDelete(DeleteBehavior.NoAction);
+
+            e.HasOne<UserEntity>()
+             .WithMany()
+             .HasForeignKey(s => s.CreatedByUserId)
+             .OnDelete(DeleteBehavior.NoAction);
         });
     }
 }

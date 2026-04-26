@@ -65,6 +65,30 @@ const APPOINTMENT_TIMES = [
   "17:00",
 ];
 
+// ── Available slots hook ─────────────────────────────────────────────────────
+
+function useAvailableSlots(doctorId: string | undefined, date: string | undefined) {
+  const [slots, setSlots] = useState<string[]>(APPOINTMENT_TIMES);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!doctorId || !date) {
+      setSlots(APPOINTMENT_TIMES);
+      return;
+    }
+    let cancelled = false;
+    setIsLoading(true);
+    api
+      .get<{ slots: string[] }>(`/api/doctors/${doctorId}/schedule/available-slots?date=${date}`)
+      .then((res) => { if (!cancelled) setSlots(res.slots); })
+      .catch(() => { if (!cancelled) setSlots(APPOINTMENT_TIMES); })
+      .finally(() => { if (!cancelled) setIsLoading(false); });
+    return () => { cancelled = true; };
+  }, [doctorId, date]);
+
+  return { slots, isLoading };
+}
+
 // ── Schemas ──────────────────────────────────────────────────────────────────
 
 const existingPatientSchema = z.object({
@@ -353,6 +377,7 @@ export default function CreateAppointmentPage({
                   isAdmin={user?.role === "admin"}
                   departments={departments}
                   doctors={doctors}
+                  fixedDoctorId={user?.role !== "admin" ? user?.doctorId : undefined}
                 />
                 {submitError && <ErrorBanner message={submitError} />}
               </form>
@@ -493,6 +518,7 @@ export default function CreateAppointmentPage({
                     isAdmin={user?.role === "admin"}
                     departments={departments}
                     doctors={doctors}
+                    fixedDoctorId={user?.role !== "admin" ? user?.doctorId : undefined}
                   />
                   {submitError && <ErrorBanner message={submitError} />}
                 </form>
@@ -697,6 +723,7 @@ export default function CreateAppointmentPage({
                     isAdmin={user?.role === "admin"}
                     departments={departments}
                     doctors={doctors}
+                    fixedDoctorId={user?.role !== "admin" ? user?.doctorId : undefined}
                   />
                 </div>
               </div>
@@ -729,6 +756,7 @@ function AppointmentFields({
   isAdmin = false,
   departments = [],
   doctors = [],
+  fixedDoctorId,
 }: {
   form: ReturnType<typeof useForm<ExistingPatientForm>>;
   isSubmitting: boolean;
@@ -738,12 +766,23 @@ function AppointmentFields({
   isAdmin?: boolean;
   departments?: Department[];
   doctors?: Doctor[];
+  fixedDoctorId?: string;
 }) {
   const [selectedDeptId, setSelectedDeptId] = useState("");
   const filteredDoctors = selectedDeptId
     ? doctors.filter((d) => d.departmentId === selectedDeptId)
     : [];
   const selectedDoctorId = form.watch("doctorId") ?? "";
+  const effectiveDoctorId = fixedDoctorId || selectedDoctorId || undefined;
+  const watchedDate = form.watch("date");
+  const { slots, isLoading: slotsLoading } = useAvailableSlots(effectiveDoctorId, watchedDate);
+
+  useEffect(() => {
+    const currentTime = form.getValues("time");
+    if (currentTime && slots.length > 0 && !slots.includes(currentTime)) {
+      form.setValue("time", "");
+    }
+  }, [slots, form]);
 
   return (
     <div className="space-y-5">
@@ -758,12 +797,18 @@ function AppointmentFields({
 
         <div className="space-y-1.5">
           <Label className="text-xs font-medium">Time <span className="text-destructive">*</span></Label>
-          <Select defaultValue={form.getValues("time") || "09:00"} onValueChange={(v) => form.setValue("time", v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+          <Select
+            value={form.watch("time") || ""}
+            onValueChange={(v) => form.setValue("time", v)}
+            disabled={slotsLoading}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={slotsLoading ? "Loading slots…" : "Select time…"} />
+            </SelectTrigger>
             <SelectContent>
-              {APPOINTMENT_TIMES.map((t) => (
-                <SelectItem key={t} value={t}>{t}</SelectItem>
-              ))}
+              {slots.length === 0
+                ? <div className="px-2 py-4 text-center text-sm text-muted-foreground">No available slots for this date</div>
+                : slots.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
             </SelectContent>
           </Select>
           {form.formState.errors.time && (
@@ -867,17 +912,29 @@ function NewPatientAptFields({
   isAdmin = false,
   departments = [],
   doctors = [],
+  fixedDoctorId,
 }: {
   form: ReturnType<typeof useForm<NewPatientForm>>;
   isAdmin?: boolean;
   departments?: Department[];
   doctors?: Doctor[];
+  fixedDoctorId?: string;
 }) {
   const [selectedDeptId, setSelectedDeptId] = useState("");
   const filteredDoctors = selectedDeptId
     ? doctors.filter((d) => d.departmentId === selectedDeptId)
     : [];
   const selectedDoctorId = form.watch("doctorId") ?? "";
+  const effectiveDoctorId = fixedDoctorId || selectedDoctorId || undefined;
+  const watchedDate = form.watch("date");
+  const { slots, isLoading: slotsLoading } = useAvailableSlots(effectiveDoctorId, watchedDate);
+
+  useEffect(() => {
+    const currentTime = form.getValues("time");
+    if (currentTime && slots.length > 0 && !slots.includes(currentTime)) {
+      form.setValue("time", "");
+    }
+  }, [slots, form]);
 
   return (
     <div className="space-y-4">
@@ -892,12 +949,18 @@ function NewPatientAptFields({
 
         <div className="space-y-1.5">
           <Label className="text-xs font-medium">Time <span className="text-destructive">*</span></Label>
-          <Select defaultValue={form.getValues("time") || "09:00"} onValueChange={(v) => form.setValue("time", v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+          <Select
+            value={form.watch("time") || ""}
+            onValueChange={(v) => form.setValue("time", v)}
+            disabled={slotsLoading}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={slotsLoading ? "Loading slots…" : "Select time…"} />
+            </SelectTrigger>
             <SelectContent>
-              {APPOINTMENT_TIMES.map((t) => (
-                <SelectItem key={t} value={t}>{t}</SelectItem>
-              ))}
+              {slots.length === 0
+                ? <div className="px-2 py-4 text-center text-sm text-muted-foreground">No available slots for this date</div>
+                : slots.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>

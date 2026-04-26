@@ -13,6 +13,7 @@ import {
   FlaskConical,
   Building2,
   BadgeCheck,
+  CalendarDays,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -222,7 +223,8 @@ export default function DoctorsPage({ onNavigate }: DoctorsPageProps) {
           {paginatedDoctors.map((doctor) => (
             <div
               key={doctor.id}
-              className="bg-card rounded-xl border border-border p-4 hover:border-primary/30 hover:shadow-md transition-all group"
+              className="bg-card rounded-xl border border-border p-4 hover:border-primary/30 hover:shadow-md transition-all group cursor-pointer"
+              onClick={() => onNavigate(`doctor-schedule-${doctor.id}`)}
             >
               {/* Card header */}
               <div className="flex items-start justify-between mb-3">
@@ -245,6 +247,7 @@ export default function DoctorsPage({ onNavigate }: DoctorsPageProps) {
                       variant="ghost"
                       size="sm"
                       className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => e.stopPropagation()}
                     >
                       <MoreVertical className="w-4 h-4" />
                     </Button>
@@ -252,6 +255,9 @@ export default function DoctorsPage({ onNavigate }: DoctorsPageProps) {
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => onNavigate(`edit-doctor-${doctor.id}`)}>
                       <Edit className="w-4 h-4 mr-2" /> Edit doctor
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onNavigate(`doctor-schedule-${doctor.id}`)}>
+                      <CalendarDays className="w-4 h-4 mr-2" /> View schedule
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -297,7 +303,7 @@ export default function DoctorsPage({ onNavigate }: DoctorsPageProps) {
                   size="sm"
                   variant="ghost"
                   className="h-7 text-xs"
-                  onClick={() => onNavigate(`edit-doctor-${doctor.id}`)}
+                  onClick={(e) => { e.stopPropagation(); onNavigate(`edit-doctor-${doctor.id}`); }}
                 >
                   Edit
                 </Button>
