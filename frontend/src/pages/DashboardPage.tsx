@@ -47,20 +47,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -68,17 +56,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Empty,
-  EmptyHeader,
-  EmptyTitle,
-  EmptyDescription,
-  EmptyContent,
-} from "@/components/ui/empty";
+import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyContent } from "@/components/ui/empty";
 import { useAppStore } from "@/lib/store";
 import { api } from "@/lib/api";
 import { formatDate, calculateAge, getInitials } from "@/lib/utils";
-import type { Patient, BloodType, Sex, Doctor, DoctorRole, Appointment, DashboardStats, DoctorSummary } from "@/lib/types";
+import type {
+  Patient,
+  BloodType,
+  Sex,
+  Doctor,
+  DoctorRole,
+  Appointment,
+  DashboardStats,
+  DoctorSummary,
+} from "@/lib/types";
 
 // ─── Patient form schema ──────────────────────────────────────────────────────
 const patientSchema = z.object({
@@ -108,17 +99,12 @@ type DoctorFormData = z.infer<typeof doctorSchema>;
 
 const PATIENT_PAGE_SIZE = 8;
 
-const roleConfig: Record<
-  DoctorRole,
-  { label: string; icon: React.ReactNode; color: string; description: string }
-> = {
+const roleConfig: Record<DoctorRole, { label: string; icon: React.ReactNode; color: string; description: string }> = {
   specialist_doctor: {
     label: "Medic specialist",
     icon: <Stethoscope className="w-4 h-4" />,
-    color:
-      "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800",
-    description:
-      "Poate adăuga pacienți, crea programări, adăuga note și gestiona medicamentele.",
+    color: "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800",
+    description: "Poate adăuga pacienți, crea programări, adăuga note și gestiona medicamentele.",
   },
   lab_doctor: {
     label: "Medic laborator",
@@ -129,15 +115,11 @@ const roleConfig: Record<
   },
 };
 
-const statusConfig: Record<
-  Appointment["status"],
-  { label: string; icon: React.ReactNode; className: string }
-> = {
+const statusConfig: Record<Appointment["status"], { label: string; icon: React.ReactNode; className: string }> = {
   Scheduled: {
     label: "Programat",
     icon: <AlertCircle className="w-3.5 h-3.5" />,
-    className:
-      "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800",
+    className: "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800",
   },
   Completed: {
     label: "Finalizat",
@@ -185,9 +167,16 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
       void fetchPatients();
       void api.get<DashboardStats>("/api/dashboard/stats").then(setDashboardStats).catch(console.error);
       setStaffLoading(true);
-      void api.get<DoctorSummary[]>("/api/dashboard/staff")
-        .then((data) => { setStaffList(data); setStaffLoading(false); })
-        .catch((err) => { console.error("GET /api/dashboard/staff failed:", err); setStaffLoading(false); });
+      void api
+        .get<DoctorSummary[]>("/api/dashboard/staff")
+        .then((data) => {
+          setStaffList(data);
+          setStaffLoading(false);
+        })
+        .catch((err) => {
+          console.error("GET /api/dashboard/staff failed:", err);
+          setStaffLoading(false);
+        });
     }
     if (user?.role === "specialist_doctor") {
       void fetchPatients();
@@ -198,7 +187,8 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
     }
     if (user?.role != null) {
       setApptLoading(true);
-      void api.get<Appointment[]>("/api/appointments")
+      void api
+        .get<Appointment[]>("/api/appointments")
         .then((data) => {
           setDashboardAppts(data);
           setAppointments(data);
@@ -222,12 +212,14 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const todayStr = today.toISOString().split("T")[0];
+    const isDoctorUser = user?.role === "specialist_doctor" || user?.role === "lab_doctor";
+    const currentDoctorId = user?.doctorId?.toLowerCase();
     const recentRecords = medicalRecords.filter(
-      (r) => new Date(r.createdAt) >= thirtyDaysAgo
+      (r) =>
+        new Date(r.createdAt) >= thirtyDaysAgo &&
+        (!isDoctorUser || (!!currentDoctorId && r.doctorId.toLowerCase() === currentDoctorId)),
     );
-    const upcomingApts = appointments.filter(
-      (a) => new Date(a.date) >= today && a.status === "Scheduled"
-    );
+    const upcomingApts = appointments.filter((a) => new Date(a.date) >= today && a.status === "Scheduled");
     // Lab-specific stats (file-based: no status, use uploadedAt for date filtering)
     const todayResults = labResults.filter((r) => r.uploadedAt.startsWith(todayStr));
     const recentLabResults = [...labResults]
@@ -247,26 +239,15 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
       // Upcoming harvests = all upcoming scheduled appointments (lab doctor view)
       upcomingHarvests: upcomingApts,
     };
-  }, [patients, medicalRecords, appointments, labResults]);
+  }, [patients, medicalRecords, appointments, labResults, user?.role, user?.doctorId]);
 
   const recentPatients = useMemo(
-    () =>
-      [...patients]
-        .sort(
-          (a, b) =>
-            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-        )
-        .slice(0, 5),
-    [patients]
+    () => [...patients].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).slice(0, 5),
+    [patients],
   );
 
   const greetingHour = new Date().getHours();
-  const greeting =
-    greetingHour < 12
-      ? "Bună dimineața"
-      : greetingHour < 17
-      ? "Bună ziua"
-      : "Bună seara";
+  const greeting = greetingHour < 12 ? "Bună dimineața" : greetingHour < 17 ? "Bună ziua" : "Bună seara";
 
   // ────────────────────────────────────────────────────────────────────────────
   // PATIENTS TAB STATE
@@ -277,8 +258,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
   const [patientPage, setPatientPage] = useState(1);
   const [isPatientModalOpen, setIsPatientModalOpen] = useState(false);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
-  const [deletePatientConfirm, setDeletePatientConfirm] =
-    useState<Patient | null>(null);
+  const [deletePatientConfirm, setDeletePatientConfirm] = useState<Patient | null>(null);
 
   const patientForm = useForm<PatientFormData>({
     resolver: zodResolver(patientSchema),
@@ -299,26 +279,18 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
           p.fullName.toLowerCase().includes(q) ||
           p.nationalId.toLowerCase().includes(q) ||
           p.email.toLowerCase().includes(q) ||
-          p.phone.includes(q)
+          p.phone.includes(q),
       );
     }
-    if (patientFilterSex !== "all")
-      list = list.filter((p) => p.sex === patientFilterSex);
-    if (patientFilterBlood !== "all")
-      list = list.filter((p) => p.bloodType === patientFilterBlood);
-    return list.sort(
-      (a, b) =>
-        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-    );
+    if (patientFilterSex !== "all") list = list.filter((p) => p.sex === patientFilterSex);
+    if (patientFilterBlood !== "all") list = list.filter((p) => p.bloodType === patientFilterBlood);
+    return list.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   }, [patients, patientSearch, patientFilterSex, patientFilterBlood]);
 
-  const totalPatientPages = Math.max(
-    1,
-    Math.ceil(filteredPatients.length / PATIENT_PAGE_SIZE)
-  );
+  const totalPatientPages = Math.max(1, Math.ceil(filteredPatients.length / PATIENT_PAGE_SIZE));
   const paginatedPatients = filteredPatients.slice(
     (patientPage - 1) * PATIENT_PAGE_SIZE,
-    patientPage * PATIENT_PAGE_SIZE
+    patientPage * PATIENT_PAGE_SIZE,
   );
 
   const openAddPatient = () => {
@@ -366,9 +338,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
   const [filterDoctorRole, setFilterDoctorRole] = useState("all");
   const [isDoctorModalOpen, setIsDoctorModalOpen] = useState(false);
   const [editingDoctor, setEditingDoctor] = useState<DoctorSummary | null>(null);
-  const [deleteDoctorConfirm, setDeleteDoctorConfirm] = useState<DoctorSummary | null>(
-    null
-  );
+  const [deleteDoctorConfirm, setDeleteDoctorConfirm] = useState<DoctorSummary | null>(null);
 
   const doctorForm = useForm<DoctorFormData>({
     resolver: zodResolver(doctorSchema),
@@ -384,11 +354,10 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
           d.name.toLowerCase().includes(q) ||
           d.email.toLowerCase().includes(q) ||
           d.specialty.toLowerCase().includes(q) ||
-          d.department.toLowerCase().includes(q)
+          d.department.toLowerCase().includes(q),
       );
     }
-    if (filterDoctorRole !== "all")
-      list = list.filter((d) => d.doctorRole === filterDoctorRole);
+    if (filterDoctorRole !== "all") list = list.filter((d) => d.doctorRole === filterDoctorRole);
     return list;
   }, [staffList, doctors, doctorSearch, filterDoctorRole]);
 
@@ -434,7 +403,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
     try {
       await api.patch(`/api/appointments/${id}/status`, { status });
       setDashboardAppts((prev) =>
-        prev.map((a) => a.id === id ? { ...a, status: status as Appointment["status"] } : a)
+        prev.map((a) => (a.id === id ? { ...a, status: status as Appointment["status"] } : a)),
       );
     } catch (err) {
       console.error("Failed to update appointment status:", err);
@@ -450,11 +419,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
       scheduled: dashboardAppts.filter((a) => a.status === "Scheduled").length,
       today: dashboardAppts.filter((a) => {
         const d = new Date(a.date);
-        return (
-          d >= today &&
-          d < new Date(today.getTime() + 24 * 60 * 60 * 1000) &&
-          a.status === "Scheduled"
-        );
+        return d >= today && d < new Date(today.getTime() + 24 * 60 * 60 * 1000) && a.status === "Scheduled";
       }).length,
       thisWeek: dashboardAppts.filter((a) => {
         const d = new Date(a.date);
@@ -473,17 +438,14 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
         (a) =>
           a.patientName.toLowerCase().includes(q) ||
           a.type.toLowerCase().includes(q) ||
-          a.doctor.toLowerCase().includes(q)
+          a.doctor.toLowerCase().includes(q),
       );
     }
-    if (apptFilterStatus !== "all")
-      list = list.filter((a) => a.status === apptFilterStatus);
+    if (apptFilterStatus !== "all") list = list.filter((a) => a.status === apptFilterStatus);
     if (apptFilterPeriod === "today") {
       list = list.filter((a) => {
         const d = new Date(a.date);
-        return (
-          d >= today && d < new Date(today.getTime() + 24 * 60 * 60 * 1000)
-        );
+        return d >= today && d < new Date(today.getTime() + 24 * 60 * 60 * 1000);
       });
     } else if (apptFilterPeriod === "upcoming") {
       list = list.filter((a) => new Date(a.date) >= today);
@@ -525,12 +487,9 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
           </h1>
           <p className="text-muted-foreground text-sm mt-0.5">
             {formatDate(new Date().toISOString(), "EEEE, dd MMMM yyyy")} —{" "}
-            {isAdmin
-              ? "Prezentare generală și management sistem"
-              : "Prezentarea dvs. clinică"}
+            {isAdmin ? "Prezentare generală și management sistem" : "Prezentarea dvs. clinică"}
           </p>
         </div>
-
       </div>
 
       {/* ── KPI Cards ───────────────────────────────────────────────────────── */}
@@ -566,13 +525,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
           />
         </div>
       ) : (
-        <div
-          className={`grid gap-4 ${
-            isAdmin
-              ? "grid-cols-2 sm:grid-cols-4"
-              : "grid-cols-1 sm:grid-cols-3"
-          }`}
-        >
+        <div className={`grid gap-4 ${isAdmin ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-1 sm:grid-cols-3"}`}>
           <KPI
             label="Total pacienți"
             value={stats.totalPatients}
@@ -626,10 +579,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
             <TabsTrigger value="appointments" className="gap-1.5">
               <CalendarDays className="w-3.5 h-3.5" />
               Programări
-              <Badge
-                variant="secondary"
-                className="ml-1 text-[10px] px-1.5 py-0"
-              >
+              <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0">
                 {apptStats.scheduled}
               </Badge>
             </TabsTrigger>
@@ -638,10 +588,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
             <TabsTrigger value="doctors" className="gap-1.5">
               <Shield className="w-3.5 h-3.5" />
               Medici
-              <Badge
-                variant="secondary"
-                className="ml-1 text-[10px] px-1.5 py-0"
-              >
+              <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0">
                 {dashboardStats?.activeDoctors ?? doctors.length}
               </Badge>
             </TabsTrigger>
@@ -650,13 +597,11 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
 
         {/* ── OVERVIEW TAB ──────────────────────────────────────────────────── */}
         <TabsContent value="overview" className="space-y-6">
-
           {/* ════════════════════════════════════════════════════════════════════
               LAB DOCTOR — unique lab-centric overview (no patient list duplicate)
           ═══════════════════════════════════════════════════════════════════════ */}
           {isLabDoctor && (
             <div className="space-y-6">
-
               {/* ── Recent Uploads ────────────────────────────────────────────── */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-3">
@@ -681,7 +626,10 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                     stats.recentLabResults.map((r) => {
                       const patient = patients.find((p) => p.id === r.patientId);
                       return (
-                        <div key={r.id} className="flex items-start gap-3 p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors">
+                        <div
+                          key={r.id}
+                          className="flex items-start gap-3 p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors"
+                        >
                           <div className="mt-0.5 w-2 h-2 rounded-full shrink-0 bg-purple-400" />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">{r.originalFileName}</p>
@@ -730,7 +678,11 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                         const now = new Date();
                         const isToday = apt.date === now.toISOString().split("T")[0];
                         const isTomorrow = apt.date === new Date(now.getTime() + 86400000).toISOString().split("T")[0];
-                        const dayLabel = isToday ? "Azi" : isTomorrow ? "Mâine" : aptDate.toLocaleDateString("ro-RO", { day: "2-digit", month: "short" });
+                        const dayLabel = isToday
+                          ? "Azi"
+                          : isTomorrow
+                            ? "Mâine"
+                            : aptDate.toLocaleDateString("ro-RO", { day: "2-digit", month: "short" });
                         return (
                           <button
                             key={apt.id}
@@ -738,16 +690,22 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                             className="w-full flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors text-left group"
                           >
                             {/* Date block */}
-                            <div className={`flex flex-col items-center justify-center w-12 h-12 rounded-lg shrink-0 text-center ${isToday ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+                            <div
+                              className={`flex flex-col items-center justify-center w-12 h-12 rounded-lg shrink-0 text-center ${isToday ? "bg-primary text-primary-foreground" : "bg-muted"}`}
+                            >
                               <span className="text-[10px] font-medium uppercase leading-none opacity-80">
-                                {isToday ? "Azi" : isTomorrow ? "Mâine" : aptDate.toLocaleDateString("ro-RO", { month: "short" })}
+                                {isToday
+                                  ? "Azi"
+                                  : isTomorrow
+                                    ? "Mâine"
+                                    : aptDate.toLocaleDateString("ro-RO", { month: "short" })}
                               </span>
                               {!isToday && !isTomorrow && (
-                                <span className="text-lg font-bold leading-tight">
-                                  {aptDate.getDate()}
-                                </span>
+                                <span className="text-lg font-bold leading-tight">{aptDate.getDate()}</span>
                               )}
-                              <span className={`text-[10px] leading-none mt-0.5 ${isToday ? "opacity-90" : "text-muted-foreground"}`}>
+                              <span
+                                className={`text-[10px] leading-none mt-0.5 ${isToday ? "opacity-90" : "text-muted-foreground"}`}
+                              >
                                 {apt.time}
                               </span>
                             </div>
@@ -769,11 +727,13 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
 
                             {/* Status badge */}
                             <div className="shrink-0">
-                              <span className={`text-[10px] px-2 py-1 rounded-full border font-medium ${
-                                isToday
-                                  ? "bg-primary/10 text-primary border-primary/20"
-                                  : "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-800"
-                              }`}>
+                              <span
+                                className={`text-[10px] px-2 py-1 rounded-full border font-medium ${
+                                  isToday
+                                    ? "bg-primary/10 text-primary border-primary/20"
+                                    : "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-800"
+                                }`}
+                              >
                                 {isToday ? "Azi" : dayLabel}
                               </span>
                             </div>
@@ -787,7 +747,6 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
 
               {/* ── Two-column: Recent Lab Activity + Workload Summary ─────────── */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
                 {/* Recent Lab Activity */}
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between pb-3">
@@ -820,10 +779,16 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                               </AvatarFallback>
                             </Avatar>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">{r.originalFileName}</p>
-                              <p className="text-xs text-muted-foreground truncate">{patient?.fullName ?? "Pacient necunoscut"}</p>
+                              <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
+                                {r.originalFileName}
+                              </p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {patient?.fullName ?? "Pacient necunoscut"}
+                              </p>
                             </div>
-                            <span className="text-[10px] text-muted-foreground shrink-0">{formatDate(r.uploadedAt)}</span>
+                            <span className="text-[10px] text-muted-foreground shrink-0">
+                              {formatDate(r.uploadedAt)}
+                            </span>
                           </button>
                         );
                       })
@@ -854,7 +819,6 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                     </div>
                   </CardContent>
                 </Card>
-
               </div>
 
               {/* ── HIPAA Notice ──────────────────────────────────────────────── */}
@@ -877,7 +841,6 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                   </ul>
                 </CardContent>
               </Card>
-
             </div>
           )}
 
@@ -885,234 +848,217 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
               ADMIN / SPECIALIST — existing two-column overview
           ═══════════════════════════════════════════════════════════════════════ */}
           {!isLabDoctor && (
-          <div className={`grid grid-cols-1 gap-6 ${!isLabDoctor ? "lg:grid-cols-2" : ""}`}>
-
-            {/* ── Recent Patients ───────────────────────────────────────────── */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-3">
-                <CardTitle className="text-base font-semibold flex items-center gap-2">
-                  <Users className="w-4 h-4 text-muted-foreground" />
-                  Pacienți recenți
-                </CardTitle>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 text-xs"
-                  onClick={() => setActiveTab("patients")}
-                >
-                  Vezi toate
-                </Button>
-              </CardHeader>
-              <CardContent className="space-y-2 pt-0">
-                {recentPatients.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Users className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                    <p className="text-sm">Niciun pacient momentan</p>
-                  </div>
-                ) : (
-                  recentPatients.map((patient) => (
-                    <button
-                      key={patient.id}
-                      onClick={() => onNavigate(`patient-${patient.id}`)}
-                      className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors text-left group"
-                    >
-                      <Avatar className="w-9 h-9 shrink-0">
-                        <AvatarFallback className="text-xs font-medium bg-primary/10 text-primary">
-                          {getInitials(patient.fullName)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
-                          {patient.fullName}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {calculateAge(patient.dateOfBirth)} ani · {patient.sex} · {patient.bloodType}
-                        </p>
-                      </div>
-                      <Badge variant="outline" className="text-xs shrink-0">
-                        {formatDate(patient.updatedAt)}
-                      </Badge>
-                    </button>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-
-            {/* ── Right column: Upcoming Appointments (non-admin) or Medical Staff (admin) ── */}
-            {!isLabDoctor && isAdmin ? (
+            <div className={`grid grid-cols-1 gap-6 ${!isLabDoctor ? "lg:grid-cols-2" : ""}`}>
+              {/* ── Recent Patients ───────────────────────────────────────────── */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-3">
                   <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <Stethoscope className="w-4 h-4 text-muted-foreground" />
-                    Personal medical
+                    <Users className="w-4 h-4 text-muted-foreground" />
+                    Pacienți recenți
                   </CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 text-xs"
-                    onClick={() => setActiveTab("doctors")}
-                  >
+                  <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setActiveTab("patients")}>
                     Vezi toate
                   </Button>
                 </CardHeader>
                 <CardContent className="space-y-2 pt-0">
-                  {(staffList ?? doctors).length === 0 ? (
+                  {recentPatients.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
-                      <Stethoscope className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                      <p className="text-sm">Niciun medic înregistrat</p>
+                      <Users className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                      <p className="text-sm">Niciun pacient momentan</p>
                     </div>
                   ) : (
-                    (staffList ?? doctors).slice(0, 5).map((d) => {
-                      const cfg = roleConfig[d.doctorRole];
-                      return (
-                        <div
-                          key={d.id}
-                          className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors"
-                        >
-                          <Avatar className="w-9 h-9 shrink-0">
-                            <AvatarFallback className="text-xs font-medium bg-primary/10 text-primary">
-                              {getInitials(d.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{d.name}</p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {d.specialty} · {d.department}
-                            </p>
-                          </div>
-                          <span
-                            className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-medium shrink-0 ${cfg.color}`}
-                          >
-                            {cfg.icon}
-                            {cfg.label.replace(" Doctor", "")}
-                          </span>
+                    recentPatients.map((patient) => (
+                      <button
+                        key={patient.id}
+                        onClick={() => onNavigate(`patient-${patient.id}`)}
+                        className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors text-left group"
+                      >
+                        <Avatar className="w-9 h-9 shrink-0">
+                          <AvatarFallback className="text-xs font-medium bg-primary/10 text-primary">
+                            {getInitials(patient.fullName)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
+                            {patient.fullName}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {calculateAge(patient.dateOfBirth)} ani · {patient.sex} · {patient.bloodType}
+                          </p>
                         </div>
-                      );
-                    })
+                        <Badge variant="outline" className="text-xs shrink-0">
+                          {formatDate(patient.updatedAt)}
+                        </Badge>
+                      </button>
+                    ))
                   )}
                 </CardContent>
               </Card>
-            ) : (
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-3">
-                  <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <CalendarDays className="w-4 h-4 text-muted-foreground" />
-                    Programări viitoare
-                  </CardTitle>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">{stats.upcomingAppointments}</Badge>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 text-xs"
-                      onClick={() => setActiveTab("appointments")}
-                    >
+
+              {/* ── Right column: Upcoming Appointments (non-admin) or Medical Staff (admin) ── */}
+              {!isLabDoctor && isAdmin ? (
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-3">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                      <Stethoscope className="w-4 h-4 text-muted-foreground" />
+                      Personal medical
+                    </CardTitle>
+                    <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setActiveTab("doctors")}>
                       Vezi toate
                     </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3 pt-0">
-                  {stats.upcomingList.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <CalendarDays className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                      <p className="text-sm">Nicio programare viitoare</p>
-                      {!isLabDoctor && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="mt-3 gap-1.5"
-                          onClick={() => onNavigate("create-appointment")}
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          Programează una
-                        </Button>
-                      )}
-                    </div>
-                  ) : (
-                    stats.upcomingList.map((apt) => {
-                      const aptPatient = patients.find((p) => p.id === apt.patientId);
-                      const isToday =
-                        new Date(apt.date).toDateString() === new Date().toDateString();
-                      return (
-                        <div
-                          key={apt.id}
-                          className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors group"
-                        >
+                  </CardHeader>
+                  <CardContent className="space-y-2 pt-0">
+                    {(staffList ?? doctors).length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Stethoscope className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                        <p className="text-sm">Niciun medic înregistrat</p>
+                      </div>
+                    ) : (
+                      (staffList ?? doctors).slice(0, 5).map((d) => {
+                        const cfg = roleConfig[d.doctorRole];
+                        return (
                           <div
-                            className={`flex flex-col items-center justify-center w-10 h-10 rounded-lg shrink-0 text-center ${
-                              isToday
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-primary/10 text-primary"
-                            }`}
+                            key={d.id}
+                            className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors"
                           >
-                            <span className="text-[10px] font-medium leading-none uppercase">
-                              {new Date(apt.date).toLocaleDateString("en", { month: "short" })}
-                            </span>
-                            <span className="text-sm font-bold leading-tight">
-                              {new Date(apt.date).getDate()}
-                            </span>
-                            <span className="text-[9px] leading-none opacity-80">
-                              {apt.time}
-                            </span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <button
-                              onClick={() => aptPatient && onNavigate(`patient-${aptPatient.id}`)}
-                              className="text-sm font-medium truncate hover:text-primary transition-colors text-left block w-full"
+                            <Avatar className="w-9 h-9 shrink-0">
+                              <AvatarFallback className="text-xs font-medium bg-primary/10 text-primary">
+                                {getInitials(d.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{d.name}</p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {d.specialty} · {d.department}
+                              </p>
+                            </div>
+                            <span
+                              className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-medium shrink-0 ${cfg.color}`}
                             >
-                              {aptPatient?.fullName ?? "Pacient necunoscut"}
-                            </button>
-                            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                              <User className="w-3 h-3" />
-                              {apt.doctor}
-                            </p>
+                              {cfg.icon}
+                              {cfg.label.replace(" Doctor", "")}
+                            </span>
                           </div>
-                          <Badge
-                            variant="secondary"
-                            className={`text-[10px] shrink-0 ${
-                              apt.status === "Completed"
-                                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                : apt.status === "Cancelled"
-                                ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                                : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                            }`}
+                        );
+                      })
+                    )}
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-3">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                      <CalendarDays className="w-4 h-4 text-muted-foreground" />
+                      Programări viitoare
+                    </CardTitle>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">{stats.upcomingAppointments}</Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-xs"
+                        onClick={() => setActiveTab("appointments")}
+                      >
+                        Vezi toate
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3 pt-0">
+                    {stats.upcomingList.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <CalendarDays className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                        <p className="text-sm">Nicio programare viitoare</p>
+                        {!isLabDoctor && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-3 gap-1.5"
+                            onClick={() => onNavigate("create-appointment")}
                           >
-                            {apt.status}
-                          </Badge>
-                        </div>
-                      );
-                    })
-                  )}
+                            <Plus className="w-3.5 h-3.5" />
+                            Programează una
+                          </Button>
+                        )}
+                      </div>
+                    ) : (
+                      stats.upcomingList.map((apt) => {
+                        const aptPatient = patients.find((p) => p.id === apt.patientId);
+                        const isToday = new Date(apt.date).toDateString() === new Date().toDateString();
+                        return (
+                          <div
+                            key={apt.id}
+                            className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors group"
+                          >
+                            <div
+                              className={`flex flex-col items-center justify-center w-10 h-10 rounded-lg shrink-0 text-center ${
+                                isToday ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
+                              }`}
+                            >
+                              <span className="text-[10px] font-medium leading-none uppercase">
+                                {new Date(apt.date).toLocaleDateString("en", { month: "short" })}
+                              </span>
+                              <span className="text-sm font-bold leading-tight">{new Date(apt.date).getDate()}</span>
+                              <span className="text-[9px] leading-none opacity-80">{apt.time}</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <button
+                                onClick={() => aptPatient && onNavigate(`patient-${aptPatient.id}`)}
+                                className="text-sm font-medium truncate hover:text-primary transition-colors text-left block w-full"
+                              >
+                                {aptPatient?.fullName ?? "Pacient necunoscut"}
+                              </button>
+                              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                <User className="w-3 h-3" />
+                                {apt.doctor}
+                              </p>
+                            </div>
+                            <Badge
+                              variant="secondary"
+                              className={`text-[10px] shrink-0 ${
+                                apt.status === "Completed"
+                                  ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                  : apt.status === "Cancelled"
+                                    ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                    : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                              }`}
+                            >
+                              {apt.status}
+                            </Badge>
+                          </div>
+                        );
+                      })
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* ── HIPAA Notice ──────────────────────────────────────────────── */}
+              <Card
+                className={`border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 dark:border-amber-800 ${!isLabDoctor ? "lg:col-span-2" : ""}`}
+              >
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-semibold flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                    <AlertCircle className="w-4 h-4" />
+                    Notă de conformitate HIPAA
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="flex items-start gap-2 text-sm text-amber-800 dark:text-amber-300 mb-2">
+                    <p>
+                      Toate datele pacienților sunt informații de sănătate protejate (PHI) conform reglementărilor
+                      HIPAA.
+                    </p>
+                  </div>
+                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs text-amber-700 dark:text-amber-400">
+                    <li>• Accesați doar înregistrările relevante pentru rolul dvs. clinic</li>
+                    <li>• Nu partajați datele de autentificare cu alții</li>
+                    <li>• Deconectați-vă când părăsiți stațiile de lucru nesupravegheate</li>
+                    <li>• Toate accesările sunt auditate și înregistrate</li>
+                  </ul>
                 </CardContent>
               </Card>
-            )}
-
-            {/* ── HIPAA Notice ──────────────────────────────────────────────── */}
-            <Card className={`border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 dark:border-amber-800 ${!isLabDoctor ? "lg:col-span-2" : ""}`}>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-semibold flex items-center gap-2 text-amber-700 dark:text-amber-400">
-                  <AlertCircle className="w-4 h-4" />
-                  Notă de conformitate HIPAA
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="flex items-start gap-2 text-sm text-amber-800 dark:text-amber-300 mb-2">
-                  <p>
-                    Toate datele pacienților sunt informații de sănătate protejate (PHI) conform reglementărilor HIPAA.
-                  </p>
-                </div>
-                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs text-amber-700 dark:text-amber-400">
-                  <li>• Accesați doar înregistrările relevante pentru rolul dvs. clinic</li>
-                  <li>• Nu partajați datele de autentificare cu alții</li>
-                  <li>• Deconectați-vă când părăsiți stațiile de lucru nesupravegheate</li>
-                  <li>• Toate accesările sunt auditate și înregistrate</li>
-                </ul>
-              </CardContent>
-            </Card>
-
-          </div>
+            </div>
           )}
-
         </TabsContent>
 
         {/* ── PATIENTS TAB ──────────────────────────────────────────────────── */}
@@ -1176,13 +1122,11 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Toate grupele sanguine</SelectItem>
-                {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "Unknown"].map(
-                  (bt) => (
-                    <SelectItem key={bt} value={bt}>
-                      {bt}
-                    </SelectItem>
-                  )
-                )}
+                {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "Unknown"].map((bt) => (
+                  <SelectItem key={bt} value={bt}>
+                    {bt}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -1193,9 +1137,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
               <EmptyHeader>
                 <EmptyTitle>Niciun pacient găsit</EmptyTitle>
                 <EmptyDescription>
-                  {patientSearch ||
-                  patientFilterSex !== "all" ||
-                  patientFilterBlood !== "all"
+                  {patientSearch || patientFilterSex !== "all" || patientFilterBlood !== "all"
                     ? "Încercați să ștergeți filtrele."
                     : "Adăugați primul pacient pentru a începe."}
                 </EmptyDescription>
@@ -1226,9 +1168,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="font-semibold text-sm leading-tight">
-                            {patient.fullName}
-                          </p>
+                          <p className="font-semibold text-sm leading-tight">{patient.fullName}</p>
                           <p className="text-xs text-muted-foreground">
                             {calculateAge(patient.dateOfBirth)} ani · {patient.sex}
                           </p>
@@ -1245,17 +1185,13 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => onNavigate(`patient-${patient.id}`)}
-                          >
+                          <DropdownMenuItem onClick={() => onNavigate(`patient-${patient.id}`)}>
                             <Eye className="w-4 h-4 mr-2" />
                             Vezi dosar
                           </DropdownMenuItem>
                           {canManagePatients && (
                             <>
-                              <DropdownMenuItem
-                                onClick={() => openEditPatient(patient)}
-                              >
+                              <DropdownMenuItem onClick={() => openEditPatient(patient)}>
                                 <Edit className="w-4 h-4 mr-2" />
                                 Editează pacient
                               </DropdownMenuItem>
@@ -1310,19 +1246,13 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 <div className="flex items-center justify-between pt-2">
                   <p className="text-xs text-muted-foreground">
                     Se afișează {(patientPage - 1) * PATIENT_PAGE_SIZE + 1}–
-                    {Math.min(
-                      patientPage * PATIENT_PAGE_SIZE,
-                      filteredPatients.length
-                    )}{" "}
-                    din {filteredPatients.length}
+                    {Math.min(patientPage * PATIENT_PAGE_SIZE, filteredPatients.length)} din {filteredPatients.length}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() =>
-                        setPatientPage((p) => Math.max(1, p - 1))
-                      }
+                      onClick={() => setPatientPage((p) => Math.max(1, p - 1))}
                       disabled={patientPage === 1}
                       className="h-8 w-8 p-0"
                     >
@@ -1334,11 +1264,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() =>
-                        setPatientPage((p) =>
-                          Math.min(totalPatientPages, p + 1)
-                        )
-                      }
+                      onClick={() => setPatientPage((p) => Math.min(totalPatientPages, p + 1))}
                       disabled={patientPage === totalPatientPages}
                       className="h-8 w-8 p-0"
                     >
@@ -1362,10 +1288,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                   {apptStats.scheduled} viitoare · {apptStats.today} azi
                 </p>
               </div>
-              <Button
-                onClick={() => onNavigate("create-appointment")}
-                className="gap-2 sm:w-auto w-full"
-              >
+              <Button onClick={() => onNavigate("create-appointment")} className="gap-2 sm:w-auto w-full">
                 <Plus className="w-4 h-4" />
                 Programează consultație
               </Button>
@@ -1414,10 +1337,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                   className="pl-9"
                 />
               </div>
-              <Select
-                value={apptFilterStatus}
-                onValueChange={setApptFilterStatus}
-              >
+              <Select value={apptFilterStatus} onValueChange={setApptFilterStatus}>
                 <SelectTrigger className="w-full sm:w-36">
                   <SelectValue placeholder="Stare" />
                 </SelectTrigger>
@@ -1428,10 +1348,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                   <SelectItem value="Cancelled">Anulat</SelectItem>
                 </SelectContent>
               </Select>
-              <Select
-                value={apptFilterPeriod}
-                onValueChange={setApptFilterPeriod}
-              >
+              <Select value={apptFilterPeriod} onValueChange={setApptFilterPeriod}>
                 <SelectTrigger className="w-full sm:w-36">
                   <SelectValue placeholder="Perioadă" />
                 </SelectTrigger>
@@ -1455,18 +1372,13 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 <EmptyHeader>
                   <EmptyTitle>Nicio programare găsită</EmptyTitle>
                   <EmptyDescription>
-                    {apptSearch ||
-                    apptFilterStatus !== "all" ||
-                    apptFilterPeriod !== "all"
+                    {apptSearch || apptFilterStatus !== "all" || apptFilterPeriod !== "all"
                       ? "Încercați să ștergeți filtrele."
                       : "Programați prima consultație pentru a începe."}
                   </EmptyDescription>
                 </EmptyHeader>
                 <EmptyContent>
-                  <Button
-                    onClick={() => onNavigate("create-appointment")}
-                    className="gap-2"
-                  >
+                  <Button onClick={() => onNavigate("create-appointment")} className="gap-2">
                     <Plus className="w-4 h-4" />
                     Programează consultație
                   </Button>
@@ -1477,46 +1389,26 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 {groupedAppointments.map(([date, apts]) => {
                   const d = new Date(date);
                   const now = new Date();
-                  const today = new Date(
-                    now.getFullYear(),
-                    now.getMonth(),
-                    now.getDate()
-                  );
+                  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
                   const isToday = d.toDateString() === today.toDateString();
-                  const isTomorrow =
-                    d.toDateString() ===
-                    new Date(today.getTime() + 86400000).toDateString();
-                  const dayLabel = isToday
-                    ? "Azi"
-                    : isTomorrow
-                    ? "Mâine"
-                    : formatDate(date, "EEEE, dd MMMM yyyy");
+                  const isTomorrow = d.toDateString() === new Date(today.getTime() + 86400000).toDateString();
+                  const dayLabel = isToday ? "Azi" : isTomorrow ? "Mâine" : formatDate(date, "EEEE, dd MMMM yyyy");
 
                   return (
                     <div key={date}>
                       <div className="flex items-center gap-3 mb-3">
                         <div
                           className={`flex flex-col items-center justify-center w-10 h-10 rounded-xl shrink-0 ${
-                            isToday
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted text-muted-foreground"
+                            isToday ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                           }`}
                         >
-                          <span className="text-xs font-bold leading-none">
-                            {formatDate(date, "dd")}
-                          </span>
+                          <span className="text-xs font-bold leading-none">{formatDate(date, "dd")}</span>
                           <span className="text-[10px] leading-none uppercase opacity-80">
                             {formatDate(date, "MMM")}
                           </span>
                         </div>
                         <div>
-                          <p
-                            className={`font-semibold text-sm ${
-                              isToday ? "text-primary" : ""
-                            }`}
-                          >
-                            {dayLabel}
-                          </p>
+                          <p className={`font-semibold text-sm ${isToday ? "text-primary" : ""}`}>{dayLabel}</p>
                           <p className="text-xs text-muted-foreground">
                             {apts.length} {apts.length === 1 ? "programare" : "programări"}
                           </p>
@@ -1528,24 +1420,17 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                         {apts.map((apt) => {
                           const sc = statusConfig[apt.status];
                           return (
-                            <Card
-                              key={apt.id}
-                              className="hover:shadow-sm transition-shadow group"
-                            >
+                            <Card key={apt.id} className="hover:shadow-sm transition-shadow group">
                               <CardContent className="p-4">
                                 <div className="flex items-start gap-4">
                                   <div className="flex flex-col items-center justify-center w-14 h-14 rounded-xl bg-muted/60 shrink-0">
                                     <Clock className="w-3.5 h-3.5 text-muted-foreground mb-0.5" />
-                                    <span className="text-sm font-bold">
-                                      {apt.time}
-                                    </span>
+                                    <span className="text-sm font-bold">{apt.time}</span>
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <div className="flex flex-wrap items-center gap-2">
                                       <button
-                                        onClick={() =>
-                                          onNavigate(`patient-${apt.patientId}`)
-                                        }
+                                        onClick={() => onNavigate(`patient-${apt.patientId}`)}
                                         className="flex items-center gap-2 group/btn"
                                       >
                                         <Avatar className="w-7 h-7 shrink-0">
@@ -1564,14 +1449,10 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                                         {sc.label}
                                       </span>
                                     </div>
-                                    <p className="text-sm text-muted-foreground mt-1 truncate">
-                                      {apt.type}
-                                    </p>
+                                    <p className="text-sm text-muted-foreground mt-1 truncate">{apt.type}</p>
                                     <div className="flex items-center gap-1.5 mt-1">
                                       <User className="w-3 h-3 text-muted-foreground" />
-                                      <span className="text-xs text-muted-foreground">
-                                        {apt.doctor}
-                                      </span>
+                                      <span className="text-xs text-muted-foreground">{apt.doctor}</span>
                                     </div>
                                   </div>
                                   <DropdownMenu>
@@ -1585,11 +1466,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                                       </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
-                                      <DropdownMenuItem
-                                        onClick={() =>
-                                          onNavigate(`patient-${apt.patientId}`)
-                                        }
-                                      >
+                                      <DropdownMenuItem onClick={() => onNavigate(`patient-${apt.patientId}`)}>
                                         <User className="w-4 h-4 mr-2" />
                                         Vezi dosar pacient
                                       </DropdownMenuItem>
@@ -1598,9 +1475,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                                           <DropdownMenuSeparator />
                                           {apt.status === "Scheduled" && (
                                             <DropdownMenuItem
-                                              onClick={() =>
-                                                handleApptStatusChange(apt.id, "Completed")
-                                              }
+                                              onClick={() => handleApptStatusChange(apt.id, "Completed")}
                                             >
                                               <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />
                                               Marchează ca finalizat
@@ -1609,9 +1484,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                                           {apt.status === "Scheduled" && (
                                             <DropdownMenuItem
                                               className="text-destructive"
-                                              onClick={() =>
-                                                handleApptStatusChange(apt.id, "Cancelled")
-                                              }
+                                              onClick={() => handleApptStatusChange(apt.id, "Cancelled")}
                                             >
                                               <XCircle className="w-4 h-4 mr-2" />
                                               Anulează programarea
@@ -1619,9 +1492,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                                           )}
                                           {apt.status === "Cancelled" && (
                                             <DropdownMenuItem
-                                              onClick={() =>
-                                                handleApptStatusChange(apt.id, "Scheduled")
-                                              }
+                                              onClick={() => handleApptStatusChange(apt.id, "Scheduled")}
                                             >
                                               <CalendarDays className="w-4 h-4 mr-2 text-blue-600" />
                                               Reprogramează
@@ -1666,16 +1537,8 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
 
             {/* Role info cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {(
-                Object.entries(roleConfig) as [
-                  DoctorRole,
-                  (typeof roleConfig)[DoctorRole]
-                ][]
-              ).map(([role, cfg]) => (
-                <div
-                  key={role}
-                  className={`rounded-xl border p-3.5 ${cfg.color}`}
-                >
+              {(Object.entries(roleConfig) as [DoctorRole, (typeof roleConfig)[DoctorRole]][]).map(([role, cfg]) => (
+                <div key={role} className={`rounded-xl border p-3.5 ${cfg.color}`}>
                   <div className="flex items-center gap-2 mb-1">
                     {cfg.icon}
                     <span className="font-semibold text-sm">{cfg.label}</span>
@@ -1699,18 +1562,13 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                   className="pl-9"
                 />
               </div>
-              <Select
-                value={filterDoctorRole}
-                onValueChange={setFilterDoctorRole}
-              >
+              <Select value={filterDoctorRole} onValueChange={setFilterDoctorRole}>
                 <SelectTrigger className="w-full sm:w-48">
                   <SelectValue placeholder="Toate rolurile" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Toate rolurile</SelectItem>
-                  <SelectItem value="specialist_doctor">
-                    Medici specialiști
-                  </SelectItem>
+                  <SelectItem value="specialist_doctor">Medici specialiști</SelectItem>
                   <SelectItem value="lab_doctor">Medici laborator</SelectItem>
                 </SelectContent>
               </Select>
@@ -1751,12 +1609,8 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="font-semibold text-sm leading-tight">
-                              {doctor.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {doctor.specialty}
-                            </p>
+                            <p className="font-semibold text-sm leading-tight">{doctor.name}</p>
+                            <p className="text-xs text-muted-foreground">{doctor.specialty}</p>
                           </div>
                         </div>
                         <DropdownMenu>
@@ -1770,9 +1624,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => openEditDoctor(doctor)}
-                            >
+                            <DropdownMenuItem onClick={() => openEditDoctor(doctor)}>
                               <Edit className="w-4 h-4 mr-2" />
                               Editează medic
                             </DropdownMenuItem>
@@ -1836,49 +1688,27 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
       >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {editingPatient ? "Editează pacient" : "Adaugă pacient nou"}
-            </DialogTitle>
+            <DialogTitle>{editingPatient ? "Editează pacient" : "Adaugă pacient nou"}</DialogTitle>
           </DialogHeader>
-          <form
-            onSubmit={patientForm.handleSubmit(onPatientSubmit)}
-            className="space-y-4 py-2"
-          >
+          <form onSubmit={patientForm.handleSubmit(onPatientSubmit)} className="space-y-4 py-2">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2 space-y-1.5">
                 <Label htmlFor="fullName">Nume complet *</Label>
-                <Input
-                  id="fullName"
-                  placeholder="ex. Ion Popescu"
-                  {...patientForm.register("fullName")}
-                />
+                <Input id="fullName" placeholder="ex. Ion Popescu" {...patientForm.register("fullName")} />
                 {patientForm.formState.errors.fullName && (
-                  <p className="text-xs text-destructive">
-                    {patientForm.formState.errors.fullName.message}
-                  </p>
+                  <p className="text-xs text-destructive">{patientForm.formState.errors.fullName.message}</p>
                 )}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="dateOfBirth">Data nașterii *</Label>
-                <Input
-                  id="dateOfBirth"
-                  type="date"
-                  {...patientForm.register("dateOfBirth")}
-                />
+                <Input id="dateOfBirth" type="date" {...patientForm.register("dateOfBirth")} />
                 {patientForm.formState.errors.dateOfBirth && (
-                  <p className="text-xs text-destructive">
-                    {patientForm.formState.errors.dateOfBirth.message}
-                  </p>
+                  <p className="text-xs text-destructive">{patientForm.formState.errors.dateOfBirth.message}</p>
                 )}
               </div>
               <div className="space-y-1.5">
                 <Label>Sex *</Label>
-                <Select
-                  value={patientForm.watch("sex")}
-                  onValueChange={(v) =>
-                    patientForm.setValue("sex", v as Sex)
-                  }
-                >
+                <Select value={patientForm.watch("sex")} onValueChange={(v) => patientForm.setValue("sex", v as Sex)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -1891,68 +1721,36 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="nationalId">CNP *</Label>
-                <Input
-                  id="nationalId"
-                  placeholder="ex. 1234567890123"
-                  {...patientForm.register("nationalId")}
-                />
+                <Input id="nationalId" placeholder="ex. 1234567890123" {...patientForm.register("nationalId")} />
                 {patientForm.formState.errors.nationalId && (
-                  <p className="text-xs text-destructive">
-                    {patientForm.formState.errors.nationalId.message}
-                  </p>
+                  <p className="text-xs text-destructive">{patientForm.formState.errors.nationalId.message}</p>
                 )}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="phone">Telefon *</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="+40 755 000 000"
-                  {...patientForm.register("phone")}
-                />
+                <Input id="phone" type="tel" placeholder="+40 755 000 000" {...patientForm.register("phone")} />
                 {patientForm.formState.errors.phone && (
-                  <p className="text-xs text-destructive">
-                    {patientForm.formState.errors.phone.message}
-                  </p>
+                  <p className="text-xs text-destructive">{patientForm.formState.errors.phone.message}</p>
                 )}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="patEmail">Email *</Label>
-                <Input
-                  id="patEmail"
-                  type="email"
-                  placeholder="pacient@email.com"
-                  {...patientForm.register("email")}
-                />
+                <Input id="patEmail" type="email" placeholder="pacient@email.com" {...patientForm.register("email")} />
                 {patientForm.formState.errors.email && (
-                  <p className="text-xs text-destructive">
-                    {patientForm.formState.errors.email.message}
-                  </p>
+                  <p className="text-xs text-destructive">{patientForm.formState.errors.email.message}</p>
                 )}
               </div>
               <div className="space-y-1.5">
                 <Label>Grup sanguin *</Label>
                 <Select
                   value={patientForm.watch("bloodType")}
-                  onValueChange={(v) =>
-                    patientForm.setValue("bloodType", v as BloodType)
-                  }
+                  onValueChange={(v) => patientForm.setValue("bloodType", v as BloodType)}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {[
-                      "A+",
-                      "A-",
-                      "B+",
-                      "B-",
-                      "AB+",
-                      "AB-",
-                      "O+",
-                      "O-",
-                      "Unknown",
-                    ].map((bt) => (
+                    {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "Unknown"].map((bt) => (
                       <SelectItem key={bt} value={bt}>
                         {bt}
                       </SelectItem>
@@ -1990,15 +1788,12 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
               >
                 Anulează
               </Button>
-              <Button
-                type="submit"
-                disabled={patientForm.formState.isSubmitting}
-              >
+              <Button type="submit" disabled={patientForm.formState.isSubmitting}>
                 {patientForm.formState.isSubmitting
                   ? "Se salvează..."
                   : editingPatient
-                  ? "Salvează modificările"
-                  : "Adaugă pacient"}
+                    ? "Salvează modificările"
+                    : "Adaugă pacient"}
               </Button>
             </DialogFooter>
           </form>
@@ -2006,24 +1801,17 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
       </Dialog>
 
       {/* Delete Patient Confirm */}
-      <Dialog
-        open={!!deletePatientConfirm}
-        onOpenChange={() => setDeletePatientConfirm(null)}
-      >
+      <Dialog open={!!deletePatientConfirm} onOpenChange={() => setDeletePatientConfirm(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Șterge pacient?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground py-2">
-            Aceasta va șterge definitiv{" "}
-            <strong>{deletePatientConfirm?.fullName}</strong> și toate înregistrările sale.
+            Aceasta va șterge definitiv <strong>{deletePatientConfirm?.fullName}</strong> și toate înregistrările sale.
             Această acțiune nu poate fi anulată.
           </p>
           <DialogFooter>
-            <Button
-              variant="secondary"
-              onClick={() => setDeletePatientConfirm(null)}
-            >
+            <Button variant="secondary" onClick={() => setDeletePatientConfirm(null)}>
               Anulează
             </Button>
             <Button
@@ -2053,21 +1841,14 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
       >
         <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {editingDoctor ? "Editează medic" : "Adaugă medic nou"}
-            </DialogTitle>
+            <DialogTitle>{editingDoctor ? "Editează medic" : "Adaugă medic nou"}</DialogTitle>
           </DialogHeader>
-          <form
-            onSubmit={doctorForm.handleSubmit(onDoctorSubmit)}
-            className="space-y-4 py-2"
-          >
+          <form onSubmit={doctorForm.handleSubmit(onDoctorSubmit)} className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Tip medic *</Label>
               <Select
                 value={doctorForm.watch("doctorRole")}
-                onValueChange={(v) =>
-                  doctorForm.setValue("doctorRole", v as DoctorRole)
-                }
+                onValueChange={(v) => doctorForm.setValue("doctorRole", v as DoctorRole)}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -2087,51 +1868,29 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                   </SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                {roleConfig[doctorForm.watch("doctorRole")]?.description}
-              </p>
+              <p className="text-xs text-muted-foreground">{roleConfig[doctorForm.watch("doctorRole")]?.description}</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2 space-y-1.5">
                 <Label htmlFor="docName">Nume complet *</Label>
-                <Input
-                  id="docName"
-                  placeholder="e.g. Dr. Jane Smith"
-                  {...doctorForm.register("name")}
-                />
+                <Input id="docName" placeholder="e.g. Dr. Jane Smith" {...doctorForm.register("name")} />
                 {doctorForm.formState.errors.name && (
-                  <p className="text-xs text-destructive">
-                    {doctorForm.formState.errors.name.message}
-                  </p>
+                  <p className="text-xs text-destructive">{doctorForm.formState.errors.name.message}</p>
                 )}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="docEmail">Adresă email *</Label>
-                <Input
-                  id="docEmail"
-                  type="email"
-                  placeholder="doctor@hospital.com"
-                  {...doctorForm.register("email")}
-                />
+                <Input id="docEmail" type="email" placeholder="doctor@hospital.com" {...doctorForm.register("email")} />
                 {doctorForm.formState.errors.email && (
-                  <p className="text-xs text-destructive">
-                    {doctorForm.formState.errors.email.message}
-                  </p>
+                  <p className="text-xs text-destructive">{doctorForm.formState.errors.email.message}</p>
                 )}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="docPhone">Număr de telefon *</Label>
-                <Input
-                  id="docPhone"
-                  type="tel"
-                  placeholder="+1 (555) 000-0000"
-                  {...doctorForm.register("phone")}
-                />
+                <Input id="docPhone" type="tel" placeholder="+1 (555) 000-0000" {...doctorForm.register("phone")} />
                 {doctorForm.formState.errors.phone && (
-                  <p className="text-xs text-destructive">
-                    {doctorForm.formState.errors.phone.message}
-                  </p>
+                  <p className="text-xs text-destructive">{doctorForm.formState.errors.phone.message}</p>
                 )}
               </div>
               <div className="space-y-1.5">
@@ -2139,16 +1898,12 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 <Input
                   id="docSpecialty"
                   placeholder={
-                    doctorForm.watch("doctorRole") === "lab_doctor"
-                      ? "ex. Patologie clinică"
-                      : "ex. Cardiologie"
+                    doctorForm.watch("doctorRole") === "lab_doctor" ? "ex. Patologie clinică" : "ex. Cardiologie"
                   }
                   {...doctorForm.register("specialty")}
                 />
                 {doctorForm.formState.errors.specialty && (
-                  <p className="text-xs text-destructive">
-                    {doctorForm.formState.errors.specialty.message}
-                  </p>
+                  <p className="text-xs text-destructive">{doctorForm.formState.errors.specialty.message}</p>
                 )}
               </div>
               <div className="space-y-1.5">
@@ -2156,43 +1911,32 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 <Input
                   id="docDept"
                   placeholder={
-                    doctorForm.watch("doctorRole") === "lab_doctor"
-                      ? "ex. Laborator"
-                      : "ex. Medicină internă"
+                    doctorForm.watch("doctorRole") === "lab_doctor" ? "ex. Laborator" : "ex. Medicină internă"
                   }
                   {...doctorForm.register("department")}
                 />
                 {doctorForm.formState.errors.department && (
-                  <p className="text-xs text-destructive">
-                    {doctorForm.formState.errors.department.message}
-                  </p>
+                  <p className="text-xs text-destructive">{doctorForm.formState.errors.department.message}</p>
                 )}
               </div>
               <div className="sm:col-span-2 space-y-1.5">
                 <Label htmlFor="docLicense">Număr de licență *</Label>
                 <Input
                   id="docLicense"
-                  placeholder={
-                    doctorForm.watch("doctorRole") === "lab_doctor"
-                      ? "ex. LAB-0042"
-                      : "ex. MD-4821"
-                  }
+                  placeholder={doctorForm.watch("doctorRole") === "lab_doctor" ? "ex. LAB-0042" : "ex. MD-4821"}
                   {...doctorForm.register("licenseNumber")}
                 />
                 {doctorForm.formState.errors.licenseNumber && (
-                  <p className="text-xs text-destructive">
-                    {doctorForm.formState.errors.licenseNumber.message}
-                  </p>
+                  <p className="text-xs text-destructive">{doctorForm.formState.errors.licenseNumber.message}</p>
                 )}
               </div>
             </div>
 
             <div className="rounded-lg bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-800 p-3">
               <p className="text-xs text-amber-700 dark:text-amber-400">
-                <strong>Notă:</strong> După adăugarea unui medic, datele de autentificare
-                vor folosi emailul de mai sus cu parola de sistem{" "}
-                <span className="font-mono font-bold">MedKit2025!</span>.
-                Contactați IT pentru a seta o parolă personalizată.
+                <strong>Notă:</strong> După adăugarea unui medic, datele de autentificare vor folosi emailul de mai sus
+                cu parola de sistem <span className="font-mono font-bold">MedKit2025!</span>. Contactați IT pentru a
+                seta o parolă personalizată.
               </p>
             </div>
 
@@ -2207,15 +1951,12 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
               >
                 Anulează
               </Button>
-              <Button
-                type="submit"
-                disabled={doctorForm.formState.isSubmitting}
-              >
+              <Button type="submit" disabled={doctorForm.formState.isSubmitting}>
                 {doctorForm.formState.isSubmitting
                   ? "Se salvează..."
                   : editingDoctor
-                  ? "Salvează modificările"
-                  : "Adaugă medic"}
+                    ? "Salvează modificările"
+                    : "Adaugă medic"}
               </Button>
             </DialogFooter>
           </form>
@@ -2223,23 +1964,17 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
       </Dialog>
 
       {/* Delete Doctor Confirm */}
-      <Dialog
-        open={!!deleteDoctorConfirm}
-        onOpenChange={() => setDeleteDoctorConfirm(null)}
-      >
+      <Dialog open={!!deleteDoctorConfirm} onOpenChange={() => setDeleteDoctorConfirm(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Elimină medic?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground py-2">
-            Aceasta va elimina <strong>{deleteDoctorConfirm?.name}</strong> din
-            sistem. Nu va mai putea să se autentifice. Această acțiune nu poate fi anulată.
+            Aceasta va elimina <strong>{deleteDoctorConfirm?.name}</strong> din sistem. Nu va mai putea să se
+            autentifice. Această acțiune nu poate fi anulată.
           </p>
           <DialogFooter>
-            <Button
-              variant="secondary"
-              onClick={() => setDeleteDoctorConfirm(null)}
-            >
+            <Button variant="secondary" onClick={() => setDeleteDoctorConfirm(null)}>
               Anulează
             </Button>
             <Button

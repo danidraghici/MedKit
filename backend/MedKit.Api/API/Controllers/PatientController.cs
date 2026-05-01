@@ -21,7 +21,7 @@ public class PatientController(PatientService patientService, AppDbContext ctx) 
     }
 
     [HttpGet("my")]
-    [Authorize(Roles = "admin,specialist_doctor,lab_doctor")]
+    [Authorize(Roles = "admin,specialist_doctor,lab_doctor,patient")]
     public async Task<IActionResult> GetMy()
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -35,11 +35,29 @@ public class PatientController(PatientService patientService, AppDbContext ctx) 
         if (role == "lab_doctor")
             return Ok(await patientService.GetByLabRequestsAsync());
 
-        var user = await ctx.Users.FindAsync(userId);
-        if (user?.DoctorId is null)
-            return Forbid();
+        if (role == "specialist_doctor")
+        {
+            var user = await ctx.Users.FindAsync(userId);
+            if (user?.DoctorId is null)
+                return Forbid();
 
-        return Ok(await patientService.GetByDoctorAsync(user.DoctorId.Value));
+            return Ok(await patientService.GetByDoctorAsync(user.DoctorId.Value));
+        }
+
+        if (role == "patient")
+        {
+            var user = await ctx.Users.FindAsync(userId);
+            if (user?.PatientId is null)
+                return Forbid();
+
+            var patient = await patientService.GetByIdAsync(user.PatientId.Value);
+            if (patient is null)
+                return NotFound();
+
+            return Ok(new[] { patient });
+        }
+
+        return Forbid();
     }
 
     [HttpPost]

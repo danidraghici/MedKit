@@ -9,7 +9,6 @@ namespace MedKit.Api.API.Controllers;
 
 [ApiController]
 [Route("api/appointments")]
-[Authorize(Roles = "admin,specialist_doctor")]
 public class AppointmentController(AppointmentService appointmentService, AppDbContext ctx) : ControllerBase
 {
     private async Task<(Guid? DoctorId, IActionResult? Error)> ResolveCallerDoctorIdAsync()
@@ -26,6 +25,7 @@ public class AppointmentController(AppointmentService appointmentService, AppDbC
     }
 
     [HttpGet("stats")]
+    [Authorize(Roles = "admin,specialist_doctor")]
     public async Task<IActionResult> GetStats()
     {
         var (doctorId, error) = await ResolveCallerDoctorIdAsync();
@@ -36,6 +36,7 @@ public class AppointmentController(AppointmentService appointmentService, AppDbC
     }
 
     [HttpGet("profile-stats")]
+    [Authorize(Roles = "admin,specialist_doctor")]
     public async Task<IActionResult> GetProfileStats()
     {
         var (doctorId, error) = await ResolveCallerDoctorIdAsync();
@@ -47,6 +48,7 @@ public class AppointmentController(AppointmentService appointmentService, AppDbC
     }
 
     [HttpGet]
+    [Authorize(Roles = "admin,specialist_doctor")]
     public async Task<IActionResult> GetAll()
     {
         var (doctorId, error) = await ResolveCallerDoctorIdAsync();
@@ -57,16 +59,35 @@ public class AppointmentController(AppointmentService appointmentService, AppDbC
     }
 
     [HttpGet("patient/{patientId:guid}")]
+    [Authorize(Roles = "admin,specialist_doctor,patient")]
     public async Task<IActionResult> GetByPatient(Guid patientId)
     {
-        var (doctorId, error) = await ResolveCallerDoctorIdAsync();
-        if (error is not null) return error;
+        var role = User.FindFirstValue(ClaimTypes.Role);
+        Guid? doctorId = null;
+
+        if (role == "specialist_doctor")
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var currentUserId)) return Unauthorized();
+            var user = await ctx.Users.FindAsync(currentUserId);
+            if (user?.DoctorId is null) return Forbid();
+            doctorId = user.DoctorId;
+        }
+
+        if (role == "patient")
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var currentUserId)) return Unauthorized();
+            var user = await ctx.Users.FindAsync(currentUserId);
+            if (user?.PatientId is null || user.PatientId.Value != patientId) return Forbid();
+        }
 
         var list = await appointmentService.GetByPatientAsync(patientId, doctorId);
         return Ok(list);
     }
 
     [HttpPost]
+    [Authorize(Roles = "admin,specialist_doctor")]
     public async Task<IActionResult> Create([FromBody] CreateAppointmentRequest request)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -87,6 +108,7 @@ public class AppointmentController(AppointmentService appointmentService, AppDbC
     }
 
     [HttpPatch("{id:guid}/status")]
+    [Authorize(Roles = "admin,specialist_doctor")]
     public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdateAppointmentStatusRequest request)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);

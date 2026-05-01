@@ -82,6 +82,7 @@ builder.Services.AddScoped<DoctorService>();
 builder.Services.AddScoped<DepartmentService>();
 builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<AppointmentService>();
+builder.Services.AddScoped<AppointmentRequestService>();
 builder.Services.AddScoped<UserProfileService>();
 builder.Services.AddScoped<NotificationRuleService>();
 builder.Services.AddScoped<NoteService>();

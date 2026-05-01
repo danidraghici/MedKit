@@ -6,10 +6,11 @@ namespace MedKit.Api.API.Controllers;
 
 [ApiController]
 [Route("api/dashboard")]
-[Authorize(Roles = "admin")]
+[Authorize]
 public class DashboardController(DashboardService dashboardService) : ControllerBase
 {
     [HttpGet("stats")]
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> GetStats()
     {
         var stats = await dashboardService.GetStatsAsync();

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using MedKit.Api.API.DTOs;
+using MedKit.Api.Models;
 using MedKit.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,17 +9,30 @@ namespace MedKit.Api.API.Controllers;
 
 [ApiController]
 [Route("api/notes")]
-[Authorize(Roles = "admin,specialist_doctor")]
-public class NoteController(NoteService noteService) : ControllerBase
+[Authorize]
+public class NoteController(NoteService noteService, AppDbContext ctx) : ControllerBase
 {
     [HttpGet("patient/{patientId:guid}")]
     public async Task<IActionResult> GetByPatient(Guid patientId)
     {
+        var role = User.FindFirstValue(ClaimTypes.Role);
+        if (role == "patient")
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            var user = await ctx.Users.FindAsync(userId);
+            if (user?.PatientId is null || user.PatientId.Value != patientId)
+                return Forbid();
+        }
+
         var notes = await noteService.GetByPatientAsync(patientId);
         return Ok(notes);
     }
 
     [HttpPost]
+    [Authorize(Roles = "admin,specialist_doctor")]
     public async Task<IActionResult> Create([FromBody] CreateNoteRequest request)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -40,6 +54,7 @@ public class NoteController(NoteService noteService) : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = "admin,specialist_doctor")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateNoteRequest request)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -60,6 +75,7 @@ public class NoteController(NoteService noteService) : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "admin,specialist_doctor")]
     public async Task<IActionResult> Delete(Guid id)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);

@@ -93,8 +93,8 @@ export default function App() {
   const initAuth = useAppStore((s) => s.initAuth);
   const user = useAppStore((s) => s.user);
   const patients = useAppStore((s) => s.patients);
+  const fetchPatients = useAppStore((s) => s.fetchPatients);
   const departments = useAppStore((s) => s.departments);
-  const getPatientReminders = useAppStore((s) => s.getPatientReminders);
   const labRequestUnreadCount = useAppStore((s) => s.labRequestUnreadCount);
   const fetchUnreadLabRequestCount = useAppStore((s) => s.fetchUnreadLabRequestCount);
   const fetchLabRequests = useAppStore((s) => s.fetchLabRequests);
@@ -102,6 +102,7 @@ export default function App() {
   const fetchSchedulePendingCount = useAppStore((s) => s.fetchSchedulePendingCount);
   const unreadNotificationCount = useAppStore((s) => s.unreadNotificationCount);
   const fetchUnreadNotificationCount = useAppStore((s) => s.fetchUnreadNotificationCount);
+  const fetchNotifications = useAppStore((s) => s.fetchNotifications);
   const doctors = useAppStore((s) => s.doctors);
 
   const [activePage, setActivePage] = useState<PageId>("dashboard");
@@ -118,13 +119,40 @@ export default function App() {
 
   const notifications = [
     ...(isSpecialistDoctor && schedulePendingCount > 0
-      ? [{ id: "schedule-pending", title: "Aprobare program necesară", description: `${schedulePendingCount} modificare${schedulePendingCount !== 1 ? "s" : ""} din admin în așteptarea aprobării`, page: "profile", Icon: CalendarDays, iconColor: "text-amber-500" }]
+      ? [
+          {
+            id: "schedule-pending",
+            title: "Aprobare program necesară",
+            description: `${schedulePendingCount} modificare${schedulePendingCount !== 1 ? "s" : ""} din admin în așteptarea aprobării`,
+            page: "profile",
+            Icon: CalendarDays,
+            iconColor: "text-amber-500",
+          },
+        ]
       : []),
     ...(isLabDoctor && labRequestUnreadCount > 0
-      ? [{ id: "lab-unread", title: "Cereri de analize necitite", description: `${labRequestUnreadCount} cerere${labRequestUnreadCount !== 1 ? "s" : ""} nouă de revizuit`, page: "lab-requests", Icon: FlaskConical, iconColor: "text-purple-500" }]
+      ? [
+          {
+            id: "lab-unread",
+            title: "Cereri de analize necitite",
+            description: `${labRequestUnreadCount} cerere${labRequestUnreadCount !== 1 ? "s" : ""} nouă de revizuit`,
+            page: "lab-requests",
+            Icon: FlaskConical,
+            iconColor: "text-purple-500",
+          },
+        ]
       : []),
     ...(isAnyDoctor && unreadNotificationCount > 0
-      ? [{ id: "notif-unread", title: "Notificări noi", description: `${unreadNotificationCount} notificare${unreadNotificationCount !== 1 ? "s" : ""} necitită`, page: "profile", Icon: Bell, iconColor: "text-blue-500" }]
+      ? [
+          {
+            id: "notif-unread",
+            title: "Notificări noi",
+            description: `${unreadNotificationCount} notificare${unreadNotificationCount !== 1 ? "s" : ""} necitită`,
+            page: "profile",
+            Icon: Bell,
+            iconColor: "text-blue-500",
+          },
+        ]
       : []),
   ];
   const totalNotificationCount =
@@ -133,49 +161,41 @@ export default function App() {
     (isAnyDoctor ? unreadNotificationCount : 0);
 
   // Role badge display helper
-  const roleBadgeLabel = user?.role === "admin"
-    ? "Administrator"
-    : user?.role === "specialist_doctor"
-    ? "Medic specialist"
-    : user?.role === "lab_doctor"
-    ? "Medic laborator"
-    : user?.role === "patient"
-    ? "Pacient"
-    : "";
+  const roleBadgeLabel =
+    user?.role === "admin"
+      ? "Administrator"
+      : user?.role === "specialist_doctor"
+        ? "Medic specialist"
+        : user?.role === "lab_doctor"
+          ? "Medic laborator"
+          : user?.role === "patient"
+            ? "Pacient"
+            : "";
 
-  const roleBadgeColor = user?.role === "admin"
-    ? "border-amber-300 text-amber-700 dark:text-amber-400"
-    : user?.role === "specialist_doctor"
-    ? "border-blue-300 text-blue-700 dark:text-blue-400"
-    : user?.role === "lab_doctor"
-    ? "border-purple-300 text-purple-700 dark:text-purple-400"
-    : "border-emerald-300 text-emerald-700 dark:text-emerald-400";
+  const roleBadgeColor =
+    user?.role === "admin"
+      ? "border-amber-300 text-amber-700 dark:text-amber-400"
+      : user?.role === "specialist_doctor"
+        ? "border-blue-300 text-blue-700 dark:text-blue-400"
+        : user?.role === "lab_doctor"
+          ? "border-purple-300 text-purple-700 dark:text-purple-400"
+          : "border-emerald-300 text-emerald-700 dark:text-emerald-400";
 
   // Lab doctor nav with live unread badge on "lab-requests"
   const labDoctorNavigation = labDoctorNavigationBase.map((item) =>
-    item.id === "lab-requests" && labRequestUnreadCount > 0
-      ? { ...item, badge: labRequestUnreadCount }
-      : item
+    item.id === "lab-requests" && labRequestUnreadCount > 0 ? { ...item, badge: labRequestUnreadCount } : item,
   );
 
   // Specialist doctor nav with pending schedule badge on "profile"
   const specialistNavigationWithBadge = specialistNavigation.map((item) =>
-    item.id === "profile" && schedulePendingCount > 0
-      ? { ...item, badge: schedulePendingCount }
-      : item
+    item.id === "profile" && schedulePendingCount > 0 ? { ...item, badge: schedulePendingCount } : item,
   );
 
   // Select navigation based on role
-  const staffNavigation = isAdmin
-    ? adminNavigation
-    : isLabDoctor
-    ? labDoctorNavigation
-    : specialistNavigationWithBadge;
+  const staffNavigation = isAdmin ? adminNavigation : isLabDoctor ? labDoctorNavigation : specialistNavigationWithBadge;
 
-  // Reminder count badge
-  const reminderCount = isPatient && user?.patientId
-    ? getPatientReminders(user.patientId).length
-    : 0;
+  // Patient badge uses real unread notifications instead of mock reminders.
+  const reminderCount = isPatient ? unreadNotificationCount : 0;
 
   // Pre-fetch lab requests and poll unread count every 30 s when logged in as lab doctor
   useEffect(() => {
@@ -194,13 +214,19 @@ export default function App() {
     return () => clearInterval(id);
   }, [isAnyDoctor, user?.doctorId, fetchSchedulePendingCount]);
 
-  // Poll unread notification count every 30 s for all doctor roles
+  // Poll unread notification count every 30 s for doctor roles only.
   useEffect(() => {
-    if (!isAnyDoctor) return;
+    if (!isAuthenticated || !isAnyDoctor) return;
     void fetchUnreadNotificationCount();
     const id = setInterval(() => void fetchUnreadNotificationCount(), 30_000);
     return () => clearInterval(id);
-  }, [isAnyDoctor, fetchUnreadNotificationCount]);
+  }, [isAuthenticated, isAnyDoctor, fetchUnreadNotificationCount]);
+
+  // Patient portal reads reminders from notifications directly; a one-time fetch is enough.
+  useEffect(() => {
+    if (!isAuthenticated || !isPatient) return;
+    void fetchNotifications();
+  }, [isAuthenticated, isPatient, fetchNotifications]);
 
   // Attempt silent re-auth on mount via httpOnly refresh cookie
   useEffect(() => {
@@ -213,6 +239,11 @@ export default function App() {
       else setActivePage("dashboard");
     }
   }, [isAuthenticated, isPatient]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !isPatient) return;
+    void fetchPatients();
+  }, [isAuthenticated, isPatient, fetchPatients]);
 
   if (!authChecked) {
     return (
@@ -237,31 +268,21 @@ export default function App() {
   // ── NOT AUTHENTICATED ─────────────────────────────────────────────────────
   if (!isAuthenticated) {
     if (loginMode === "patient") {
-      return (
-        <PatientLoginPage
-          onLoginSuccess={() => {}}
-          onSwitchToDoctor={() => setLoginMode("doctor")}
-        />
-      );
+      return <PatientLoginPage onLoginSuccess={() => {}} onSwitchToDoctor={() => setLoginMode("doctor")} />;
     }
     return (
-      <LoginPage
-        onLoginSuccess={() => setActivePage("dashboard")}
-        onSwitchToPatient={() => setLoginMode("patient")}
-      />
+      <LoginPage onLoginSuccess={() => setActivePage("dashboard")} onSwitchToPatient={() => setLoginMode("patient")} />
     );
   }
 
   // ── PATIENT PORTAL ────────────────────────────────────────────────────────
   if (isPatient) {
-    const patient = patients.find((p) => p.id === user?.patientId);
+    const patient = patients.find((p) => p.id === user?.patientId) ?? patients[0];
     const activeNavId = activePage.startsWith("patient-") ? activePage : "patient-overview";
 
     const patientNavWithBadge = patientNavigation.map((nav) => ({
       ...nav,
-      ...(nav.id === "patient-appointments" && reminderCount > 0
-        ? { badge: reminderCount }
-        : {}),
+      ...(nav.id === "patient-appointments" && reminderCount > 0 ? { badge: reminderCount } : {}),
     }));
 
     return (
@@ -269,7 +290,15 @@ export default function App() {
         navigation={patientNavWithBadge}
         activePageId={activeNavId}
         onNavigate={handleNavigate}
-        breadcrumbItems={[{ label: "Portal Pacient" }, { label: activePage.replace("patient-", "").replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) }]}
+        breadcrumbItems={[
+          { label: "Portal Pacient" },
+          {
+            label: activePage
+              .replace("patient-", "")
+              .replace(/-/g, " ")
+              .replace(/\b\w/g, (c) => c.toUpperCase()),
+          },
+        ]}
         showSearch={false}
         appName="MedKit"
         appLogoSrc="https://api.dicebear.com/9.x/initials/svg?seed=MK&backgroundColor=059669&fontFamily=Arial&fontSize=40&textColor=ffffff"
@@ -281,13 +310,23 @@ export default function App() {
             <Heart className="w-3.5 h-3.5 text-emerald-600" />
             <span className="text-xs text-muted-foreground font-medium hidden sm:inline">Portal Pacient</span>
             <span className="w-px h-3 bg-border hidden sm:block" />
-            <span className="text-xs text-muted-foreground hidden sm:inline">Înregistrările dvs. sunt criptate și protejate HIPAA</span>
+            <span className="text-xs text-muted-foreground hidden sm:inline">
+              Înregistrările dvs. sunt criptate și protejate HIPAA
+            </span>
           </div>
           <div className="flex items-center gap-2">
             {reminderCount > 0 && (
-              <Button variant="ghost" size="sm" className="relative h-8 w-8 p-0" onClick={() => handleNavigate("patient-overview")}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="relative h-8 w-8 p-0"
+                onClick={() => handleNavigate("patient-overview")}
+              >
                 <Bell className="w-4 h-4" />
-                <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px]" variant="destructive">
+                <Badge
+                  className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px]"
+                  variant="destructive"
+                >
                   {reminderCount}
                 </Badge>
               </Button>
@@ -307,12 +346,18 @@ export default function App() {
                 <div className="px-3 py-2 border-b border-border mb-1">
                   <p className="text-sm font-semibold">{user?.name}</p>
                   <p className="text-xs text-muted-foreground">{user?.email}</p>
-                  <Badge variant="outline" className="text-[10px] mt-0.5 border-emerald-300 text-emerald-700">Pacient</Badge>
+                  <Badge variant="outline" className="text-[10px] mt-0.5 border-emerald-300 text-emerald-700">
+                    Pacient
+                  </Badge>
                 </div>
                 {patient && (
                   <div className="px-3 py-1.5 border-b border-border mb-1">
-                    <p className="text-xs text-muted-foreground">Grupă sanguină: <span className="font-medium text-foreground">{patient.bloodType}</span></p>
-                    <p className="text-xs text-muted-foreground">CNP: <span className="font-medium text-foreground">{patient.nationalId}</span></p>
+                    <p className="text-xs text-muted-foreground">
+                      Grupă sanguină: <span className="font-medium text-foreground">{patient.bloodType}</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      CNP: <span className="font-medium text-foreground">{patient.nationalId}</span>
+                    </p>
                   </div>
                 )}
                 <DropdownMenuSeparator />
@@ -382,14 +427,14 @@ export default function App() {
     activePage.startsWith("edit-patient-")
       ? "patients"
       : activePage === "create-appointment"
-      ? "appointments"
-      : activePage === "add-doctor" || activePage.startsWith("edit-doctor-")
-      ? "doctors"
-      : activePage.startsWith("department-")
-      ? "departments"
-      : activePage.startsWith("doctor-schedule-")
-      ? "doctors"
-      : activePage;
+        ? "appointments"
+        : activePage === "add-doctor" || activePage.startsWith("edit-doctor-")
+          ? "doctors"
+          : activePage.startsWith("department-")
+            ? "departments"
+            : activePage.startsWith("doctor-schedule-")
+              ? "doctors"
+              : activePage;
 
   const renderPage = () => {
     if (activePage === "dashboard") return <DashboardPage onNavigate={handleNavigate} />;
@@ -398,20 +443,35 @@ export default function App() {
     if (activePage.startsWith("department-") && isAdmin) {
       const deptId = activePage.replace("department-", "");
       const dept = departments.find((d) => d.id === deptId);
-      return <DepartmentDoctorsPage departmentId={deptId} departmentName={dept?.name ?? "Department"} onNavigate={handleNavigate} />;
+      return (
+        <DepartmentDoctorsPage
+          departmentId={deptId}
+          departmentName={dept?.name ?? "Department"}
+          onNavigate={handleNavigate}
+        />
+      );
     }
     if (activePage === "add-doctor" && isAdmin) return <AddDoctorPage onNavigate={handleNavigate} />;
-    if (activePage.startsWith("edit-doctor-") && isAdmin) return <AddDoctorPage onNavigate={handleNavigate} editingDoctorId={activePage.replace("edit-doctor-", "")} />;
+    if (activePage.startsWith("edit-doctor-") && isAdmin)
+      return <AddDoctorPage onNavigate={handleNavigate} editingDoctorId={activePage.replace("edit-doctor-", "")} />;
     if (activePage.startsWith("doctor-schedule-") && isAdmin) {
       const doctorId = activePage.replace("doctor-schedule-", "");
       const doctor = doctors.find((d) => d.id === doctorId);
-      return <AdminDoctorSchedulePage doctorId={doctorId} doctorName={doctor?.name ?? "Doctor"} onNavigate={handleNavigate} />;
+      return (
+        <AdminDoctorSchedulePage
+          doctorId={doctorId}
+          doctorName={doctor?.name ?? "Doctor"}
+          onNavigate={handleNavigate}
+        />
+      );
     }
     if (activePage === "patients") return <PatientsPage onNavigate={handleNavigate} />;
     if (activePage === "add-patient") return <AddPatientPage onNavigate={handleNavigate} />;
-    if (activePage.startsWith("edit-patient-") && !activePage.startsWith("patient-")) return <AddPatientPage onNavigate={handleNavigate} editingPatientId={activePage.replace("edit-patient-", "")} />;
+    if (activePage.startsWith("edit-patient-") && !activePage.startsWith("patient-"))
+      return <AddPatientPage onNavigate={handleNavigate} editingPatientId={activePage.replace("edit-patient-", "")} />;
     if (activePage === "appointments" && !isLabDoctor) return <AppointmentsPage onNavigate={handleNavigate} />;
-    if (activePage === "create-appointment" && !isLabDoctor) return <CreateAppointmentPage onNavigate={handleNavigate} />;
+    if (activePage === "create-appointment" && !isLabDoctor)
+      return <CreateAppointmentPage onNavigate={handleNavigate} />;
     if (activePage.startsWith("create-appointment-patient-") && !isLabDoctor) {
       const patientId = activePage.replace("create-appointment-patient-", "");
       return <CreateAppointmentPage onNavigate={handleNavigate} preselectedPatientId={patientId} />;
@@ -443,7 +503,9 @@ export default function App() {
           <ShieldCheck className="w-3.5 h-3.5 text-primary" />
           <span className="text-xs text-muted-foreground font-medium hidden sm:inline">Conform HIPAA</span>
           <span className="w-px h-3 bg-border hidden sm:block" />
-          <span className="text-xs text-muted-foreground hidden sm:inline">Toate accesările sunt înregistrate și monitorizate</span>
+          <span className="text-xs text-muted-foreground hidden sm:inline">
+            Toate accesările sunt înregistrate și monitorizate
+          </span>
         </div>
         <div className="flex items-center gap-1">
           {/* Notification Bell */}
@@ -523,9 +585,7 @@ export default function App() {
       </div>
 
       {/* Doctor page content */}
-      <div className="flex-1 p-4 sm:p-6 min-h-0 overflow-auto">
-        {renderPage()}
-      </div>
+      <div className="flex-1 p-4 sm:p-6 min-h-0 overflow-auto">{renderPage()}</div>
     </PrimaryTemplate>
   );
 }

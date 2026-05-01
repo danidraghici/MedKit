@@ -32,8 +32,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { api } from "@/lib/api";
 import { useAppStore } from "@/lib/store";
-import type { AppointmentType, LabAIInsight } from "@/lib/types";
+import type {
+  Appointment,
+  AppointmentRequest,
+  AppointmentType,
+  LabAIInsight,
+  LabResult,
+  MedicalRecord,
+  UserNotification,
+} from "@/lib/types";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
@@ -58,6 +67,18 @@ const REMINDER_ICONS: Record<string, React.ReactNode> = {
   "lab-result-ready": <FlaskConical className="w-4 h-4" />,
   "medication-refill": <Pill className="w-4 h-4" />,
   "specialist-referral": <ClipboardList className="w-4 h-4" />,
+  appointment: <Calendar className="w-4 h-4" />,
+  general: <Bell className="w-4 h-4" />,
+};
+
+type ReminderViewModel = {
+  id: string;
+  title: string;
+  message: string;
+  dueDate: string;
+  priority: "low" | "medium" | "high";
+  type: string;
+  countdownLabel?: string;
 };
 
 const URGENCY_CONFIG = {
@@ -121,32 +142,42 @@ interface PatientDashboardPageProps {
 export default function PatientDashboardPage({ activeTab: activeTabProp, onTabChange }: PatientDashboardPageProps) {
   const user = useAppStore((s) => s.user);
   const patients = useAppStore((s) => s.patients);
-  const medicalRecords = useAppStore((s) => s.medicalRecords);
-  const labResults = useAppStore((s) => s.labResults);
-  const appointments = useAppStore((s) => s.appointments);
-  const getPatientAppointmentRequests = useAppStore((s) => s.getPatientAppointmentRequests);
+  const fetchPatients = useAppStore((s) => s.fetchPatients);
   const getLabAIInsight = useAppStore((s) => s.getLabAIInsight);
   const generateLabAIInsight = useAppStore((s) => s.generateLabAIInsight);
-  const getPatientReminders = useAppStore((s) => s.getPatientReminders);
-  const dismissReminder = useAppStore((s) => s.dismissReminder);
-  const addAppointmentRequest = useAppStore((s) => s.addAppointmentRequest);
+  const notifications = useAppStore((s) => s.notifications);
+  const fetchNotifications = useAppStore((s) => s.fetchNotifications);
+  const markNotificationRead = useAppStore((s) => s.markNotificationRead);
   const departments = useAppStore((s) => s.departments);
   const fetchDepartments = useAppStore((s) => s.fetchDepartments);
   const doctors = useAppStore((s) => s.doctors);
   const fetchDoctors = useAppStore((s) => s.fetchDoctors);
+  const [patientMedicalRecords, setPatientMedicalRecords] = useState<MedicalRecord[]>([]);
+  const [patientLabResults, setPatientLabResults] = useState<LabResult[]>([]);
+  const [patientAppointments, setPatientAppointments] = useState<Appointment[]>([]);
+  const [patientRequests, setPatientRequests] = useState<AppointmentRequest[]>([]);
 
-  const patient = patients.find((p) => p.id == user?.patientId);
+  const patient = patients.find((p) => p.id === user?.patientId) ?? patients[0];
   const patientId = patient?.id ?? "";
+  const matchesCurrentPatient = (value: string) => !patientId || value.toLowerCase() === patientId.toLowerCase();
 
-  const myRecords = medicalRecords
-    .filter((r) => r.patientId === patientId)
+  const myRecords = patientMedicalRecords
+    .filter((r) => matchesCurrentPatient(r.patientId))
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  const myLabs = labResults
-    .filter((r) => r.patientId === patientId)
+  const myLabs = patientLabResults
+    .filter((r) => matchesCurrentPatient(r.patientId))
     .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
-  const myAppointments = appointments.filter((a) => a.patientId === patientId);
-  const myRequests = getPatientAppointmentRequests(patientId);
-  const reminders = getPatientReminders(patientId);
+  const myAppointments = patientAppointments.filter((a) => matchesCurrentPatient(a.patientId));
+  const myRequests = patientRequests
+    .filter((r) => matchesCurrentPatient(r.patientId))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const upcomingItems = [
+    ...myAppointments.filter((a) => a.status === "Scheduled" && getDaysUntil(a.date) >= 0),
+    ...myRequests.filter((r) => r.status !== "Rejected" && getDaysUntil(r.requestedDate) >= 0),
+  ];
+  const reminders = notifications
+    .filter((notification) => !notification.isRead)
+    .map((notification) => mapNotificationToReminder(notification, patientAppointments));
 
   const [internalTab, setInternalTab] = useState(activeTabProp ?? "overview");
   const activeTab = activeTabProp ?? internalTab;
@@ -159,6 +190,38 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
   useEffect(() => {
     if (activeTabProp) setInternalTab(activeTabProp);
   }, [activeTabProp]);
+
+  useEffect(() => {
+    if (user?.role === "patient") void fetchPatients();
+  }, [user?.role, fetchPatients]);
+
+  useEffect(() => {
+    if (user?.role === "patient") void fetchNotifications();
+  }, [user?.role, fetchNotifications]);
+
+  useEffect(() => {
+    if (user?.role !== "patient") return;
+
+    let cancelled = false;
+
+    void Promise.allSettled([
+      api.get<MedicalRecord[]>("/api/dashboard/patient/medical-records"),
+      api.get<LabResult[]>("/api/dashboard/patient/lab-results"),
+      api.get<Appointment[]>("/api/dashboard/patient/appointments"),
+      api.get<AppointmentRequest[]>("/api/appointment-requests/my"),
+    ]).then(([recordsResult, labsResult, appointmentsResult, requestsResult]) => {
+      if (cancelled) return;
+
+      if (recordsResult.status === "fulfilled") setPatientMedicalRecords(recordsResult.value);
+      if (labsResult.status === "fulfilled") setPatientLabResults(labsResult.value);
+      if (appointmentsResult.status === "fulfilled") setPatientAppointments(appointmentsResult.value);
+      if (requestsResult.status === "fulfilled") setPatientRequests(requestsResult.value);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.role]);
 
   useEffect(() => {
     if (departments.length === 0) void fetchDepartments();
@@ -185,25 +248,30 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
     setInsightModalInsight(insight);
   };
 
-  const handleApptSubmit = () => {
+  const handleApptSubmit = async () => {
     if (!apptForm.type || !apptForm.date || !apptForm.time || !apptForm.reason.trim()) {
       setApptFormError("Please fill in all required fields.");
       return;
     }
     setApptFormError("");
-    addAppointmentRequest({
-      patientId,
-      patientName: patient?.fullName ?? "",
-      requestedDate: apptForm.date,
-      requestedTime: apptForm.time,
-      type: apptForm.type as AppointmentType,
-      reason: apptForm.reason,
-      preferredDoctor: apptForm.preferredDoctor || undefined,
-    });
-    setApptForm({ type: "", date: "", time: "", reason: "", preferredDepartment: "", preferredDoctor: "" });
-    setApptModalOpen(false);
-    setApptSuccess(true);
-    setTimeout(() => setApptSuccess(false), 5000);
+
+    try {
+      const created = await api.post<AppointmentRequest>("/api/appointment-requests", {
+        requestedDate: apptForm.date,
+        requestedTime: apptForm.time,
+        type: apptForm.type,
+        reason: apptForm.reason.trim(),
+        preferredDoctorId: apptForm.preferredDoctor || undefined,
+      });
+
+      setPatientRequests((current) => [created, ...current.filter((request) => request.id !== created.id)]);
+      setApptForm({ type: "", date: "", time: "", reason: "", preferredDepartment: "", preferredDoctor: "" });
+      setApptModalOpen(false);
+      setApptSuccess(true);
+      setTimeout(() => setApptSuccess(false), 5000);
+    } catch (error) {
+      setApptFormError(error instanceof Error ? error.message : "Failed to submit appointment request.");
+    }
   };
 
   const statusBadge = (status: string) => {
@@ -280,7 +348,7 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
           },
           {
             label: "Appointments",
-            value: myAppointments.filter((a) => a.status === "Scheduled").length,
+            value: myAppointments.length + myRequests.length,
             icon: Calendar,
             color: "text-emerald-600",
             bg: "bg-emerald-50 dark:bg-emerald-950/30",
@@ -350,7 +418,7 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm font-semibold text-foreground">{r.title}</p>
                     <button
-                      onClick={() => dismissReminder(r.id)}
+                      onClick={() => void markNotificationRead(r.id)}
                       className="text-muted-foreground hover:text-foreground shrink-0 mt-0.5"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -359,14 +427,14 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
                   <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{r.message}</p>
                   <div className="flex items-center gap-3 mt-1.5">
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Clock className="w-3 h-3" /> Due {formatDate(r.dueDate)}
+                      <Clock className="w-3 h-3" /> {r.countdownLabel ?? formatDate(r.dueDate)}
                     </span>
-                    {r.type === "follow-up-due" || r.type === "specialist-referral" ? (
+                    {r.type === "appointment" ? (
                       <button
-                        onClick={() => setApptModalOpen(true)}
+                        onClick={() => setActiveTab("appointments")}
                         className="text-xs text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1"
                       >
-                        Book now <ChevronRight className="w-3 h-3" />
+                        View appointments <ChevronRight className="w-3 h-3" />
                       </button>
                     ) : null}
                   </div>
@@ -438,40 +506,35 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
                 </div>
               </CardHeader>
               <CardContent className="pt-0 space-y-2">
-                {[
-                  ...myAppointments.filter((a) => a.status === "Scheduled"),
-                  ...myRequests.filter((r) => r.status !== "Rejected"),
-                ]
-                  .slice(0, 3)
-                  .map((apt) => {
-                    const isRequest = "requestedDate" in apt;
-                    return (
-                      <div
-                        key={apt.id}
-                        className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 mt-0.5 shrink-0">
-                          <Calendar className="w-3.5 h-3.5" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-sm font-medium truncate">
-                              {isRequest
-                                ? (apt as (typeof myRequests)[0]).type
-                                : (apt as (typeof myAppointments)[0]).type}
-                            </p>
-                            {statusBadge(apt.status)}
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {isRequest
-                              ? `${formatDate((apt as (typeof myRequests)[0]).requestedDate)} · ${(apt as (typeof myRequests)[0]).requestedTime}`
-                              : `${formatDate((apt as (typeof myAppointments)[0]).date)} · ${(apt as (typeof myAppointments)[0]).time}`}
-                          </p>
-                        </div>
+                {upcomingItems.slice(0, 3).map((apt) => {
+                  const isRequest = "requestedDate" in apt;
+                  return (
+                    <div
+                      key={apt.id}
+                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 mt-0.5 shrink-0">
+                        <Calendar className="w-3.5 h-3.5" />
                       </div>
-                    );
-                  })}
-                {myAppointments.length === 0 && myRequests.length === 0 && (
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-medium truncate">
+                            {isRequest
+                              ? (apt as (typeof myRequests)[0]).type
+                              : (apt as (typeof myAppointments)[0]).type}
+                          </p>
+                          {statusBadge(apt.status)}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {isRequest
+                            ? `${formatDate((apt as (typeof myRequests)[0]).requestedDate)} · ${(apt as (typeof myRequests)[0]).requestedTime}`
+                            : `${formatDate((apt as (typeof myAppointments)[0]).date)} · ${(apt as (typeof myAppointments)[0]).time}`}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+                {upcomingItems.length === 0 && (
                   <div className="text-center py-4 space-y-2">
                     <p className="text-sm text-muted-foreground">No upcoming appointments</p>
                     <Button size="sm" variant="outline" onClick={() => setApptModalOpen(true)}>
@@ -970,7 +1033,7 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
                     ? doctors.filter((d) => d.departmentId === apptForm.preferredDepartment)
                     : doctors
                   ).map((d) => (
-                    <SelectItem key={d.id} value={d.name}>
+                    <SelectItem key={d.id} value={d.id}>
                       {d.name} — {d.specialty}
                     </SelectItem>
                   ))}
@@ -1011,4 +1074,81 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
       </Dialog>
     </div>
   );
+}
+
+function mapNotificationToReminder(notification: UserNotification, appointments: Appointment[]): ReminderViewModel {
+  let type = "general";
+  if (notification.relatedEntityType === "lab_request") type = "lab-result-ready";
+  else if (notification.relatedEntityType === "appointment") type = "appointment";
+
+  let priority: ReminderViewModel["priority"] = "low";
+  if (type === "lab-result-ready") priority = "high";
+  else if (type === "appointment") priority = "medium";
+
+  let dueDate = notification.createdAt;
+  let title = notification.title;
+  let countdownLabel: string | undefined;
+
+  if (type === "appointment") {
+    const appointment = resolveAppointmentForReminder(notification, appointments);
+    if (appointment?.date) {
+      dueDate = appointment.date;
+      const daysUntil = getDaysUntil(appointment.date);
+      if (daysUntil > 1) {
+        title = `New appointment in ${daysUntil} days`;
+        countdownLabel = `In ${daysUntil} days`;
+      } else if (daysUntil === 1) {
+        title = "New appointment in 1 day";
+        countdownLabel = "Tomorrow";
+      } else if (daysUntil === 0) {
+        title = "New appointment today";
+        countdownLabel = "Today";
+      } else {
+        title = "New appointment";
+        countdownLabel = `${Math.abs(daysUntil)} day${Math.abs(daysUntil) === 1 ? "" : "s"} ago`;
+      }
+    }
+  }
+
+  return {
+    id: notification.id,
+    title,
+    message: notification.body ?? "",
+    dueDate,
+    priority,
+    type,
+    countdownLabel,
+  };
+}
+
+function resolveAppointmentForReminder(
+  notification: UserNotification,
+  appointments: Appointment[],
+): Appointment | undefined {
+  if (appointments.length === 0) return undefined;
+
+  const relatedId = normalizeId(notification.relatedEntityId);
+  if (relatedId) {
+    const exactMatch = appointments.find((item) => normalizeId(item.id) === relatedId);
+    if (exactMatch) return exactMatch;
+  }
+
+  const upcoming = appointments
+    .filter((item) => item.status === "Scheduled" && getDaysUntil(item.date) >= 0)
+    .sort((a, b) => getDaysUntil(a.date) - getDaysUntil(b.date));
+
+  return upcoming[0] ?? appointments[0];
+}
+
+function normalizeId(value: string | null): string {
+  return (value ?? "").trim().toLowerCase();
+}
+
+function getDaysUntil(dateIso: string): number {
+  const today = new Date();
+  const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const target = new Date(dateIso);
+  const targetMidnight = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+  const diff = targetMidnight.getTime() - todayMidnight.getTime();
+  return Math.round(diff / (1000 * 60 * 60 * 24));
 }

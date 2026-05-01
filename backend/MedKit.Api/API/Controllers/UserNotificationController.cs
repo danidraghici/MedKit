@@ -9,7 +9,7 @@ namespace MedKit.Api.API.Controllers;
 
 [ApiController]
 [Route("api/notifications")]
-[Authorize(Roles = "admin,specialist_doctor,lab_doctor")]
+[Authorize(Roles = "admin,specialist_doctor,lab_doctor,patient")]
 public class UserNotificationController(AppDbContext db) : ControllerBase
 {
     private Guid? CurrentUserId =>

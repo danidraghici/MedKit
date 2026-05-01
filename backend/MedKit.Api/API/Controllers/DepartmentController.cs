@@ -8,7 +8,7 @@ namespace MedKit.Api.API.Controllers;
 
 [ApiController]
 [Route("api/departments")]
-[Authorize(Roles = "admin")]
+[Authorize]
 public class DepartmentController(DepartmentService departmentService) : ControllerBase
 {
     [HttpGet]
@@ -19,6 +19,7 @@ public class DepartmentController(DepartmentService departmentService) : Control
     }
 
     [HttpPost]
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> Create([FromBody] CreateDepartmentRequest request)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -31,13 +32,14 @@ public class DepartmentController(DepartmentService departmentService) : Control
 
         return error switch
         {
-            "name_taken"          => Conflict(new { error = "name_taken" }),
+            "name_taken" => Conflict(new { error = "name_taken" }),
             null when dto is not null => Ok(dto),
             _ => StatusCode(500, new { error = "Unexpected error." })
         };
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateDepartmentRequest request)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -50,8 +52,8 @@ public class DepartmentController(DepartmentService departmentService) : Control
 
         return error switch
         {
-            "not_found"           => NotFound(new { error = "Departamentul nu a fost găsit." }),
-            "name_taken"          => Conflict(new { error = "name_taken" }),
+            "not_found" => NotFound(new { error = "Departamentul nu a fost găsit." }),
+            "name_taken" => Conflict(new { error = "name_taken" }),
             null when dto is not null => Ok(dto),
             _ => StatusCode(500, new { error = "Eroare neașteptată." })
         };

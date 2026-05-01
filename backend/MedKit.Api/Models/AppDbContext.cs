@@ -10,6 +10,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
     public DbSet<PatientEntity> Patients => Set<PatientEntity>();
     public DbSet<MedicalRecordEntity> MedicalRecords => Set<MedicalRecordEntity>();
+    public DbSet<AppointmentRequestEntity> AppointmentRequests => Set<AppointmentRequestEntity>();
     public DbSet<AppointmentEntity> Appointments => Set<AppointmentEntity>();
     public DbSet<DoctorEntity> Doctors => Set<DoctorEntity>();
     public DbSet<DepartmentEntity> Departments => Set<DepartmentEntity>();
@@ -84,6 +85,22 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
              .WithOne()
              .HasForeignKey(d => d.MedicalRecordId)
              .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AppointmentRequestEntity>(e =>
+        {
+            // appointment_requests has audit trigger — OUTPUT clause is forbidden on triggered tables
+            e.ToTable(t => t.UseSqlOutputClause(false));
+
+            e.HasOne<DoctorEntity>()
+                .WithMany()
+                .HasForeignKey(r => r.PreferredDoctorId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            e.HasOne<UserEntity>()
+                .WithMany()
+                .HasForeignKey(r => r.RespondedById)
+                .OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<VitalSignEntity>(e =>
