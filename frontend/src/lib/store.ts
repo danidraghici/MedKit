@@ -54,7 +54,7 @@ interface AppState {
   // Medical Records
   medicalRecords: MedicalRecord[];
   fetchMedicalRecords: (patientId: string) => Promise<void>;
-  addMedicalRecord: (record: Omit<MedicalRecord, "id" | "createdAt">) => Promise<MedicalRecord>;
+  addMedicalRecord: (record: Omit<MedicalRecord, "id" | "createdAt" | "doctorId"> & { doctorId?: string }) => Promise<MedicalRecord>;
   updateMedicalRecord: (id: string, data: Omit<MedicalRecord, "id" | "patientId" | "doctorId" | "doctor" | "date" | "createdAt" | "attachments">) => Promise<MedicalRecord>;
   getMedicalRecords: (patientId: string) => MedicalRecord[];
 

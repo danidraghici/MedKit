@@ -3,9 +3,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  FlaskConical, Clock, User, FileText, Upload, X, CheckCircle2, Loader2, Dot,
-} from "lucide-react";
+import { FlaskConical, Clock, User, FileText, Upload, X, CheckCircle2, Loader2, Dot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -13,7 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
 import { useAppStore } from "@/lib/store";
 import { formatDate, formatDateTime, formatFileSize } from "@/lib/utils";
-import type { LabRequest } from "@/lib/types";
+import type { LabRequest, LabRequestStatus } from "@/lib/types";
 
 // ─── Result submission form ───────────────────────────────────────────────────
 
@@ -31,11 +29,24 @@ type ResultFormData = z.infer<typeof resultSchema>;
 
 // ─── Status badge helper ──────────────────────────────────────────────────────
 
+const statusLabelMap: Record<LabRequestStatus, string> = {
+  Pending: "În așteptare",
+  "In Progress": "În procesare",
+  Completed: "Finalizat",
+};
+
+function decodeStatus(status: string): LabRequestStatus {
+  if (status === "Pending" || status === "În așteptare") return "Pending";
+  if (status === "In Progress" || status === "În procesare") return "In Progress";
+  return "Completed";
+}
+
 function statusBadge(status: string) {
   const base = "text-xs px-2.5 py-1 rounded-full font-semibold border";
-  if (status === "În așteptare")
+  const normalized = decodeStatus(status);
+  if (normalized === "Pending")
     return `${base} text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950/30 dark:border-amber-800`;
-  if (status === "În procesare")
+  if (normalized === "In Progress")
     return `${base} text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800`;
   return `${base} text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950/30 dark:border-emerald-800`;
 }
@@ -79,7 +90,7 @@ export default function LabRequestsPage() {
     return () => clearInterval(id);
   }, [fetchUnreadLabRequestCount]);
 
-  const filtered = labRequests.filter((r) => filter === "Toate" || r.status === filter);
+  const filtered = labRequests.filter((r) => filter === "Toate" || r.status === decodeStatus(filter));
 
   const openRequest = async (req: LabRequest) => {
     setSelectedRequest(req);
@@ -102,8 +113,8 @@ export default function LabRequestsPage() {
     if (!selectedRequest) return;
     setIsProcessing(true);
     try {
-      await updateLabRequestStatus(selectedRequest.id, "În procesare");
-      setSelectedRequest((prev) => prev ? { ...prev, status: "În procesare" } : prev);
+      await updateLabRequestStatus(selectedRequest.id, "In Progress");
+      setSelectedRequest((prev) => (prev ? { ...prev, status: "In Progress" } : prev));
       toast.success("Status actualizat la În procesare");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Actualizarea statusului a eșuat.");
@@ -115,11 +126,7 @@ export default function LabRequestsPage() {
   const onSubmitResult = async (data: ResultFormData) => {
     if (!selectedRequest) return;
     try {
-      await submitLabResult(
-        selectedRequest.id,
-        data.observations?.trim() || undefined,
-        selectedFile ?? undefined,
-      );
+      await submitLabResult(selectedRequest.id, data.observations?.trim() || undefined, selectedFile ?? undefined);
       toast.success("Rezultatele au fost trimise. Cererea a fost marcată ca Finalizat.");
       closeSheet();
     } catch (err: unknown) {
@@ -142,24 +149,24 @@ export default function LabRequestsPage() {
 
       {/* Filter tabs */}
       <div className="flex gap-1 border-b border-border">
-        {(["Toate", "În așteptare", "În procesare", "Finalizat"] as FilterTab[]).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setFilter(tab)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              filter === tab
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {tab}
-            {tab !== "Toate" && (
-              <span className="ml-1.5 text-xs text-muted-foreground">
-                ({labRequests.filter((r) => r.status === tab).length})
-              </span>
-            )}
-          </button>
-        ))}
+        {(["Toate", "În așteptare", "În procesare", "Finalizat"] as FilterTab[]).map((tab) => {
+          const count =
+            tab === "Toate" ? labRequests.length : labRequests.filter((r) => r.status === decodeStatus(tab)).length;
+          return (
+            <button
+              key={tab}
+              onClick={() => setFilter(tab)}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                filter === tab
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {tab}
+              {tab !== "Toate" && <span className="ml-1.5 text-xs text-muted-foreground">({count})</span>}
+            </button>
+          );
+        })}
       </div>
 
       {/* List */}
@@ -191,9 +198,7 @@ export default function LabRequestsPage() {
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0 space-y-1.5">
                   <div className="flex items-center gap-2">
-                    {!req.viewedByLabAt && (
-                      <Dot className="w-5 h-5 text-primary shrink-0 -ml-1.5" />
-                    )}
+                    {!req.viewedByLabAt && <Dot className="w-5 h-5 text-primary shrink-0 -ml-1.5" />}
                     <span className="font-semibold text-sm truncate">{req.patientName}</span>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -204,11 +209,17 @@ export default function LabRequestsPage() {
                     ))}
                   </div>
                   <p className="text-xs text-muted-foreground flex items-center gap-3">
-                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatDate(req.createdAt)}</span>
-                    <span className="flex items-center gap-1"><User className="w-3 h-3" />{req.requestedByDoctorName}</span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {formatDate(req.createdAt)}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <User className="w-3 h-3" />
+                      {req.requestedByDoctorName}
+                    </span>
                   </p>
                 </div>
-                <span className={statusBadge(req.status)}>{req.status}</span>
+                <span className={statusBadge(req.status)}>{statusLabelMap[req.status]}</span>
               </div>
             </button>
           ))}
@@ -216,13 +227,19 @@ export default function LabRequestsPage() {
       )}
 
       {/* Detail Sheet */}
-      <Sheet open={isSheetOpen} onOpenChange={(open) => { if (!open) closeSheet(); }}>
+      <Sheet
+        open={isSheetOpen}
+        onOpenChange={(open) => {
+          if (!open) closeSheet();
+        }}
+      >
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           {liveRequest && (
             <>
               <SheetHeader className="mb-6">
                 <SheetTitle className="flex items-center gap-2">
-                  <FlaskConical className="w-5 h-5" />Cerere analize
+                  <FlaskConical className="w-5 h-5" />
+                  Cerere analize
                 </SheetTitle>
               </SheetHeader>
 
@@ -243,7 +260,7 @@ export default function LabRequestsPage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Status</span>
-                    <span className={statusBadge(liveRequest.status)}>{liveRequest.status}</span>
+                    <span className={statusBadge(liveRequest.status)}>{statusLabelMap[liveRequest.status]}</span>
                   </div>
                 </div>
 
@@ -252,7 +269,10 @@ export default function LabRequestsPage() {
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tip probă</p>
                   <div className="flex flex-wrap gap-1.5">
                     {liveRequest.sampleTypes.map((s) => (
-                      <span key={s} className="text-xs px-2.5 py-1 rounded-full bg-muted border border-border capitalize font-medium">
+                      <span
+                        key={s}
+                        className="text-xs px-2.5 py-1 rounded-full bg-muted border border-border capitalize font-medium"
+                      >
                         {s === "csf" ? "CSF" : s}
                       </span>
                     ))}
@@ -263,27 +283,22 @@ export default function LabRequestsPage() {
                 {liveRequest.notes && (
                   <div className="space-y-1.5">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                      <FileText className="w-3.5 h-3.5" />Note specialist
+                      <FileText className="w-3.5 h-3.5" />
+                      Note specialist
                     </p>
-                    <p className="text-sm bg-muted/50 rounded-lg border border-border px-3 py-2">
-                      {liveRequest.notes}
-                    </p>
+                    <p className="text-sm bg-muted/50 rounded-lg border border-border px-3 py-2">{liveRequest.notes}</p>
                   </div>
                 )}
 
                 {/* Actions by status */}
-                {liveRequest.status === "În așteptare" && (
-                  <Button
-                    onClick={() => void handleStartProcessing()}
-                    disabled={isProcessing}
-                    className="w-full gap-2"
-                  >
+                {liveRequest.status === "Pending" && (
+                  <Button onClick={() => void handleStartProcessing()} disabled={isProcessing} className="w-full gap-2">
                     {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <FlaskConical className="w-4 h-4" />}
                     Marchează ca În procesare
                   </Button>
                 )}
 
-                {liveRequest.status === "În procesare" && (
+                {liveRequest.status === "In Progress" && (
                   <form onSubmit={handleSubmit(onSubmitResult)} className="space-y-4">
                     <div className="space-y-1.5">
                       <Label>Observații</Label>
@@ -293,9 +308,7 @@ export default function LabRequestsPage() {
                         rows={4}
                         className="resize-none"
                       />
-                      {errors.observations && (
-                        <p className="text-xs text-destructive">{errors.observations.message}</p>
-                      )}
+                      {errors.observations && <p className="text-xs text-destructive">{errors.observations.message}</p>}
                     </div>
 
                     <div className="space-y-1.5">
@@ -343,22 +356,29 @@ export default function LabRequestsPage() {
                     </div>
 
                     <Button type="submit" disabled={isSubmitting} className="w-full gap-2">
-                      {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                      {isSubmitting ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="w-4 h-4" />
+                      )}
                       Trimite rezultat
                     </Button>
                   </form>
                 )}
 
                 {/* Completed: read-only results */}
-                {liveRequest.status === "Finalizat" && liveRequest.results.length > 0 && (
+                {liveRequest.status === "Completed" && liveRequest.results.length > 0 && (
                   <div className="space-y-3">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Rezultate trimise</p>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Rezultate trimise
+                    </p>
                     {liveRequest.results.map((res) => (
                       <div key={res.id} className="rounded-xl border border-border bg-muted/30 p-4 space-y-2">
                         {res.observations && <p className="text-sm">{res.observations}</p>}
                         {res.labResultFileName && (
                           <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                            <FileText className="w-3.5 h-3.5" />{res.labResultFileName}
+                            <FileText className="w-3.5 h-3.5" />
+                            {res.labResultFileName}
                           </p>
                         )}
                         <p className="text-xs text-muted-foreground">
