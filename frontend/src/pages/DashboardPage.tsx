@@ -115,6 +115,39 @@ const roleConfig: Record<DoctorRole, { label: string; icon: React.ReactNode; col
   },
 };
 
+type DashboardAppointmentStatus = "Planificată" | "Finalizată" | "Anulată";
+
+const normalizeAppointmentStatus = (status: string | undefined | null): DashboardAppointmentStatus => {
+  switch (status) {
+    case "Scheduled":
+    case "Programat":
+    case "Programată":
+    case "Planificată":
+      return "Planificată";
+    case "Completed":
+    case "Finalizat":
+    case "Finalizată":
+      return "Finalizată";
+    case "Cancelled":
+    case "Anulat":
+    case "Anulată":
+      return "Anulată";
+    default:
+      return "Planificată";
+  }
+};
+
+const toApiAppointmentStatus = (status: DashboardAppointmentStatus): "Scheduled" | "Completed" | "Cancelled" => {
+  switch (status) {
+    case "Planificată":
+      return "Scheduled";
+    case "Finalizată":
+      return "Completed";
+    case "Anulată":
+      return "Cancelled";
+  }
+};
+
 const statusConfig: Record<Appointment["status"], { label: string; icon: React.ReactNode; className: string }> = {
   Planificată: {
     label: "Programat",
@@ -186,17 +219,24 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
       void fetchAllLabResults();
     }
     if (user?.role != null) {
+      const appointmentsPath =
+        user.role === "patient" && user.patientId ? `/api/appointments/patient/${user.patientId}` : "/api/appointments";
+
       setApptLoading(true);
       void api
-        .get<Appointment[]>("/api/appointments")
+        .get<Appointment[]>(appointmentsPath)
         .then((data) => {
-          setDashboardAppts(data);
-          setAppointments(data);
+          const normalizedData = data.map((a) => ({
+            ...a,
+            status: normalizeAppointmentStatus(a.status),
+          }));
+          setDashboardAppts(normalizedData);
+          setAppointments(normalizedData);
         })
         .catch(console.error)
         .finally(() => setApptLoading(false));
     }
-  }, [user?.role, fetchPatients, fetchAllLabResults, setAppointments]);
+  }, [user?.role, user?.patientId, fetchPatients, fetchAllLabResults, setAppointments]);
 
   const isAdmin = user?.role === "admin";
   const isLabDoctor = user?.role === "lab_doctor";
@@ -399,12 +439,10 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
   const [apptFilterStatus, setApptFilterStatus] = useState("all");
   const [apptFilterPeriod, setApptFilterPeriod] = useState("today");
 
-  const handleApptStatusChange = async (id: string, status: string) => {
+  const handleApptStatusChange = async (id: string, status: DashboardAppointmentStatus) => {
     try {
-      await api.patch(`/api/appointments/${id}/status`, { status });
-      setDashboardAppts((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, status: status as Appointment["status"] } : a)),
-      );
+      await api.patch(`/api/appointments/${id}/status`, { status: toApiAppointmentStatus(status) });
+      setDashboardAppts((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a)));
     } catch (err) {
       console.error("Failed to update appointment status:", err);
     }
@@ -441,7 +479,9 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
           a.doctor.toLowerCase().includes(q),
       );
     }
-    if (apptFilterStatus !== "all") list = list.filter((a) => a.status === apptFilterStatus);
+    if (apptFilterStatus !== "all") {
+      list = list.filter((a) => normalizeAppointmentStatus(a.status) === apptFilterStatus);
+    }
     if (apptFilterPeriod === "today") {
       list = list.filter((a) => {
         const d = new Date(a.date);
@@ -1343,9 +1383,9 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Toate stările</SelectItem>
-                  <SelectItem value="Scheduled">Programat</SelectItem>
-                  <SelectItem value="Completed">Finalizat</SelectItem>
-                  <SelectItem value="Cancelled">Anulat</SelectItem>
+                  <SelectItem value="Planificată">Programat</SelectItem>
+                  <SelectItem value="Finalizată">Finalizat</SelectItem>
+                  <SelectItem value="Anulată">Anulat</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={apptFilterPeriod} onValueChange={setApptFilterPeriod}>
@@ -1418,7 +1458,8 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
 
                       <div className="space-y-2.5">
                         {apts.map((apt) => {
-                          const sc = statusConfig[apt.status];
+                          const normalizedStatus = normalizeAppointmentStatus(apt.status);
+                          const sc = statusConfig[normalizedStatus];
                           return (
                             <Card key={apt.id} className="hover:shadow-sm transition-shadow group">
                               <CardContent className="p-4">
@@ -1470,10 +1511,10 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                                         <User className="w-4 h-4 mr-2" />
                                         Vezi dosar pacient
                                       </DropdownMenuItem>
-                                      {apt.status !== "Finalizată" && (
+                                      {normalizedStatus !== "Finalizată" && (
                                         <>
                                           <DropdownMenuSeparator />
-                                          {apt.status === "Planificată" && (
+                                          {normalizedStatus === "Planificată" && (
                                             <DropdownMenuItem
                                               onClick={() => handleApptStatusChange(apt.id, "Finalizată")}
                                             >
@@ -1481,7 +1522,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                                               Marchează ca finalizat
                                             </DropdownMenuItem>
                                           )}
-                                          {apt.status === "Planificată" && (
+                                          {normalizedStatus === "Planificată" && (
                                             <DropdownMenuItem
                                               className="text-destructive"
                                               onClick={() => handleApptStatusChange(apt.id, "Anulată")}
@@ -1490,7 +1531,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                                               Anulează programarea
                                             </DropdownMenuItem>
                                           )}
-                                          {apt.status === "Anulată" && (
+                                          {normalizedStatus === "Anulată" && (
                                             <DropdownMenuItem
                                               onClick={() => handleApptStatusChange(apt.id, "Planificată")}
                                             >

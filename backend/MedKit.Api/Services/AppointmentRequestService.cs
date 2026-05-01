@@ -2,12 +2,16 @@ using MedKit.Api.API.DTOs;
 using MedKit.Api.API.Helpers;
 using MedKit.Api.Models;
 using MedKit.Api.Models.Entities;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 namespace MedKit.Api.Services;
 
 public class AppointmentRequestService(AppDbContext db)
 {
+    private const string AppointmentRequestTypeConstraint = "CK_appointment_requests_type";
+
     private static string NormalizeStatusForClient(string dbStatus) => dbStatus switch
     {
         "În așteptare" or "Pending" => "Pending",
@@ -15,6 +19,27 @@ public class AppointmentRequestService(AppDbContext db)
         "Respins" or "Rejected" => "Rejected",
         _ => dbStatus,
     };
+
+    private static string[] GetTypeCandidates(string requestType)
+    {
+        var trimmedType = requestType.Trim();
+
+        return trimmedType switch
+        {
+            "Consultație generală" or "General Consultation" => ["Consultație generală", "General Consultation"],
+            "Urmărire" or "Follow-up" => ["Urmărire", "Follow-up"],
+            "Revizuire analize" or "Lab Review" => ["Revizuire analize", "Lab Review"],
+            "Urgență" or "Emergency" => ["Urgență", "Emergency"],
+            "Telemedicină" or "Telemedicine" => ["Telemedicină", "Telemedicine"],
+            "Trimitere specialist" or "Specialist Referral" => ["Trimitere specialist", "Specialist Referral"],
+            "Control anual" or "Annual Check-up" => ["Control anual", "Annual Check-up"],
+            _ => [trimmedType],
+        };
+    }
+
+    private static bool IsAppointmentRequestTypeConstraint(DbUpdateException exception)
+        => exception.InnerException is SqlException sqlException
+           && sqlException.Message.Contains(AppointmentRequestTypeConstraint, StringComparison.OrdinalIgnoreCase);
 
     public async Task<List<AppointmentRequestDto>> GetByPatientAsync(Guid patientId)
     {
@@ -68,9 +93,9 @@ public class AppointmentRequestService(AppDbContext db)
         {
             Id = Guid.NewGuid(),
             PatientId = patientId,
-            RequestedDate = DateOnly.Parse(request.RequestedDate),
+            RequestedDate = DateOnly.ParseExact(request.RequestedDate, "yyyy-MM-dd", CultureInfo.InvariantCulture),
             RequestedTime = request.RequestedTime,
-            Type = request.Type,
+            Type = request.Type.Trim(),
             Reason = request.Reason.Trim(),
             PreferredDoctorId = preferredDoctorId,
             Status = "În așteptare",
@@ -78,11 +103,35 @@ public class AppointmentRequestService(AppDbContext db)
             UpdatedAt = now,
         };
 
-        await SessionContextHelper.SetAndExecuteAsync(db, userId, async () =>
+        db.AppointmentRequests.Add(entity);
+
+        var typeCandidates = GetTypeCandidates(request.Type);
+        DbUpdateException? lastTypeConstraintException = null;
+
+        foreach (var typeCandidate in typeCandidates)
         {
-            db.AppointmentRequests.Add(entity);
-            await db.SaveChangesAsync();
-        });
+            entity.Type = typeCandidate;
+
+            try
+            {
+                await SessionContextHelper.SetAndExecuteAsync(db, userId, async () =>
+                {
+                    await db.SaveChangesAsync();
+                });
+
+                lastTypeConstraintException = null;
+                break;
+            }
+            catch (DbUpdateException exception) when (IsAppointmentRequestTypeConstraint(exception))
+            {
+                lastTypeConstraintException = exception;
+            }
+        }
+
+        if (lastTypeConstraintException is not null)
+        {
+            throw lastTypeConstraintException;
+        }
 
         return (new AppointmentRequestDto
         {

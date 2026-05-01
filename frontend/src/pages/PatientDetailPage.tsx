@@ -94,6 +94,39 @@ const URGENCY_LEVELS: UrgencyLevel[] = ["Rutină","Semi-urgent","Urgent","Foarte
 const FOLLOW_UP_TYPES: FollowUpType[] = ["Vizită în cabinet","Apel telefonic","Analize laborator","Imagini","Referire la specialist","Cabinet de urgență dacă simptomele se agravează","Niciuna"];
 const VISIT_TYPES = ["În persoană","Telemedicină","Urgență","Control","Procedură"] as const;
 
+type PatientAppointmentStatus = "Planificată" | "Finalizată" | "Anulată";
+
+const normalizeAppointmentStatus = (status: string): PatientAppointmentStatus => {
+  switch (status) {
+    case "Scheduled":
+    case "Programat":
+    case "Programată":
+    case "Planificată":
+      return "Planificată";
+    case "Completed":
+    case "Finalizat":
+    case "Finalizată":
+      return "Finalizată";
+    case "Cancelled":
+    case "Anulat":
+    case "Anulată":
+      return "Anulată";
+    default:
+      return "Planificată";
+  }
+};
+
+const toApiAppointmentStatus = (status: PatientAppointmentStatus): "Scheduled" | "Completed" | "Cancelled" => {
+  switch (status) {
+    case "Planificată":
+      return "Scheduled";
+    case "Finalizată":
+      return "Completed";
+    case "Anulată":
+      return "Cancelled";
+  }
+};
+
 const urgencyConfig: Record<UrgencyLevel, { color: string; badge: "default" | "secondary" | "outline" }> = {
   Rutină:     { color: "text-emerald-600 bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800", badge: "secondary" },
   "Semi-urgent": { color: "text-yellow-600 bg-yellow-50 border-yellow-200 dark:bg-yellow-950/30 dark:border-yellow-800", badge: "secondary" },
@@ -428,7 +461,12 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
     setPatientApptLoading(true);
     void api.get<Appointment[]>(`/api/appointments/patient/${patientId}`)
       .then((apts) => {
-        setPatientAppts(apts);
+        setPatientAppts(
+          apts.map((apt) => ({
+            ...apt,
+            status: normalizeAppointmentStatus(apt.status) as Appointment["status"],
+          }))
+        );
       })
       .catch(console.error)
       .finally(() => setPatientApptLoading(false));
@@ -491,9 +529,9 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
     }
   };
 
-  const handleApptStatusChange = async (id: string, status: string) => {
+  const handleApptStatusChange = async (id: string, status: PatientAppointmentStatus) => {
     try {
-      await api.patch(`/api/appointments/${id}/status`, { status });
+      await api.patch(`/api/appointments/${id}/status`, { status: toApiAppointmentStatus(status) });
       setPatientAppts((prev) =>
         prev.map((a) => a.id === id ? { ...a, status: status as Appointment["status"] } : a)
       );
@@ -1512,6 +1550,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                 const now = new Date();
                 const aptDate = new Date(apt.date);
                 const isPast = aptDate < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const normalizedStatus = normalizeAppointmentStatus(apt.status);
 
                 const statusStyles: Record<string, string> = {
                   Planificată: "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800",
@@ -1549,10 +1588,10 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="font-semibold text-sm">{apt.type}</p>
                           <span
-                            className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border font-medium ${statusStyles[apt.status]}`}
+                            className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border font-medium ${statusStyles[normalizedStatus]}`}
                           >
-                            {statusIcons[apt.status]}
-                            {apt.status}
+                            {statusIcons[normalizedStatus]}
+                            {normalizedStatus}
                           </span>
                         </div>
                         <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
@@ -1566,7 +1605,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                       </div>
 
                       {/* Actions */}
-                      {apt.status !== "Finalizată" && (
+                      {normalizedStatus !== "Finalizată" && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
@@ -1578,7 +1617,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            {apt.status === "Planificată" && (
+                            {normalizedStatus === "Planificată" && (
                               <DropdownMenuItem
                                 onClick={() => handleApptStatusChange(apt.id, "Finalizată")}
                               >
@@ -1586,7 +1625,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                                 Marchează ca finalizată
                               </DropdownMenuItem>
                             )}
-                            {apt.status === "Planificată" && (
+                            {normalizedStatus === "Planificată" && (
                               <DropdownMenuItem
                                 className="text-destructive"
                                 onClick={() => handleApptStatusChange(apt.id, "Anulată")}
@@ -1595,7 +1634,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                                 Anulează programare
                               </DropdownMenuItem>
                             )}
-                            {apt.status === "Anulată" && (
+                            {normalizedStatus === "Anulată" && (
                               <DropdownMenuItem
                                 onClick={() => handleApptStatusChange(apt.id, "Planificată")}
                               >

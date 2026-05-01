@@ -18,9 +18,6 @@ import {
   ShieldCheck,
   X,
   ClipboardList,
-  Phone,
-  Building2,
-  Stethoscope,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,16 +25,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import CreateAppointmentDialog from "@/components/CreateAppointmentDialog";
 import { api } from "@/lib/api";
 import { useAppStore } from "@/lib/store";
 import type {
   Appointment,
   AppointmentRequest,
-  AppointmentType,
   LabAIInsight,
   LabResult,
   MedicalRecord,
@@ -45,10 +38,10 @@ import type {
 } from "@/lib/types";
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  return new Date(iso).toLocaleDateString("ro-RO", { year: "numeric", month: "short", day: "numeric" });
 }
 function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", {
+  return new Date(iso).toLocaleDateString("ro-RO", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -59,6 +52,10 @@ function formatDateTime(iso: string) {
 function calcAge(dob: string) {
   const diff = Date.now() - new Date(dob).getTime();
   return Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25));
+}
+
+function isScheduledAppointmentStatus(status: string) {
+  return status === "Scheduled" || status === "Programat" || status === "Programată" || status === "Planificată";
 }
 
 const REMINDER_ICONS: Record<string, React.ReactNode> = {
@@ -91,13 +88,13 @@ const URGENCY_CONFIG = {
   Monitor: {
     color: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800",
     icon: <TrendingUp className="w-4 h-4" />,
-    label: "Monitor",
+    label: "Monitorizare",
   },
   "Consult Doctor": {
     color:
       "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800",
     icon: <AlertTriangle className="w-4 h-4" />,
-    label: "Consult Doctor",
+    label: "Consultă medicul",
   },
   Urgent: {
     color: "bg-red-100 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-800",
@@ -106,33 +103,45 @@ const URGENCY_CONFIG = {
   },
 };
 
-const APPOINTMENT_TYPES: AppointmentType[] = [
-  "Consult",
-  "Control",
-  "Analize laborator - prelevare",
-  "Urgență",
-  "Telemedicină",
-  "Procedură",
-  "Control Anual",
-];
+function translateAppointmentStatus(status: string): string {
+  switch (status) {
+    case "Approved":
+      return "Aprobată";
+    case "Completed":
+      return "Finalizată";
+    case "Pending":
+      return "În așteptare";
+    case "Scheduled":
+      return "Planificată";
+    case "Rejected":
+      return "Respinsă";
+    case "Cancelled":
+      return "Anulată";
+    default:
+      return status;
+  }
+}
 
-const TIME_SLOTS = [
-  "08:00 AM",
-  "08:30 AM",
-  "09:00 AM",
-  "09:30 AM",
-  "10:00 AM",
-  "10:30 AM",
-  "11:00 AM",
-  "11:30 AM",
-  "12:00 PM",
-  "02:00 PM",
-  "02:30 PM",
-  "03:00 PM",
-  "03:30 PM",
-  "04:00 PM",
-  "04:30 PM",
-];
+function translateAppointmentType(type: string): string {
+  switch (type) {
+    case "Consult":
+      return "Consultație";
+    case "Control":
+      return "Control";
+    case "Analize laborator - prelevare":
+      return "Analize laborator - prelevare";
+    case "Urgență":
+      return "Urgență";
+    case "Telemedicină":
+      return "Telemedicină";
+    case "Procedură":
+      return "Procedură";
+    case "Control Anual":
+      return "Control anual";
+    default:
+      return type;
+  }
+}
 
 interface PatientDashboardPageProps {
   activeTab?: string;
@@ -172,7 +181,7 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
     .filter((r) => matchesCurrentPatient(r.patientId))
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   const upcomingItems = [
-    ...myAppointments.filter((a) => a.status === "Planificată" && getDaysUntil(a.date) >= 0),
+    ...myAppointments.filter((a) => isScheduledAppointmentStatus(a.status) && getDaysUntil(a.date) >= 0),
     ...myRequests.filter((r) => r.status !== "Rejected" && getDaysUntil(r.requestedDate) >= 0),
   ];
   const reminders = notifications
@@ -231,54 +240,42 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
   const [insightModalInsight, setInsightModalInsight] = useState<LabAIInsight | null>(null);
   const [apptSuccess, setApptSuccess] = useState(false);
 
-  // Appointment request form state
-  const [apptForm, setApptForm] = useState({
-    type: "" as AppointmentType | "",
-    date: "",
-    time: "",
-    reason: "",
-    preferredDepartment: "",
-    preferredDoctor: "",
-  });
-  const [apptFormError, setApptFormError] = useState("");
-
   const handleOpenInsight = (labResultId: string) => {
     let insight = getLabAIInsight(labResultId);
     if (!insight) insight = generateLabAIInsight(labResultId, patientId);
     setInsightModalInsight(insight);
   };
 
-  const handleApptSubmit = async () => {
-    if (!apptForm.type || !apptForm.date || !apptForm.time || !apptForm.reason.trim()) {
-      setApptFormError("Please fill in all required fields.");
-      return;
-    }
-    setApptFormError("");
-
+  const handleAppointmentCreated = async () => {
     try {
-      const created = await api.post<AppointmentRequest>("/api/appointment-requests", {
-        requestedDate: apptForm.date,
-        requestedTime: apptForm.time,
-        type: apptForm.type,
-        reason: apptForm.reason.trim(),
-        preferredDoctorId: apptForm.preferredDoctor || undefined,
-      });
+      const [appointments, requests] = await Promise.all([
+        api.get<Appointment[]>("/api/dashboard/patient/appointments"),
+        api.get<AppointmentRequest[]>("/api/appointment-requests/my"),
+      ]);
 
-      setPatientRequests((current) => [created, ...current.filter((request) => request.id !== created.id)]);
-      setApptForm({ type: "", date: "", time: "", reason: "", preferredDepartment: "", preferredDoctor: "" });
-      setApptModalOpen(false);
+      setPatientAppointments(appointments);
+      setPatientRequests(requests);
       setApptSuccess(true);
       setTimeout(() => setApptSuccess(false), 5000);
-    } catch (error) {
-      setApptFormError(error instanceof Error ? error.message : "Failed to submit appointment request.");
+    } catch {
+      // Keep optimistic UX even if refresh fails; next page load will sync data.
+      setApptSuccess(true);
+      setTimeout(() => setApptSuccess(false), 5000);
     }
   };
 
   const statusBadge = (status: string) => {
-    if (status === "Approved" || status === "Completed") return <Badge variant="success">{status}</Badge>;
-    if (status === "Pending" || status === "Scheduled") return <Badge variant="warning">{status}</Badge>;
-    if (status === "Rejected" || status === "Cancelled") return <Badge variant="destructive">{status}</Badge>;
-    return <Badge>{status}</Badge>;
+    const label = translateAppointmentStatus(status);
+    if (status === "Approved" || status === "Completed" || status === "Aprobată" || status === "Finalizată") {
+      return <Badge variant="success">{label}</Badge>;
+    }
+    if (status === "Pending" || status === "Scheduled" || status === "În așteptare" || status === "Planificată") {
+      return <Badge variant="warning">{label}</Badge>;
+    }
+    if (status === "Rejected" || status === "Cancelled" || status === "Respinsă" || status === "Anulată") {
+      return <Badge variant="destructive">{label}</Badge>;
+    }
+    return <Badge>{label}</Badge>;
   };
 
   const priorityColor = {
@@ -290,7 +287,7 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
   if (!patient) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">No patient record found for your account.</p>
+        <p className="text-muted-foreground">Nu a fost găsit un profil de pacient pentru contul tău.</p>
       </div>
     );
   }
@@ -300,9 +297,9 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
       {/* Welcome header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Welcome back, {patient.fullName.split(" ")[0]} 👋</h1>
+          <h1 className="text-2xl font-bold text-foreground">Bine ai revenit, {patient.fullName.split(" ")[0]} 👋</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
-            {new Date().toLocaleDateString("en-US", {
+            {new Date().toLocaleDateString("ro-RO", {
               weekday: "long",
               year: "numeric",
               month: "long",
@@ -315,7 +312,7 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
           className="bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
         >
           <Plus className="w-4 h-4 mr-2" />
-          Request appointment
+          Programare nouă
         </Button>
       </div>
 
@@ -323,9 +320,7 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
       {apptSuccess && (
         <Alert variant="success" className="border-emerald-300">
           <CheckCircle2 className="w-4 h-4" />
-          <AlertDescription>
-            Appointment request submitted successfully! Your care team will confirm it shortly.
-          </AlertDescription>
+          <AlertDescription>Programarea a fost creată cu succes.</AlertDescription>
         </Alert>
       )}
 
@@ -333,28 +328,28 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           {
-            label: "Medical records",
+            label: "Dosare medicale",
             value: myRecords.length,
             icon: FileText,
             color: "text-blue-600",
             bg: "bg-blue-50 dark:bg-blue-950/30",
           },
           {
-            label: "Lab results",
+            label: "Rezultate de laborator",
             value: myLabs.length,
             icon: FlaskConical,
             color: "text-purple-600",
             bg: "bg-purple-50 dark:bg-purple-950/30",
           },
           {
-            label: "Appointments",
+            label: "Programări",
             value: myAppointments.length + myRequests.length,
             icon: Calendar,
             color: "text-emerald-600",
             bg: "bg-emerald-50 dark:bg-emerald-950/30",
           },
           {
-            label: "Reminders",
+            label: "Mementouri",
             value: reminders.length,
             icon: Bell,
             color: "text-amber-600",
@@ -382,11 +377,11 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
         <CardContent className="p-4">
           <div className="flex flex-wrap gap-x-8 gap-y-2 text-sm">
             {[
-              { label: "Age", value: `${calcAge(patient.dateOfBirth)} years` },
-              { label: "Blood type", value: patient.bloodType },
+              { label: "Vârstă", value: `${calcAge(patient.dateOfBirth)} ani` },
+              { label: "Grupa sanguină", value: patient.bloodType },
               { label: "Sex", value: patient.sex },
-              { label: "Allergies", value: patient.allergies || "None known" },
-              { label: "Current medications", value: patient.currentMedications || "None" },
+              { label: "Alergii", value: patient.allergies || "Fără alergii cunoscute" },
+              { label: "Medicație curentă", value: patient.currentMedications || "Niciuna" },
             ].map((item) => (
               <div key={item.label}>
                 <span className="text-muted-foreground">{item.label}: </span>
@@ -401,7 +396,7 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
       {reminders.length > 0 && (
         <div className="space-y-2">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-            <Bell className="w-3.5 h-3.5" /> Reminders & alerts
+            <Bell className="w-3.5 h-3.5" /> Mementouri și alerte
           </h2>
           <div className="space-y-2">
             {reminders.map((r) => (
@@ -434,7 +429,7 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
                         onClick={() => setActiveTab("appointments")}
                         className="text-xs text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1"
                       >
-                        View appointments <ChevronRight className="w-3 h-3" />
+                        Vezi programările <ChevronRight className="w-3 h-3" />
                       </button>
                     ) : null}
                   </div>
@@ -448,10 +443,10 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
       {/* Main tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-4">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="history">Medical history</TabsTrigger>
-          <TabsTrigger value="labs">Lab results</TabsTrigger>
-          <TabsTrigger value="appointments">Appointments</TabsTrigger>
+          <TabsTrigger value="overview">Prezentare generală</TabsTrigger>
+          <TabsTrigger value="history">Istoric medical</TabsTrigger>
+          <TabsTrigger value="labs">Rezultate laborator</TabsTrigger>
+          <TabsTrigger value="appointments">Programări</TabsTrigger>
         </TabsList>
 
         {/* ── OVERVIEW ── */}
@@ -461,9 +456,9 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-semibold">Recent medical records</CardTitle>
+                  <CardTitle className="text-sm font-semibold">Dosare medicale recente</CardTitle>
                   <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setActiveTab("history")}>
-                    View all <ChevronRight className="w-3 h-3 ml-1" />
+                    Vezi toate <ChevronRight className="w-3 h-3 ml-1" />
                   </Button>
                 </div>
               </CardHeader>
@@ -485,7 +480,7 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
                   </div>
                 ))}
                 {myRecords.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4">No records found</p>
+                  <p className="text-sm text-muted-foreground text-center py-4">Nu au fost găsite dosare</p>
                 )}
               </CardContent>
             </Card>
@@ -494,14 +489,14 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-semibold">Upcoming appointments</CardTitle>
+                  <CardTitle className="text-sm font-semibold">Programări viitoare</CardTitle>
                   <Button
                     variant="ghost"
                     size="sm"
                     className="text-xs h-7"
                     onClick={() => setActiveTab("appointments")}
                   >
-                    View all <ChevronRight className="w-3 h-3 ml-1" />
+                    Vezi toate <ChevronRight className="w-3 h-3 ml-1" />
                   </Button>
                 </div>
               </CardHeader>
@@ -520,8 +515,8 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-sm font-medium truncate">
                             {isRequest
-                              ? (apt as (typeof myRequests)[0]).type
-                              : (apt as (typeof myAppointments)[0]).type}
+                              ? translateAppointmentType((apt as (typeof myRequests)[0]).type)
+                              : translateAppointmentType((apt as (typeof myAppointments)[0]).type)}
                           </p>
                           {statusBadge(apt.status)}
                         </div>
@@ -536,9 +531,9 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
                 })}
                 {upcomingItems.length === 0 && (
                   <div className="text-center py-4 space-y-2">
-                    <p className="text-sm text-muted-foreground">No upcoming appointments</p>
+                    <p className="text-sm text-muted-foreground">Nu există programări viitoare</p>
                     <Button size="sm" variant="outline" onClick={() => setApptModalOpen(true)}>
-                      <Plus className="w-3 h-3 mr-1" /> Request one
+                      <Plus className="w-3 h-3 mr-1" /> Programează una
                     </Button>
                   </div>
                 )}
@@ -551,7 +546,7 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
             <Card className="border-purple-200 dark:border-purple-800 bg-purple-50/30 dark:bg-purple-950/10">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-purple-600" /> Latest lab report available
+                  <Sparkles className="w-4 h-4 text-purple-600" /> Cel mai recent buletin de analize disponibil
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
@@ -568,7 +563,7 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
                     className="h-7 text-xs gap-1.5 shrink-0"
                     onClick={() => handleOpenInsight(myLabs[0].id)}
                   >
-                    <Sparkles className="w-3 h-3 text-amber-500" /> AI insight
+                    <Sparkles className="w-3 h-3 text-amber-500" /> Analiză AI
                   </Button>
                 </div>
               </CardContent>
@@ -581,7 +576,9 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
           <div className="space-y-4">
             {myRecords.length === 0 ? (
               <Card>
-                <CardContent className="py-12 text-center text-muted-foreground">No medical records found.</CardContent>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  Nu au fost găsite dosare medicale.
+                </CardContent>
               </Card>
             ) : (
               myRecords.map((rec) => (
@@ -619,24 +616,24 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
                     </div>
                     {rec.chiefComplaint && (
                       <p className="text-sm text-muted-foreground mb-2">
-                        <span className="font-medium text-foreground">Chief complaint: </span>
+                        <span className="font-medium text-foreground">Motiv principal: </span>
                         {rec.chiefComplaint}
                       </p>
                     )}
                     {rec.symptoms && (
                       <p className="text-sm text-muted-foreground mb-2">
-                        <span className="font-medium text-foreground">Symptoms: </span>
+                        <span className="font-medium text-foreground">Simptome: </span>
                         {rec.symptoms}
                       </p>
                     )}
                     <p className="text-sm text-muted-foreground mb-2">
-                      <span className="font-medium text-foreground">Treatment: </span>
+                      <span className="font-medium text-foreground">Tratament: </span>
                       {rec.treatment}
                     </p>
                     {(rec.prescribedDrugs?.length ?? 0) > 0 && (
                       <div className="mt-3">
                         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                          <Pill className="w-3 h-3" /> Prescribed medications
+                          <Pill className="w-3 h-3" /> Medicație prescrisă
                         </p>
                         <div className="flex flex-wrap gap-2">
                           {(rec.prescribedDrugs ?? []).map((d) => (
@@ -657,13 +654,13 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
                       <div className="mt-3 p-2.5 rounded-lg bg-muted/50 flex items-center gap-2 text-xs text-muted-foreground">
                         <Clock className="w-3.5 h-3.5 shrink-0" />
                         <span>
-                          Follow-up: {rec.followUpIn} — {rec.followUpType}
+                          Control: {rec.followUpIn} — {rec.followUpType}
                         </span>
                       </div>
                     )}
                     {rec.patientEducation && (
                       <div className="mt-3 p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-700 dark:text-emerald-400">
-                        <span className="font-semibold block mb-0.5">Instructions from your doctor:</span>
+                        <span className="font-semibold block mb-0.5">Instrucțiuni de la medicul tău:</span>
                         {rec.patientEducation}
                       </div>
                     )}
@@ -680,13 +677,15 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
             <div className="flex items-start gap-3 p-3.5 rounded-xl bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 text-sm text-blue-700 dark:text-blue-400">
               <Sparkles className="w-4 h-4 mt-0.5 shrink-0" />
               <span>
-                Click <strong>AI insight</strong> on any result to get a plain-language explanation and personalised
-                recommendations powered by AI.
+                Apasă pe <strong>Analiză AI</strong> la orice rezultat pentru o explicație pe înțelesul tău și
+                recomandări personalizate generate de AI.
               </span>
             </div>
             {myLabs.length === 0 ? (
               <Card>
-                <CardContent className="py-12 text-center text-muted-foreground">No lab results found.</CardContent>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  Nu au fost găsite rezultate de laborator.
+                </CardContent>
               </Card>
             ) : (
               myLabs.map((lab) => {
@@ -699,10 +698,10 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
                           <h3 className="font-semibold truncate">{lab.originalFileName}</h3>
                           <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
                             <span>
-                              <span className="font-medium text-foreground">Date:</span> {formatDate(lab.uploadedAt)}
+                              <span className="font-medium text-foreground">Data:</span> {formatDate(lab.uploadedAt)}
                             </span>
                             <span>
-                              <span className="font-medium text-foreground">Uploaded by:</span> {lab.uploaderName}
+                              <span className="font-medium text-foreground">Încărcat de:</span> {lab.uploaderName}
                             </span>
                           </div>
                         </div>
@@ -713,7 +712,7 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
                           onClick={() => handleOpenInsight(lab.id)}
                         >
                           <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                          {insight ? "View AI insight" : "Get AI insight"}
+                          {insight ? "Vezi analiza AI" : "Generează analiză AI"}
                         </Button>
                       </div>
                       {/* Preview insight if available */}
@@ -728,7 +727,7 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
                             className="text-xs font-medium mt-1 underline underline-offset-2 opacity-75 hover:opacity-100"
                             onClick={() => setInsightModalInsight(insight)}
                           >
-                            Read full insight →
+                            Citește analiza completă →
                           </button>
                         </div>
                       )}
@@ -744,20 +743,20 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
         <TabsContent value="appointments" className="mt-0">
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Your appointments</h3>
+              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Programările tale</h3>
               <Button
                 onClick={() => setApptModalOpen(true)}
                 size="sm"
                 className="bg-emerald-600 hover:bg-emerald-700 text-white"
               >
-                <Plus className="w-3.5 h-3.5 mr-1.5" /> Request appointment
+                <Plus className="w-3.5 h-3.5 mr-1.5" /> Programare nouă
               </Button>
             </div>
 
             {/* Existing appointments */}
             {myAppointments.length > 0 && (
               <div>
-                <p className="text-xs font-semibold text-muted-foreground mb-2">Scheduled by your care team</p>
+                <p className="text-xs font-semibold text-muted-foreground mb-2">Programate de echipa ta medicală</p>
                 <div className="space-y-2">
                   {myAppointments.map((apt) => (
                     <Card key={apt.id}>
@@ -768,9 +767,9 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
                               <Calendar className="w-4 h-4" />
                             </div>
                             <div>
-                              <p className="font-semibold text-sm">{apt.type}</p>
+                              <p className="font-semibold text-sm">{translateAppointmentType(apt.type)}</p>
                               <p className="text-xs text-muted-foreground">
-                                {formatDate(apt.date)} at {apt.time} · {apt.doctor}
+                                {formatDate(apt.date)} la {apt.time} · {apt.doctor}
                               </p>
                             </div>
                           </div>
@@ -786,7 +785,7 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
             {/* Patient requests */}
             {myRequests.length > 0 && (
               <div>
-                <p className="text-xs font-semibold text-muted-foreground mb-2">Your appointment requests</p>
+                <p className="text-xs font-semibold text-muted-foreground mb-2">Cererile tale de programare</p>
                 <div className="space-y-2">
                   {myRequests.map((req) => (
                     <Card
@@ -815,14 +814,14 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
                             </div>
                             <div>
                               <div className="flex items-center gap-2 mb-0.5">
-                                <p className="font-semibold text-sm">{req.type}</p>
+                                <p className="font-semibold text-sm">{translateAppointmentType(req.type)}</p>
                                 {statusBadge(req.status)}
                               </div>
                               <p className="text-xs text-muted-foreground">
-                                {formatDate(req.requestedDate)} at {req.requestedTime}
+                                {formatDate(req.requestedDate)} la {req.requestedTime}
                               </p>
                               {req.preferredDoctor && (
-                                <p className="text-xs text-muted-foreground">Preferred: {req.preferredDoctor}</p>
+                                <p className="text-xs text-muted-foreground">Preferat: {req.preferredDoctor}</p>
                               )}
                               <p className="text-xs text-muted-foreground mt-1 italic">{req.reason}</p>
                               {req.responseNote && (
@@ -845,12 +844,12 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
               <Card>
                 <CardContent className="py-12 text-center space-y-3">
                   <Calendar className="w-8 h-8 text-muted-foreground mx-auto" />
-                  <p className="text-muted-foreground">No appointments yet.</p>
+                  <p className="text-muted-foreground">Nu ai încă programări.</p>
                   <Button
                     onClick={() => setApptModalOpen(true)}
                     className="bg-emerald-600 hover:bg-emerald-700 text-white"
                   >
-                    <Plus className="w-4 h-4 mr-2" /> Request your first appointment
+                    <Plus className="w-4 h-4 mr-2" /> Programează prima consultație
                   </Button>
                 </CardContent>
               </Card>
@@ -869,7 +868,7 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-amber-500" /> AI Lab Insight
+              <Sparkles className="w-5 h-5 text-amber-500" /> Interpretare AI rezultate laborator
             </DialogTitle>
           </DialogHeader>
           {insightModalInsight && (
@@ -887,7 +886,7 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
 
               {/* Findings */}
               <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Findings</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Constatări</p>
                 <ul className="space-y-1">
                   {insightModalInsight.findings.map((f, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm">
@@ -900,9 +899,7 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
 
               {/* Recommendations */}
               <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                  Recommendations
-                </p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Recomandări</p>
                 <ul className="space-y-1">
                   {insightModalInsight.recommendations.map((r, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm">
@@ -919,159 +916,21 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
                 {insightModalInsight.disclaimer}
               </div>
               <p className="text-xs text-muted-foreground text-right">
-                Generated {formatDateTime(insightModalInsight.generatedAt)}
+                Generat la {formatDateTime(insightModalInsight.generatedAt)}
               </p>
             </div>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* ── Book Appointment Modal ── */}
-      <Dialog open={apptModalOpen} onOpenChange={setApptModalOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-emerald-600" /> Request an appointment
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {apptFormError && (
-              <Alert variant="destructive" size="compact">
-                <AlertDescription>{apptFormError}</AlertDescription>
-              </Alert>
-            )}
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>
-                  Appointment type <span className="text-destructive">*</span>
-                </Label>
-                <Select
-                  value={apptForm.type}
-                  onValueChange={(v) => setApptForm((f) => ({ ...f, type: v as AppointmentType }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {APPOINTMENT_TYPES.map((t) => (
-                      <SelectItem key={t} value={t}>
-                        {t}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>
-                  Preferred date <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  type="date"
-                  value={apptForm.date}
-                  min={new Date().toISOString().split("T")[0]}
-                  onChange={(e) => setApptForm((f) => ({ ...f, date: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>
-                  Preferred time <span className="text-destructive">*</span>
-                </Label>
-                <Select value={apptForm.time} onValueChange={(v) => setApptForm((f) => ({ ...f, time: v }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select time" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TIME_SLOTS.map((t) => (
-                      <SelectItem key={t} value={t}>
-                        {t}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>
-                  <Building2 className="w-3 h-3 inline mr-1 opacity-60" />
-                  Department
-                </Label>
-                <Select
-                  value={apptForm.preferredDepartment}
-                  onValueChange={(v) => setApptForm((f) => ({ ...f, preferredDepartment: v, preferredDoctor: "" }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Any department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departments.map((d) => (
-                      <SelectItem key={d.id} value={d.id}>
-                        {d.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>
-                <Stethoscope className="w-3 h-3 inline mr-1 opacity-60" />
-                Preferred doctor
-              </Label>
-              <Select
-                value={apptForm.preferredDoctor}
-                onValueChange={(v) => setApptForm((f) => ({ ...f, preferredDoctor: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Any available" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(apptForm.preferredDepartment
-                    ? doctors.filter((d) => d.departmentId === apptForm.preferredDepartment)
-                    : doctors
-                  ).map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
-                      {d.name} — {d.specialty}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>
-                Reason for visit <span className="text-destructive">*</span>
-              </Label>
-              <Textarea
-                placeholder="Please describe the reason for your appointment in a few sentences..."
-                rows={3}
-                value={apptForm.reason}
-                onChange={(e) => setApptForm((f) => ({ ...f, reason: e.target.value }))}
-              />
-            </div>
-
-            <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 text-xs text-blue-700 dark:text-blue-400 flex items-start gap-2">
-              <Phone className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-              <span>
-                Your care team will review your request and confirm the appointment date and time. You will be notified
-                once it is confirmed.
-              </span>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-1">
-              <Button variant="outline" onClick={() => setApptModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleApptSubmit}>
-                <Calendar className="w-4 h-4 mr-2" /> Submit request
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <CreateAppointmentDialog
+        open={apptModalOpen}
+        onOpenChange={setApptModalOpen}
+        preselectedPatientId={patientId}
+        onSuccess={() => {
+          void handleAppointmentCreated();
+        }}
+      />
     </div>
   );
 }
@@ -1095,17 +954,17 @@ function mapNotificationToReminder(notification: UserNotification, appointments:
       dueDate = appointment.date;
       const daysUntil = getDaysUntil(appointment.date);
       if (daysUntil > 1) {
-        title = `New appointment in ${daysUntil} days`;
-        countdownLabel = `In ${daysUntil} days`;
+        title = `Programare nouă în ${daysUntil} zile`;
+        countdownLabel = `În ${daysUntil} zile`;
       } else if (daysUntil === 1) {
-        title = "New appointment in 1 day";
-        countdownLabel = "Tomorrow";
+        title = "Programare nouă în 1 zi";
+        countdownLabel = "Mâine";
       } else if (daysUntil === 0) {
-        title = "New appointment today";
-        countdownLabel = "Today";
+        title = "Programare nouă astăzi";
+        countdownLabel = "Astăzi";
       } else {
-        title = "New appointment";
-        countdownLabel = `${Math.abs(daysUntil)} day${Math.abs(daysUntil) === 1 ? "" : "s"} ago`;
+        title = "Programare nouă";
+        countdownLabel = `${Math.abs(daysUntil)} zi${Math.abs(daysUntil) === 1 ? "" : "le"} în urmă`;
       }
     }
   }
@@ -1134,7 +993,7 @@ function resolveAppointmentForReminder(
   }
 
   const upcoming = appointments
-    .filter((item) => item.status === "Planificată" && getDaysUntil(item.date) >= 0)
+    .filter((item) => isScheduledAppointmentStatus(item.status) && getDaysUntil(item.date) >= 0)
     .sort((a, b) => getDaysUntil(a.date) - getDaysUntil(b.date));
 
   return upcoming[0] ?? appointments[0];

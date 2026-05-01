@@ -87,7 +87,7 @@ public class AppointmentController(AppointmentService appointmentService, AppDbC
     }
 
     [HttpPost]
-    [Authorize(Roles = "admin,specialist_doctor")]
+    [Authorize(Roles = "admin,specialist_doctor,patient")]
     public async Task<IActionResult> Create([FromBody] CreateAppointmentRequest request)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -96,12 +96,26 @@ public class AppointmentController(AppointmentService appointmentService, AppDbC
         if (!Guid.TryParse(userIdClaim, out var userId))
             return Unauthorized();
 
+        var role = User.FindFirstValue(ClaimTypes.Role);
+        if (role == "patient")
+        {
+            if (!Guid.TryParse(request.PatientId, out var requestedPatientId))
+                return BadRequest(new { error = "Pacient invalid." });
+
+            var user = await ctx.Users.FindAsync(userId);
+            if (user?.PatientId is null || user.PatientId.Value != requestedPatientId)
+                return Forbid();
+        }
+
         var (dto, error) = await appointmentService.CreateAsync(request, userId);
 
         return error switch
         {
+            "invalid_patient_id" => BadRequest(new { error = "Pacient invalid." }),
+            "invalid_doctor_id"  => BadRequest(new { error = "Medic invalid." }),
             "patient_not_found"  => NotFound(new { error = "Pacientul nu a fost găsit." }),
             "doctor_not_found"   => NotFound(new { error = "Medicul nu a fost găsit." }),
+            "slot_unavailable"   => Conflict(new { error = "Acest interval nu mai este disponibil. Alegeți altă oră." }),
             null when dto is not null => CreatedAtAction(nameof(GetAll), dto),
             _ => StatusCode(500, new { error = "Eroare neașteptată." }),
         };

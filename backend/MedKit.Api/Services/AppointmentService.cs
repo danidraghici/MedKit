@@ -3,6 +3,7 @@ using MedKit.Api.API.Helpers;
 using MedKit.Api.Models;
 using MedKit.Api.Models.Entities;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 namespace MedKit.Api.Services;
 
@@ -134,14 +135,25 @@ public class AppointmentService(AppDbContext db, NotificationDeliveryService not
         var doctor = await db.Doctors.FindAsync(doctorId);
         if (doctor is null) return (null, "doctor_not_found");
 
+        var appointmentDate = DateOnly.ParseExact(request.Date, "yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var appointmentTime = request.Time.Trim();
+
+        var slotAlreadyBooked = await db.Appointments.AnyAsync(a =>
+            a.DoctorId == doctorId
+            && a.AppointmentDate == appointmentDate
+            && a.AppointmentTime == appointmentTime
+            && (a.Status == "Programat" || a.Status == "Scheduled"));
+
+        if (slotAlreadyBooked) return (null, "slot_unavailable");
+
         var now = DateTimeOffset.UtcNow;
         var appointment = new AppointmentEntity
         {
             Id = Guid.NewGuid(),
             PatientId = patientId,
             DoctorId = doctorId,
-            AppointmentDate = DateOnly.Parse(request.Date),
-            AppointmentTime = request.Time,
+            AppointmentDate = appointmentDate,
+            AppointmentTime = appointmentTime,
             Type = request.Type,
             Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes,
             Status = "Programat",

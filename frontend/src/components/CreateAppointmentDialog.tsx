@@ -16,29 +16,18 @@ import {
   Loader2,
 } from "lucide-react";
 import { api } from "@/lib/api";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAppStore } from "@/lib/store";
 import { getInitials, calculateAge } from "@/lib/utils";
-import type { BloodType, Sex, Doctor, Department } from "@/lib/types";
+import type { BloodType, Sex, Doctor, Department, Appointment } from "@/lib/types";
 
 // ── Appointment types ──────────────────────────────────────────────────────
 const APPOINTMENT_TYPES = [
@@ -54,32 +43,65 @@ const APPOINTMENT_TYPES = [
   "Reînnoire rețetă",
 ] as const;
 
+const PATIENT_APPOINTMENT_REQUEST_TYPES = [
+  "Consultație generală",
+  "Urmărire",
+  "Revizuire analize",
+  "Urgență",
+  "Telemedicină",
+  "Trimitere specialist",
+  "Control anual",
+] as const;
+
 const APPOINTMENT_TIMES = [
-  "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
-  "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
-  "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
+  "08:00",
+  "08:30",
+  "09:00",
+  "09:30",
+  "10:00",
+  "10:30",
+  "11:00",
+  "11:30",
+  "12:00",
+  "12:30",
+  "13:00",
+  "13:30",
+  "14:00",
+  "14:30",
+  "15:00",
+  "15:30",
+  "16:00",
+  "16:30",
   "17:00",
 ];
 
 // ── Available slots hook ─────────────────────────────────────────────────────
 
 function useAvailableSlots(doctorId: string | undefined, date: string | undefined) {
-  const [slots, setSlots] = useState<string[]>(APPOINTMENT_TIMES);
+  const [slots, setSlots] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (!doctorId || !date) {
-      setSlots(APPOINTMENT_TIMES);
+      setSlots([]);
       return;
     }
     let cancelled = false;
     setIsLoading(true);
     api
       .get<{ slots: string[] }>(`/api/doctors/${doctorId}/schedule/available-slots?date=${date}`)
-      .then((res) => { if (!cancelled) setSlots(res.slots); })
-      .catch(() => { if (!cancelled) setSlots(APPOINTMENT_TIMES); })
-      .finally(() => { if (!cancelled) setIsLoading(false); });
-    return () => { cancelled = true; };
+      .then((res) => {
+        if (!cancelled) setSlots(res.slots);
+      })
+      .catch(() => {
+        if (!cancelled) setSlots([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [doctorId, date]);
 
   return { slots, isLoading };
@@ -132,9 +154,8 @@ export default function CreateAppointmentDialog({
   onOpenChange,
   preselectedPatientId,
   onSuccess,
-}: CreateAppointmentDialogProps) {
+}: Readonly<CreateAppointmentDialogProps>) {
   const patients = useAppStore((s) => s.patients);
-  const addAppointment = useAppStore((s) => s.addAppointment);
   const addPatient = useAppStore((s) => s.addPatient);
   const user = useAppStore((s) => s.user);
   const doctors = useAppStore((s) => s.doctors);
@@ -142,16 +163,14 @@ export default function CreateAppointmentDialog({
   const departments = useAppStore((s) => s.departments);
   const fetchDepartments = useAppStore((s) => s.fetchDepartments);
 
-  const [tab, setTab] = useState<"existing" | "new">(
-    preselectedPatientId ? "existing" : "existing"
-  );
-  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(
-    preselectedPatientId ?? null
-  );
+  const [tab, setTab] = useState<"existing" | "new">("existing");
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(preselectedPatientId ?? null);
   const [patientSearch, setPatientSearch] = useState("");
   const [patientDropdownOpen, setPatientDropdownOpen] = useState(false);
   const [selectedDeptIdExisting, setSelectedDeptIdExisting] = useState("");
   const [selectedDeptIdNew, setSelectedDeptIdNew] = useState("");
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const appointmentTypeOptions = user?.role === "patient" ? PATIENT_APPOINTMENT_REQUEST_TYPES : APPOINTMENT_TYPES;
 
   useEffect(() => {
     if (open) {
@@ -162,7 +181,7 @@ export default function CreateAppointmentDialog({
 
   const selectedPatient = useMemo(
     () => patients.find((p) => p.id === selectedPatientId),
-    [patients, selectedPatientId]
+    [patients, selectedPatientId],
   );
 
   const filteredPatients = useMemo(() => {
@@ -172,7 +191,7 @@ export default function CreateAppointmentDialog({
         p.fullName.toLowerCase().includes(q) ||
         p.nationalId.toLowerCase().includes(q) ||
         p.phone.includes(q) ||
-        p.email.toLowerCase().includes(q)
+        p.email.toLowerCase().includes(q),
     );
   }, [patients, patientSearch]);
 
@@ -181,9 +200,9 @@ export default function CreateAppointmentDialog({
     resolver: zodResolver(existingPatientAptSchema),
     defaultValues: {
       date: new Date().toISOString().split("T")[0],
-      time: "09:00",
+      time: "",
       type: "Consultație generală",
-      doctor: user?.name ?? "",
+      doctor: "",
     },
   });
 
@@ -196,19 +215,20 @@ export default function CreateAppointmentDialog({
       allergies: "",
       currentMedications: "",
       date: new Date().toISOString().split("T")[0],
-      time: "09:00",
+      time: "",
       type: "Consultație generală",
-      doctor: user?.name ?? "",
+      doctor: "",
     },
   });
 
   const handleClose = () => {
     onOpenChange(false);
+    setSubmitError(null);
     existingForm.reset({
       date: new Date().toISOString().split("T")[0],
-      time: "09:00",
+      time: "",
       type: "Consultație generală",
-      doctor: user?.name ?? "",
+      doctor: "",
     });
     newPatientForm.reset({
       sex: "Male",
@@ -216,9 +236,9 @@ export default function CreateAppointmentDialog({
       allergies: "",
       currentMedications: "",
       date: new Date().toISOString().split("T")[0],
-      time: "09:00",
+      time: "",
       type: "Consultație generală",
-      doctor: user?.name ?? "",
+      doctor: "",
     });
     if (!preselectedPatientId) setSelectedPatientId(null);
     setPatientSearch("");
@@ -229,46 +249,67 @@ export default function CreateAppointmentDialog({
 
   const onSubmitExisting = async (data: ExistingPatientAptForm) => {
     if (!selectedPatient) return;
-    await new Promise((r) => setTimeout(r, 400));
-    addAppointment({
-      patientId: selectedPatient.id,
-      patientName: selectedPatient.fullName,
-      date: data.date,
-      time: data.time,
-      type: data.type,
-      doctor: data.doctor,
-      status: "Planificată",
-    });
-    handleClose();
-    onSuccess?.();
+    setSubmitError(null);
+
+    const selectedDoctor = doctors.find((doctor) => doctor.name === data.doctor);
+    if (!selectedDoctor) {
+      setSubmitError("Vă rugăm selectați un medic valid.");
+      return;
+    }
+
+    try {
+      await api.post<Appointment>("/api/appointments", {
+        patientId: selectedPatient.id,
+        doctorId: selectedDoctor.id,
+        date: data.date,
+        time: data.time,
+        type: data.type,
+        notes: data.notes ?? "",
+      });
+
+      handleClose();
+      onSuccess?.();
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Programarea nu a putut fi salvată.");
+    }
   };
 
   const onSubmitNewPatient = async (data: NewPatientAptForm) => {
-    await new Promise((r) => setTimeout(r, 500));
-    // First create the patient
-    const newPatient = await addPatient({
-      fullName: data.fullName,
-      dateOfBirth: data.dateOfBirth,
-      sex: data.sex as Sex,
-      nationalId: data.nationalId,
-      phone: data.phone,
-      email: data.email,
-      bloodType: data.bloodType as BloodType,
-      allergies: data.allergies,
-      currentMedications: data.currentMedications,
-    });
-    // Then create appointment for them
-    addAppointment({
-      patientId: newPatient.id,
-      patientName: newPatient.fullName,
-      date: data.date,
-      time: data.time,
-      type: data.type,
-      doctor: data.doctor,
-      status: "Planificată",
-    });
-    handleClose();
-    onSuccess?.();
+    setSubmitError(null);
+
+    const selectedDoctor = doctors.find((doctor) => doctor.name === data.doctor);
+    if (!selectedDoctor) {
+      setSubmitError("Vă rugăm selectați un medic valid.");
+      return;
+    }
+
+    try {
+      const newPatient = await addPatient({
+        fullName: data.fullName,
+        dateOfBirth: data.dateOfBirth,
+        sex: data.sex as Sex,
+        nationalId: data.nationalId,
+        phone: data.phone,
+        email: data.email,
+        bloodType: data.bloodType as BloodType,
+        allergies: data.allergies,
+        currentMedications: data.currentMedications,
+      });
+
+      await api.post<Appointment>("/api/appointments", {
+        patientId: newPatient.id,
+        doctorId: selectedDoctor.id,
+        date: data.date,
+        time: data.time,
+        type: data.type,
+        notes: data.notes ?? "",
+      });
+
+      handleClose();
+      onSuccess?.();
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Programarea nu a putut fi salvată.");
+    }
   };
 
   // If a patient is preselected, force the "existing" tab and disable switching
@@ -284,6 +325,12 @@ export default function CreateAppointmentDialog({
           </DialogTitle>
         </DialogHeader>
 
+        {submitError && (
+          <Alert variant="destructive" size="compact">
+            <AlertDescription>{submitError}</AlertDescription>
+          </Alert>
+        )}
+
         {forceExisting ? (
           // ── Pre-selected patient — skip patient selection entirely ──────
           <div className="space-y-5 py-1">
@@ -298,16 +345,20 @@ export default function CreateAppointmentDialog({
                 <div>
                   <p className="font-semibold text-sm">{selectedPatient.fullName}</p>
                   <p className="text-xs text-muted-foreground">
-                    {calculateAge(selectedPatient.dateOfBirth)} yrs · {selectedPatient.sex} · {selectedPatient.bloodType}
+                    {calculateAge(selectedPatient.dateOfBirth)} yrs · {selectedPatient.sex} ·{" "}
+                    {selectedPatient.bloodType}
                   </p>
                 </div>
-                <Badge variant="outline" className="ml-auto text-xs">Selectat</Badge>
+                <Badge variant="outline" className="ml-auto text-xs">
+                  Selectat
+                </Badge>
               </div>
             )}
             <AppointmentFields
               form={existingForm}
               departments={departments}
               doctors={doctors}
+              appointmentTypes={appointmentTypeOptions}
               selectedDeptId={selectedDeptIdExisting}
               onDeptChange={(id) => {
                 setSelectedDeptIdExisting(id);
@@ -380,9 +431,7 @@ export default function CreateAppointmentDialog({
                       </div>
                       <div className="max-h-52 overflow-y-auto">
                         {filteredPatients.length === 0 ? (
-                          <div className="py-4 text-center text-sm text-muted-foreground">
-                            Niciun pacient găsit
-                          </div>
+                          <div className="py-4 text-center text-sm text-muted-foreground">Niciun pacient găsit</div>
                         ) : (
                           filteredPatients.map((p) => (
                             <button
@@ -406,9 +455,7 @@ export default function CreateAppointmentDialog({
                                   {calculateAge(p.dateOfBirth)} ani · {p.sex} · CNP: {p.nationalId}
                                 </p>
                               </div>
-                              {selectedPatientId === p.id && (
-                                <Check className="w-4 h-4 text-primary shrink-0" />
-                              )}
+                              {selectedPatientId === p.id && <Check className="w-4 h-4 text-primary shrink-0" />}
                             </button>
                           ))
                         )}
@@ -440,6 +487,7 @@ export default function CreateAppointmentDialog({
                 form={existingForm}
                 departments={departments}
                 doctors={doctors}
+                appointmentTypes={appointmentTypeOptions}
                 selectedDeptId={selectedDeptIdExisting}
                 onDeptChange={(id) => {
                   setSelectedDeptIdExisting(id);
@@ -470,31 +518,35 @@ export default function CreateAppointmentDialog({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="sm:col-span-2 space-y-1.5">
-                      <Label className="text-xs">Nume complet <span className="text-destructive">*</span></Label>
-                      <Input
-                        placeholder="ex. Maria Ionescu"
-                        {...newPatientForm.register("fullName")}
-                      />
+                      <Label className="text-xs">
+                        Nume complet <span className="text-destructive">*</span>
+                      </Label>
+                      <Input placeholder="ex. Maria Ionescu" {...newPatientForm.register("fullName")} />
                       {newPatientForm.formState.errors.fullName && (
                         <p className="text-xs text-destructive">{newPatientForm.formState.errors.fullName.message}</p>
                       )}
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label className="text-xs">Data nașterii <span className="text-destructive">*</span></Label>
+                      <Label className="text-xs">
+                        Data nașterii <span className="text-destructive">*</span>
+                      </Label>
                       <Input type="date" {...newPatientForm.register("dateOfBirth")} />
                       {newPatientForm.formState.errors.dateOfBirth && (
-                        <p className="text-xs text-destructive">{newPatientForm.formState.errors.dateOfBirth.message}</p>
+                        <p className="text-xs text-destructive">
+                          {newPatientForm.formState.errors.dateOfBirth.message}
+                        </p>
                       )}
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label className="text-xs">Sex <span className="text-destructive">*</span></Label>
-                      <Select
-                        defaultValue="Male"
-                        onValueChange={(v) => newPatientForm.setValue("sex", v as Sex)}
-                      >
-                        <SelectTrigger><SelectValue /></SelectTrigger>
+                      <Label className="text-xs">
+                        Sex <span className="text-destructive">*</span>
+                      </Label>
+                      <Select defaultValue="Male" onValueChange={(v) => newPatientForm.setValue("sex", v as Sex)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Male">Masculin</SelectItem>
                           <SelectItem value="Female">Feminin</SelectItem>
@@ -504,7 +556,9 @@ export default function CreateAppointmentDialog({
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label className="text-xs">CNP <span className="text-destructive">*</span></Label>
+                      <Label className="text-xs">
+                        CNP <span className="text-destructive">*</span>
+                      </Label>
                       <Input placeholder="ex. 1900101234567" {...newPatientForm.register("nationalId")} />
                       {newPatientForm.formState.errors.nationalId && (
                         <p className="text-xs text-destructive">{newPatientForm.formState.errors.nationalId.message}</p>
@@ -512,22 +566,30 @@ export default function CreateAppointmentDialog({
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label className="text-xs">Grupă sanguină <span className="text-destructive">*</span></Label>
+                      <Label className="text-xs">
+                        Grupă sanguină <span className="text-destructive">*</span>
+                      </Label>
                       <Select
                         defaultValue="Unknown"
                         onValueChange={(v) => newPatientForm.setValue("bloodType", v as BloodType)}
                       >
-                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
                         <SelectContent>
-                          {(["A+","A-","B+","B-","AB+","AB-","O+","O-","Unknown"] as BloodType[]).map((bt) => (
-                            <SelectItem key={bt} value={bt}>{bt}</SelectItem>
+                          {(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "Unknown"] as BloodType[]).map((bt) => (
+                            <SelectItem key={bt} value={bt}>
+                              {bt}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label className="text-xs">Telefon <span className="text-destructive">*</span></Label>
+                      <Label className="text-xs">
+                        Telefon <span className="text-destructive">*</span>
+                      </Label>
                       <Input type="tel" placeholder="+40 700 000 000" {...newPatientForm.register("phone")} />
                       {newPatientForm.formState.errors.phone && (
                         <p className="text-xs text-destructive">{newPatientForm.formState.errors.phone.message}</p>
@@ -535,7 +597,9 @@ export default function CreateAppointmentDialog({
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label className="text-xs">Email <span className="text-destructive">*</span></Label>
+                      <Label className="text-xs">
+                        Email <span className="text-destructive">*</span>
+                      </Label>
                       <Input type="email" placeholder="patient@email.com" {...newPatientForm.register("email")} />
                       {newPatientForm.formState.errors.email && (
                         <p className="text-xs text-destructive">{newPatientForm.formState.errors.email.message}</p>
@@ -549,7 +613,10 @@ export default function CreateAppointmentDialog({
 
                     <div className="sm:col-span-2 space-y-1.5">
                       <Label className="text-xs">Medicamente curente</Label>
-                      <Input placeholder="ex. Metformin 500mg, Niciuna" {...newPatientForm.register("currentMedications")} />
+                      <Input
+                        placeholder="ex. Metformin 500mg, Niciuna"
+                        {...newPatientForm.register("currentMedications")}
+                      />
                     </div>
                   </div>
                 </div>
@@ -563,6 +630,7 @@ export default function CreateAppointmentDialog({
                     form={newPatientForm}
                     departments={departments}
                     doctors={doctors}
+                    appointmentTypes={appointmentTypeOptions}
                     selectedDeptId={selectedDeptIdNew}
                     onDeptChange={(id) => {
                       setSelectedDeptIdNew(id);
@@ -572,7 +640,9 @@ export default function CreateAppointmentDialog({
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
-                  <Button type="button" variant="secondary" onClick={handleClose}>Anulează</Button>
+                  <Button type="button" variant="secondary" onClick={handleClose}>
+                    Anulează
+                  </Button>
                   <Button type="submit" disabled={newPatientForm.formState.isSubmitting} className="gap-1.5">
                     <CalendarDays className="w-4 h-4" />
                     {newPatientForm.formState.isSubmitting ? "Se salvează..." : "Înregistrează & Programează"}
@@ -587,42 +657,59 @@ export default function CreateAppointmentDialog({
   );
 }
 
+type AppointmentFieldsProps = Readonly<{
+  form: ReturnType<typeof useForm<ExistingPatientAptForm>>;
+  departments: Department[];
+  doctors: Doctor[];
+  appointmentTypes: readonly string[];
+  selectedDeptId: string;
+  onDeptChange: (id: string) => void;
+  isSubmitting: boolean;
+  onSubmit: NonNullable<React.ComponentProps<"form">["onSubmit"]>;
+  onCancel: () => void;
+  canSubmit: boolean;
+}>;
+
 // ── Shared appointment fields for existing-patient form ─────────────────────
 function AppointmentFields({
   form,
   departments,
   doctors,
+  appointmentTypes,
   selectedDeptId,
   onDeptChange,
   isSubmitting,
   onSubmit,
   onCancel,
   canSubmit,
-}: {
-  form: ReturnType<typeof useForm<ExistingPatientAptForm>>;
-  departments: Department[];
-  doctors: Doctor[];
-  selectedDeptId: string;
-  onDeptChange: (id: string) => void;
-  isSubmitting: boolean;
-  onSubmit: (e: React.FormEvent) => void;
-  onCancel: () => void;
-  canSubmit: boolean;
-}) {
-  const filteredDoctors = selectedDeptId
-    ? doctors.filter((d) => d.departmentId === selectedDeptId)
-    : [];
+}: AppointmentFieldsProps) {
+  const filteredDoctors = selectedDeptId ? doctors.filter((d) => d.departmentId === selectedDeptId) : [];
   const selectedDoctor = form.watch("doctor");
   const selectedDoctorId = doctors.find((d) => d.name === selectedDoctor)?.id;
   const watchedDate = form.watch("date");
   const { slots, isLoading: slotsLoading } = useAvailableSlots(selectedDoctorId, watchedDate);
+  const timeDisabled = !selectedDoctorId || !watchedDate || slotsLoading || slots.length === 0;
+  let timePlaceholder = "Selectați ora…";
+  if (selectedDoctorId === undefined) {
+    timePlaceholder = "Selectați mai întâi un medic…";
+  } else if (slotsLoading) {
+    timePlaceholder = "Se încarcă intervalele…";
+  } else if (slots.length === 0) {
+    timePlaceholder = "Niciun interval disponibil";
+  }
 
   useEffect(() => {
     const currentTime = form.getValues("time");
-    if (currentTime && slots.length > 0 && !slots.includes(currentTime)) {
+    if (currentTime && !slots.includes(currentTime)) {
       form.setValue("time", "");
     }
   }, [slots, form]);
+
+  useEffect(() => {
+    if (!selectedDoctorId) {
+      form.setValue("time", "");
+    }
+  }, [selectedDoctorId, form]);
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -632,27 +719,39 @@ function AppointmentFields({
         </h3>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label className="text-xs">Dată <span className="text-destructive">*</span></Label>
+            <Label className="text-xs">
+              Dată <span className="text-destructive">*</span>
+            </Label>
             <Input type="date" {...form.register("date")} />
             {form.formState.errors.date && (
               <p className="text-xs text-destructive">{form.formState.errors.date.message}</p>
             )}
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Oră <span className="text-destructive">*</span></Label>
+            <Label className="text-xs">
+              Oră <span className="text-destructive">*</span>
+            </Label>
             <Select
               value={form.watch("time") || ""}
               onValueChange={(v) => form.setValue("time", v)}
-              disabled={slotsLoading}
+              disabled={timeDisabled}
             >
               <SelectTrigger>
-                <SelectValue placeholder={slotsLoading ? "Se încarcă intervalele…" : "Selectați ora…"} />
+                <SelectValue placeholder={timePlaceholder} />
                 {slotsLoading && <Loader2 className="w-3.5 h-3.5 animate-spin ml-auto text-muted-foreground" />}
               </SelectTrigger>
               <SelectContent>
-                {slots.length === 0
-                  ? <div className="px-2 py-4 text-center text-sm text-muted-foreground">Niciun interval disponibil pentru această dată</div>
-                  : slots.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                {slots.length === 0 ? (
+                  <div className="px-2 py-4 text-center text-sm text-muted-foreground">
+                    Niciun interval disponibil pentru această dată
+                  </div>
+                ) : (
+                  slots.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {t}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -664,10 +763,14 @@ function AppointmentFields({
             Specialitate <span className="text-destructive">*</span>
           </Label>
           <Select value={selectedDeptId} onValueChange={onDeptChange}>
-            <SelectTrigger><SelectValue placeholder="Selectați o specialitate…" /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder="Selectați o specialitate…" />
+            </SelectTrigger>
             <SelectContent>
               {departments.map((d) => (
-                <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                <SelectItem key={d.id} value={d.id}>
+                  {d.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -688,7 +791,9 @@ function AppointmentFields({
               </SelectTrigger>
               <SelectContent>
                 {filteredDoctors.length === 0 ? (
-                  <SelectItem value="_none" disabled>Niciun medic în acest departament</SelectItem>
+                  <SelectItem value="_none" disabled>
+                    Niciun medic în acest departament
+                  </SelectItem>
                 ) : (
                   filteredDoctors.map((d) => (
                     <SelectItem key={d.id} value={d.name}>
@@ -706,15 +811,21 @@ function AppointmentFields({
 
         {selectedDoctor && (
           <div className="space-y-1.5">
-            <Label className="text-xs">Tip programare <span className="text-destructive">*</span></Label>
+            <Label className="text-xs">
+              Tip programare <span className="text-destructive">*</span>
+            </Label>
             <Select
               defaultValue={form.getValues("type") || "Consultație generală"}
               onValueChange={(v) => form.setValue("type", v)}
             >
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
-                {APPOINTMENT_TYPES.map((t) => (
-                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                {appointmentTypes.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -731,7 +842,9 @@ function AppointmentFields({
       </div>
 
       <div className="flex justify-end gap-2 pt-1">
-        <Button type="button" variant="secondary" onClick={onCancel}>Anulează</Button>
+        <Button type="button" variant="secondary" onClick={onCancel}>
+          Anulează
+        </Button>
         <Button type="submit" disabled={isSubmitting || !canSubmit} className="gap-1.5">
           <CalendarDays className="w-4 h-4" />
           {isSubmitting ? "Se programează..." : "Programează consultație"}
@@ -741,60 +854,89 @@ function AppointmentFields({
   );
 }
 
+type NewPatientAptFieldsProps = Readonly<{
+  form: ReturnType<typeof useForm<NewPatientAptForm>>;
+  departments: Department[];
+  doctors: Doctor[];
+  appointmentTypes: readonly string[];
+  selectedDeptId: string;
+  onDeptChange: (id: string) => void;
+}>;
+
 // ── Appointment fields within new-patient form ──────────────────────────────
 function NewPatientAptFields({
   form,
   departments,
   doctors,
+  appointmentTypes,
   selectedDeptId,
   onDeptChange,
-}: {
-  form: ReturnType<typeof useForm<NewPatientAptForm>>;
-  departments: Department[];
-  doctors: Doctor[];
-  selectedDeptId: string;
-  onDeptChange: (id: string) => void;
-}) {
-  const filteredDoctors = selectedDeptId
-    ? doctors.filter((d) => d.departmentId === selectedDeptId)
-    : [];
+}: NewPatientAptFieldsProps) {
+  const filteredDoctors = selectedDeptId ? doctors.filter((d) => d.departmentId === selectedDeptId) : [];
   const selectedDoctor = form.watch("doctor");
   const selectedDoctorId = doctors.find((d) => d.name === selectedDoctor)?.id;
   const watchedDate = form.watch("date");
   const { slots, isLoading: slotsLoading } = useAvailableSlots(selectedDoctorId, watchedDate);
+  const timeDisabled = !selectedDoctorId || !watchedDate || slotsLoading || slots.length === 0;
+  let timePlaceholder = "Selectați ora…";
+  if (selectedDoctorId === undefined) {
+    timePlaceholder = "Selectați mai întâi un medic…";
+  } else if (slotsLoading) {
+    timePlaceholder = "Se încarcă intervalele…";
+  } else if (slots.length === 0) {
+    timePlaceholder = "Niciun interval disponibil";
+  }
 
   useEffect(() => {
     const currentTime = form.getValues("time");
-    if (currentTime && slots.length > 0 && !slots.includes(currentTime)) {
+    if (currentTime && !slots.includes(currentTime)) {
       form.setValue("time", "");
     }
   }, [slots, form]);
+
+  useEffect(() => {
+    if (!selectedDoctorId) {
+      form.setValue("time", "");
+    }
+  }, [selectedDoctorId, form]);
 
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label className="text-xs">Dată <span className="text-destructive">*</span></Label>
+          <Label className="text-xs">
+            Dată <span className="text-destructive">*</span>
+          </Label>
           <Input type="date" {...form.register("date")} />
           {form.formState.errors.date && (
             <p className="text-xs text-destructive">{form.formState.errors.date.message}</p>
           )}
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Oră <span className="text-destructive">*</span></Label>
+          <Label className="text-xs">
+            Oră <span className="text-destructive">*</span>
+          </Label>
           <Select
             value={form.watch("time") || ""}
             onValueChange={(v) => form.setValue("time", v)}
-            disabled={slotsLoading}
+            disabled={timeDisabled}
           >
             <SelectTrigger>
-              <SelectValue placeholder={slotsLoading ? "Se încarcă intervalele…" : "Selectați ora…"} />
+              <SelectValue placeholder={timePlaceholder} />
               {slotsLoading && <Loader2 className="w-3.5 h-3.5 animate-spin ml-auto text-muted-foreground" />}
             </SelectTrigger>
             <SelectContent>
-              {slots.length === 0
-                ? <div className="px-2 py-4 text-center text-sm text-muted-foreground">Niciun interval disponibil pentru această dată</div>
-                : slots.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+              {slots.length === 0 ? (
+                <div className="px-2 py-4 text-center text-sm text-muted-foreground">
+                  Niciun interval disponibil pentru această dată
+                </div>
+              ) : (
+                slots.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
         </div>
@@ -806,10 +948,14 @@ function NewPatientAptFields({
           Specialitate <span className="text-destructive">*</span>
         </Label>
         <Select value={selectedDeptId} onValueChange={onDeptChange}>
-          <SelectTrigger><SelectValue placeholder="Selectați o specialitate…" /></SelectTrigger>
+          <SelectTrigger>
+            <SelectValue placeholder="Selectați o specialitate…" />
+          </SelectTrigger>
           <SelectContent>
             {departments.map((d) => (
-              <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+              <SelectItem key={d.id} value={d.id}>
+                {d.name}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -830,7 +976,9 @@ function NewPatientAptFields({
             </SelectTrigger>
             <SelectContent>
               {filteredDoctors.length === 0 ? (
-                <SelectItem value="_none" disabled>Niciun medic în acest departament</SelectItem>
+                <SelectItem value="_none" disabled>
+                  Niciun medic în acest departament
+                </SelectItem>
               ) : (
                 filteredDoctors.map((d) => (
                   <SelectItem key={d.id} value={d.name}>
@@ -848,15 +996,21 @@ function NewPatientAptFields({
 
       {selectedDoctor && (
         <div className="space-y-1.5">
-          <Label className="text-xs">Tip programare <span className="text-destructive">*</span></Label>
+          <Label className="text-xs">
+            Tip programare <span className="text-destructive">*</span>
+          </Label>
           <Select
             defaultValue={form.getValues("type") || "Consultație generală"}
             onValueChange={(v) => form.setValue("type", v)}
           >
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
-              {APPOINTMENT_TYPES.map((t) => (
-                <SelectItem key={t} value={t}>{t}</SelectItem>
+              {appointmentTypes.map((t) => (
+                <SelectItem key={t} value={t}>
+                  {t}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>

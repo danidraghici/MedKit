@@ -113,7 +113,7 @@ public class DoctorScheduleService(AppDbContext db, NotificationDeliveryService 
         var bookedTimes = await db.Appointments
             .Where(a => a.DoctorId == doctorId
                      && a.AppointmentDate == date
-                     && a.Status == "Scheduled")
+                     && (a.Status == "Programat" || a.Status == "Scheduled"))
             .Select(a => a.AppointmentTime)
             .ToListAsync();
 
