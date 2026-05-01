@@ -53,6 +53,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             // patients table has audit trigger — OUTPUT clause is forbidden on triggered tables
             e.ToTable(t => t.UseSqlOutputClause(false));
+
+            e.HasOne(p => p.User)
+             .WithOne(u => u.Patient)
+             .HasForeignKey<UserEntity>(u => u.PatientId)
+             .OnDelete(DeleteBehavior.SetNull);
         });
 
         // audit_logs is append-only — disable EF Core from tracking updates/deletes

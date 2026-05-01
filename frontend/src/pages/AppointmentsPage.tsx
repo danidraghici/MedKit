@@ -18,13 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,15 +44,11 @@ interface AppointmentStats {
   nextWeek: number;
 }
 
-const statusConfig: Record<
-  Appointment["status"],
-  { label: string; icon: React.ReactNode; className: string }
-> = {
+const statusConfig: Record<string, { label: string; icon: React.ReactNode; className: string }> = {
   Scheduled: {
     label: "Programat",
     icon: <AlertCircle className="w-3.5 h-3.5" />,
-    className:
-      "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800",
+    className: "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800",
   },
   Completed: {
     label: "Finalizat",
@@ -106,9 +96,7 @@ export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) 
   const handleStatusChange = async (id: string, status: "Completed" | "Cancelled") => {
     try {
       await api.patch(`/api/appointments/${id}/status`, { status });
-      setAppointments((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, status } : a))
-      );
+      setAppointments((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a)));
       // Refresh stats after status change
       const updatedStats = await api.get<AppointmentStats>("/api/appointments/stats");
       setStats(updatedStats);
@@ -130,7 +118,7 @@ export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) 
         (a) =>
           a.patientName.toLowerCase().includes(q) ||
           a.type.toLowerCase().includes(q) ||
-          a.doctor.toLowerCase().includes(q)
+          a.doctor.toLowerCase().includes(q),
       );
     }
 
@@ -290,37 +278,23 @@ export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) 
             const now = new Date();
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             const isToday = d.toDateString() === today.toDateString();
-            const isTomorrow =
-              d.toDateString() ===
-              new Date(today.getTime() + 86400000).toDateString();
+            const isTomorrow = d.toDateString() === new Date(today.getTime() + 86400000).toDateString();
 
-            const dayLabel = isToday
-              ? "Astăzi"
-              : isTomorrow
-              ? "Mâine"
-              : formatDate(date, "EEEE, dd MMMM yyyy");
+            const dayLabel = isToday ? "Astăzi" : isTomorrow ? "Mâine" : formatDate(date, "EEEE, dd MMMM yyyy");
 
             return (
               <div key={date}>
                 <div className="flex items-center gap-3 mb-3">
                   <div
                     className={`flex flex-col items-center justify-center w-10 h-10 rounded-xl shrink-0 ${
-                      isToday
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground"
+                      isToday ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                     }`}
                   >
-                    <span className="text-xs font-bold leading-none">
-                      {formatDate(date, "dd")}
-                    </span>
-                    <span className="text-[10px] leading-none uppercase opacity-80">
-                      {formatDate(date, "MMM")}
-                    </span>
+                    <span className="text-xs font-bold leading-none">{formatDate(date, "dd")}</span>
+                    <span className="text-[10px] leading-none uppercase opacity-80">{formatDate(date, "MMM")}</span>
                   </div>
                   <div>
-                    <p className={`font-semibold text-sm ${isToday ? "text-primary" : ""}`}>
-                      {dayLabel}
-                    </p>
+                    <p className={`font-semibold text-sm ${isToday ? "text-primary" : ""}`}>{dayLabel}</p>
                     <p className="text-xs text-muted-foreground">
                       {apts.length} programare{apts.length !== 1 ? "i" : ""}
                     </p>
@@ -330,12 +304,13 @@ export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) 
 
                 <div className="space-y-2.5">
                   {apts.map((apt) => {
-                    const sc = statusConfig[apt.status];
+                    const sc = statusConfig[apt.status] ?? {
+                      label: apt.status || "Necunoscut",
+                      icon: <AlertCircle className="w-3.5 h-3.5" />,
+                      className: "text-muted-foreground bg-muted border-border",
+                    };
                     return (
-                      <Card
-                        key={apt.id}
-                        className="hover:shadow-sm transition-shadow group"
-                      >
+                      <Card key={apt.id} className="hover:shadow-sm transition-shadow group">
                         <CardContent className="p-4">
                           <div className="flex items-start gap-4">
                             {/* Time block */}
@@ -367,9 +342,7 @@ export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) 
                                   {sc.label}
                                 </span>
                               </div>
-                              <p className="text-sm text-muted-foreground mt-1 truncate">
-                                {apt.type}
-                              </p>
+                              <p className="text-sm text-muted-foreground mt-1 truncate">{apt.type}</p>
                               <div className="flex items-center gap-1.5 mt-1">
                                 <User className="w-3 h-3 text-muted-foreground" />
                                 <span className="text-xs text-muted-foreground">{apt.doctor}</span>
@@ -388,18 +361,14 @@ export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) 
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => onNavigate(`patient-${apt.patientId}`)}
-                                >
+                                <DropdownMenuItem onClick={() => onNavigate(`patient-${apt.patientId}`)}>
                                   <User className="w-4 h-4 mr-2" />
                                   Vezi fișa pacientului
                                 </DropdownMenuItem>
                                 {apt.status === "Scheduled" && (
                                   <>
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      onClick={() => void handleStatusChange(apt.id, "Completed")}
-                                    >
+                                    <DropdownMenuItem onClick={() => void handleStatusChange(apt.id, "Completed")}>
                                       <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />
                                       Marchează finalizat
                                     </DropdownMenuItem>
@@ -415,9 +384,7 @@ export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) 
                                 {apt.status === "Cancelled" && (
                                   <>
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      onClick={() => onNavigate("create-appointment")}
-                                    >
+                                    <DropdownMenuItem onClick={() => onNavigate("create-appointment")}>
                                       <CalendarDays className="w-4 h-4 mr-2 text-blue-600" />
                                       Reprogramează
                                     </DropdownMenuItem>

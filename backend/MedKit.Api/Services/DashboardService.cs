@@ -18,7 +18,7 @@ public class DashboardService(AppDbContext db)
         var upcomingAppointments = await db.Appointments
             .CountAsync(a => a.AppointmentDate >= today
                           && a.AppointmentDate <= thirtyDaysFromNow
-                          && a.Status == "Scheduled");
+                          && a.Status == "Programat");
 
         var activeDoctors = await db.Users
             .CountAsync(u => (u.Role == "specialist_doctor" || u.Role == "lab_doctor")

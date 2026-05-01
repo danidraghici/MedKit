@@ -8,6 +8,22 @@ namespace MedKit.Api.Services;
 
 public class AppointmentService(AppDbContext db, NotificationDeliveryService notificationService)
 {
+    private static string NormalizeStatusForClient(string dbStatus) => dbStatus switch
+    {
+        "Programat" => "Scheduled",
+        "Finalizat" => "Completed",
+        "Anulat" => "Cancelled",
+        _ => dbStatus,
+    };
+
+    private static string NormalizeStatusForDb(string apiStatus) => apiStatus switch
+    {
+        "Scheduled" => "Programat",
+        "Completed" => "Finalizat",
+        "Cancelled" => "Anulat",
+        _ => apiStatus,
+    };
+
     public async Task<AppointmentStatsDto> GetStatsAsync(Guid? doctorId = null)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
@@ -39,21 +55,21 @@ public class AppointmentService(AppDbContext db, NotificationDeliveryService not
         return await (
             from a in db.Appointments
             join p in db.Patients on a.PatientId equals p.Id
-            join d in db.Doctors  on a.DoctorId  equals d.Id
+            join d in db.Doctors on a.DoctorId equals d.Id
             where doctorId == null || a.DoctorId == doctorId
             orderby a.AppointmentDate descending, a.AppointmentTime
             select new AppointmentDto
             {
-                Id          = a.Id.ToString(),
-                PatientId   = a.PatientId.ToString(),
+                Id = a.Id.ToString(),
+                PatientId = a.PatientId.ToString(),
                 PatientName = p.FullName,
-                DoctorId    = a.DoctorId.ToString(),
-                Doctor      = d.Name,
-                Date        = a.AppointmentDate.ToString("yyyy-MM-dd"),
-                Time        = a.AppointmentTime,
-                Type        = a.Type,
-                Status      = a.Status,
-                Notes       = a.Notes,
+                DoctorId = a.DoctorId.ToString(),
+                Doctor = d.Name,
+                Date = a.AppointmentDate.ToString("yyyy-MM-dd"),
+                Time = a.AppointmentTime,
+                Type = a.Type,
+                Status = NormalizeStatusForClient(a.Status),
+                Notes = a.Notes,
             }
         ).ToListAsync();
     }
@@ -64,22 +80,22 @@ public class AppointmentService(AppDbContext db, NotificationDeliveryService not
         return await (
             from a in db.Appointments
             join p in db.Patients on a.PatientId equals p.Id
-            join d in db.Doctors  on a.DoctorId  equals d.Id
+            join d in db.Doctors on a.DoctorId equals d.Id
             where a.PatientId == patientId && a.AppointmentDate >= oneYearAgo
                && (doctorId == null || a.DoctorId == doctorId)
             orderby a.AppointmentDate descending, a.AppointmentTime
             select new AppointmentDto
             {
-                Id          = a.Id.ToString(),
-                PatientId   = a.PatientId.ToString(),
+                Id = a.Id.ToString(),
+                PatientId = a.PatientId.ToString(),
                 PatientName = p.FullName,
-                DoctorId    = a.DoctorId.ToString(),
-                Doctor      = d.Name,
-                Date        = a.AppointmentDate.ToString("yyyy-MM-dd"),
-                Time        = a.AppointmentTime,
-                Type        = a.Type,
-                Status      = a.Status,
-                Notes       = a.Notes,
+                DoctorId = a.DoctorId.ToString(),
+                Doctor = d.Name,
+                Date = a.AppointmentDate.ToString("yyyy-MM-dd"),
+                Time = a.AppointmentTime,
+                Type = a.Type,
+                Status = NormalizeStatusForClient(a.Status),
+                Notes = a.Notes,
             }
         ).ToListAsync();
     }
@@ -88,11 +104,12 @@ public class AppointmentService(AppDbContext db, NotificationDeliveryService not
     {
         var appt = await db.Appointments.FirstOrDefaultAsync(a => a.Id == id);
         if (appt is null) return "not_found";
-        if (appt.Status == status) return "already_" + status.ToLower();
+        var dbStatus = NormalizeStatusForDb(status);
+        if (appt.Status == dbStatus) return "already_" + dbStatus.ToLower();
 
         await SessionContextHelper.SetAndExecuteAsync(db, userId, async () =>
         {
-            appt.Status    = status;
+            appt.Status = dbStatus;
             appt.UpdatedAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync();
         });
@@ -120,16 +137,16 @@ public class AppointmentService(AppDbContext db, NotificationDeliveryService not
         var now = DateTimeOffset.UtcNow;
         var appointment = new AppointmentEntity
         {
-            Id              = Guid.NewGuid(),
-            PatientId       = patientId,
-            DoctorId        = doctorId,
+            Id = Guid.NewGuid(),
+            PatientId = patientId,
+            DoctorId = doctorId,
             AppointmentDate = DateOnly.Parse(request.Date),
             AppointmentTime = request.Time,
-            Type            = request.Type,
-            Notes           = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes,
-            Status          = "Programat",
-            CreatedAt       = now,
-            UpdatedAt       = now,
+            Type = request.Type,
+            Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes,
+            Status = "Programat",
+            CreatedAt = now,
+            UpdatedAt = now,
         };
 
         await SessionContextHelper.SetAndExecuteAsync(db, userId, async () =>
@@ -142,16 +159,16 @@ public class AppointmentService(AppDbContext db, NotificationDeliveryService not
 
         return (new AppointmentDto
         {
-            Id          = appointment.Id.ToString(),
-            PatientId   = patientId.ToString(),
+            Id = appointment.Id.ToString(),
+            PatientId = patientId.ToString(),
             PatientName = patient.FullName,
-            DoctorId    = doctorId.ToString(),
-            Doctor      = doctor.Name,
-            Date        = appointment.AppointmentDate.ToString("yyyy-MM-dd"),
-            Time        = appointment.AppointmentTime,
-            Type        = appointment.Type,
-            Status      = appointment.Status,
-            Notes       = appointment.Notes,
+            DoctorId = doctorId.ToString(),
+            Doctor = doctor.Name,
+            Date = appointment.AppointmentDate.ToString("yyyy-MM-dd"),
+            Time = appointment.AppointmentTime,
+            Type = appointment.Type,
+            Status = appointment.Status,
+            Notes = appointment.Notes,
         }, null);
     }
 

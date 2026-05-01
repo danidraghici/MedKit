@@ -44,4 +44,6 @@ public class PatientEntity
 
     [Column("created_by_doctor_id")]
     public Guid? CreatedByDoctorId { get; set; }
+
+    public UserEntity? User { get; set; }
 }

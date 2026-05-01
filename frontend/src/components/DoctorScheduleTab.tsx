@@ -3,20 +3,14 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format, parseISO } from "date-fns";
-import {
-  Plus, Edit3, Trash2, CheckCircle2, XCircle, CalendarX, Clock, Info,
-} from "lucide-react";
+import { Plus, Edit3, Trash2, CheckCircle2, XCircle, CalendarX, Clock, Info } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -34,28 +28,38 @@ const DAY_SHORT = ["Dum", "Lun", "Mar", "Mie", "Joi", "Vin", "Sâm"];
 
 // ─── Zod schema ──────────────────────────────────────────────────────────────
 
-const scheduleSchema = z.object({
-  scheduleType: z.enum(["working_hours", "block"]),
-  dayOfWeek: z.number().int().min(0).max(6).optional(),
-  specificDate: z.string().optional(),
-  startTime: z.string().regex(/^\d{2}:\d{2}$/, "Utilizați formatul HH:mm").optional().or(z.literal("")),
-  endTime: z.string().regex(/^\d{2}:\d{2}$/, "Utilizați formatul HH:mm").optional().or(z.literal("")),
-  isWorkingDay: z.boolean(),
-  isFullDay: z.boolean(),
-  reason: z.string().max(500).optional(),
-}).superRefine((data, ctx) => {
-  if (data.scheduleType === "working_hours") {
-    if (data.dayOfWeek === undefined || data.dayOfWeek === null) {
-      ctx.addIssue({ code: "custom", path: ["dayOfWeek"], message: "Selectați o zi" });
+const scheduleSchema = z
+  .object({
+    scheduleType: z.enum(["working_hours", "block"]),
+    dayOfWeek: z.number().int().min(0).max(6).optional(),
+    specificDate: z.string().optional(),
+    startTime: z
+      .string()
+      .regex(/^\d{2}:\d{2}$/, "Utilizați formatul HH:mm")
+      .optional()
+      .or(z.literal("")),
+    endTime: z
+      .string()
+      .regex(/^\d{2}:\d{2}$/, "Utilizați formatul HH:mm")
+      .optional()
+      .or(z.literal("")),
+    isWorkingDay: z.boolean(),
+    isFullDay: z.boolean(),
+    reason: z.string().max(500).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.scheduleType === "working_hours") {
+      if (data.dayOfWeek === undefined || data.dayOfWeek === null) {
+        ctx.addIssue({ code: "custom", path: ["dayOfWeek"], message: "Selectați o zi" });
+      }
+      if (data.isWorkingDay && !data.startTime) {
+        ctx.addIssue({ code: "custom", path: ["startTime"], message: "Ora de început este obligatorie" });
+      }
     }
-    if (data.isWorkingDay && !data.startTime) {
-      ctx.addIssue({ code: "custom", path: ["startTime"], message: "Ora de început este obligatorie" });
+    if (data.scheduleType === "block" && !data.specificDate) {
+      ctx.addIssue({ code: "custom", path: ["specificDate"], message: "Selectați o dată" });
     }
-  }
-  if (data.scheduleType === "block" && !data.specificDate) {
-    ctx.addIssue({ code: "custom", path: ["specificDate"], message: "Selectați o dată" });
-  }
-});
+  });
 
 type FormValues = z.infer<typeof scheduleSchema>;
 
@@ -95,9 +99,23 @@ interface EntryDialogProps {
   title?: string;
 }
 
-function EntryDialog({ open, onClose, onSubmit, defaultType = "working_hours", editing, submitting, readonlyType, title }: EntryDialogProps) {
+function EntryDialog({
+  open,
+  onClose,
+  onSubmit,
+  defaultType = "working_hours",
+  editing,
+  submitting,
+  readonlyType,
+  title,
+}: EntryDialogProps) {
   const {
-    register, handleSubmit, watch, setValue, control, reset,
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    control,
+    reset,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(scheduleSchema),
@@ -138,7 +156,12 @@ function EntryDialog({ open, onClose, onSubmit, defaultType = "working_hours", e
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{title ?? (editing ? "Editează înregistrare" : "Adaugă înregistrare")}</DialogTitle>
@@ -176,24 +199,21 @@ function EntryDialog({ open, onClose, onSubmit, defaultType = "working_hours", e
                   name="dayOfWeek"
                   control={control}
                   render={({ field }) => (
-                    <Select
-                      value={field.value?.toString() ?? ""}
-                      onValueChange={(v) => field.onChange(parseInt(v))}
-                    >
+                    <Select value={field.value?.toString() ?? ""} onValueChange={(v) => field.onChange(parseInt(v))}>
                       <SelectTrigger>
                         <SelectValue placeholder="Selectați ziua…" />
                       </SelectTrigger>
                       <SelectContent>
                         {DAY_NAMES.map((name, i) => (
-                          <SelectItem key={i} value={i.toString()}>{name}</SelectItem>
+                          <SelectItem key={i} value={i.toString()}>
+                            {name}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   )}
                 />
-                {errors.dayOfWeek && (
-                  <p className="text-xs text-destructive">{errors.dayOfWeek.message}</p>
-                )}
+                {errors.dayOfWeek && <p className="text-xs text-destructive">{errors.dayOfWeek.message}</p>}
               </div>
 
               <div className="flex items-center gap-3">
@@ -212,16 +232,12 @@ function EntryDialog({ open, onClose, onSubmit, defaultType = "working_hours", e
                   <div className="space-y-1.5">
                     <Label>Ora de început</Label>
                     <Input type="time" {...register("startTime")} />
-                    {errors.startTime && (
-                      <p className="text-xs text-destructive">{errors.startTime.message}</p>
-                    )}
+                    {errors.startTime && <p className="text-xs text-destructive">{errors.startTime.message}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <Label>Ora de sfârșit</Label>
                     <Input type="time" {...register("endTime")} />
-                    {errors.endTime && (
-                      <p className="text-xs text-destructive">{errors.endTime.message}</p>
-                    )}
+                    {errors.endTime && <p className="text-xs text-destructive">{errors.endTime.message}</p>}
                   </div>
                 </div>
               )}
@@ -236,9 +252,11 @@ function EntryDialog({ open, onClose, onSubmit, defaultType = "working_hours", e
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start font-normal">
-                      {specificDate
-                        ? format(parseISO(specificDate), "PPP")
-                        : <span className="text-muted-foreground">Alegeți o dată…</span>}
+                      {specificDate ? (
+                        format(parseISO(specificDate), "PPP")
+                      ) : (
+                        <span className="text-muted-foreground">Alegeți o dată…</span>
+                      )}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -249,9 +267,7 @@ function EntryDialog({ open, onClose, onSubmit, defaultType = "working_hours", e
                     />
                   </PopoverContent>
                 </Popover>
-                {errors.specificDate && (
-                  <p className="text-xs text-destructive">{errors.specificDate.message}</p>
-                )}
+                {errors.specificDate && <p className="text-xs text-destructive">{errors.specificDate.message}</p>}
               </div>
 
               <div className="flex items-center gap-3">
@@ -309,10 +325,15 @@ interface Props {
 
 export function DoctorScheduleTab({ doctorId, readOnly = false, adminMode = false }: Props) {
   const {
-    fetchDoctorSchedule, fetchPendingScheduleEntries,
-    createScheduleEntry, updateScheduleEntry, deleteScheduleEntry,
-    approveScheduleEntry, rejectScheduleEntry,
-    schedulePendingCount, fetchSchedulePendingCount,
+    fetchDoctorSchedule,
+    fetchPendingScheduleEntries,
+    createScheduleEntry,
+    updateScheduleEntry,
+    deleteScheduleEntry,
+    approveScheduleEntry,
+    rejectScheduleEntry,
+    schedulePendingCount,
+    fetchSchedulePendingCount,
   } = useAppStore();
 
   const [activeEntries, setActiveEntries] = useState<DoctorScheduleEntry[]>([]);
@@ -341,9 +362,11 @@ export function DoctorScheduleTab({ doctorId, readOnly = false, adminMode = fals
     } finally {
       setLoading(false);
     }
-  }, [doctorId, fetchDoctorSchedule, fetchPendingScheduleEntries, readOnly, adminMode]);
+  }, [doctorId, fetchDoctorSchedule, fetchPendingScheduleEntries, readOnly]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const workingHours = activeEntries
     .filter((e) => e.scheduleType === "working_hours")
@@ -375,15 +398,16 @@ export function DoctorScheduleTab({ doctorId, readOnly = false, adminMode = fals
       if (editingEntry) {
         const updated = await updateScheduleEntry(doctorId, editingEntry.id, payload);
         if (adminMode) {
-          // Admin update creates a pending entry — it won't appear in active list immediately
+          setPendingEntries((prev) => [...prev, updated]);
           toast.success("Modificare propusă trimisă. Se așteaptă aprobarea medicului.");
         } else {
-          setActiveEntries((prev) => prev.map((e) => e.id === editingEntry.id ? updated : e));
+          setActiveEntries((prev) => prev.map((e) => (e.id === editingEntry.id ? updated : e)));
           toast.success("Program actualizat.");
         }
       } else {
         const created = await createScheduleEntry(doctorId, payload);
         if (adminMode) {
+          setPendingEntries((prev) => [...prev, created]);
           toast.success("Înregistrare propusă trimisă. Se așteaptă aprobarea medicului.");
         } else {
           setActiveEntries((prev) => [...prev, created]);
@@ -423,7 +447,7 @@ export function DoctorScheduleTab({ doctorId, readOnly = false, adminMode = fals
       setPendingEntries((prev) => prev.filter((e) => e.id !== entry.id));
       // If it replaced an existing entry, update active list
       if (entry.replacesScheduleId) {
-        setActiveEntries((prev) => prev.map((e) => e.id === entry.replacesScheduleId ? approved : e));
+        setActiveEntries((prev) => prev.map((e) => (e.id === entry.replacesScheduleId ? approved : e)));
       } else {
         setActiveEntries((prev) => [...prev, approved]);
       }
@@ -458,14 +482,18 @@ export function DoctorScheduleTab({ doctorId, readOnly = false, adminMode = fals
   return (
     <div className="space-y-6">
       {/* Pending Changes (doctor-facing only) */}
-      {!readOnly && !adminMode && pendingEntries.length > 0 && (
+      {!readOnly && pendingEntries.length > 0 && (
         <div className="space-y-3">
           <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800">
             <Info className="h-4 w-4 text-amber-600 dark:text-amber-400" />
             <AlertDescription className="text-amber-800 dark:text-amber-300">
-              {pendingEntries.length === 1
-                ? "1 modificare de program propusă de un administrator necesită revizuirea dvs."
-                : `${pendingEntries.length} modificări de program propuse de un administrator necesită revizuirea dvs.`}
+              {adminMode
+                ? pendingEntries.length === 1
+                  ? "1 propunere de modificare este în așteptare pentru aprobare."
+                  : `${pendingEntries.length} propuneri de modificare sunt în așteptare pentru aprobare.`
+                : pendingEntries.length === 1
+                  ? "1 modificare de program propusă de un administrator necesită revizuirea dvs."
+                  : `${pendingEntries.length} modificări de program propuse de un administrator necesită revizuirea dvs.`}
             </AlertDescription>
           </Alert>
 
@@ -474,11 +502,16 @@ export function DoctorScheduleTab({ doctorId, readOnly = false, adminMode = fals
               <CardContent className="pt-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-1 text-sm">
-                    <p className="font-medium">
-                      {entry.scheduleType === "working_hours"
-                        ? `Ore de lucru — ${DAY_NAMES[entry.dayOfWeek ?? 0]}`
-                        : `Blocat — ${entry.specificDate ? format(parseISO(entry.specificDate), "PPP") : "—"}`}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">
+                        {entry.scheduleType === "working_hours"
+                          ? `Ore de lucru — ${DAY_NAMES[entry.dayOfWeek ?? 0]}`
+                          : `Blocat — ${entry.specificDate ? format(parseISO(entry.specificDate), "PPP") : "—"}`}
+                      </p>
+                      <Badge variant="outline" className="text-xs">
+                        {entry.status === "pending_approval" ? "În așteptare" : "Activ"}
+                      </Badge>
+                    </div>
                     <p className="text-muted-foreground">
                       {entry.scheduleType === "working_hours"
                         ? entry.isWorkingDay
@@ -486,34 +519,36 @@ export function DoctorScheduleTab({ doctorId, readOnly = false, adminMode = fals
                           : "Marchează ca zi liberă"
                         : formatTimeRange(entry)}
                     </p>
-                    {entry.reason && (
-                      <p className="text-muted-foreground italic">Motiv: {entry.reason}</p>
-                    )}
+                    {entry.reason && <p className="text-muted-foreground italic">Motiv: {entry.reason}</p>}
                     {entry.proposedByName && (
                       <p className="text-xs text-muted-foreground">Propus de {entry.proposedByName}</p>
                     )}
                     {entry.replacesScheduleId && (
-                      <Badge variant="outline" className="text-xs">Înlocuiește înregistrarea existentă</Badge>
+                      <Badge variant="outline" className="text-xs">
+                        Înlocuiește înregistrarea existentă
+                      </Badge>
                     )}
                   </div>
-                  <div className="flex gap-2 shrink-0">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-green-400 text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950"
-                      onClick={() => void handleApprove(entry)}
-                    >
-                      <CheckCircle2 className="w-4 h-4 mr-1" /> Aprobă
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-destructive text-destructive hover:bg-destructive/10"
-                      onClick={() => void handleReject(entry)}
-                    >
-                      <XCircle className="w-4 h-4 mr-1" /> Respinge
-                    </Button>
-                  </div>
+                  {!adminMode && (
+                    <div className="flex gap-2 shrink-0">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-green-400 text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950"
+                        onClick={() => void handleApprove(entry)}
+                      >
+                        <CheckCircle2 className="w-4 h-4 mr-1" /> Aprobă
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-destructive text-destructive hover:bg-destructive/10"
+                        onClick={() => void handleReject(entry)}
+                      >
+                        <XCircle className="w-4 h-4 mr-1" /> Respinge
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -645,13 +680,22 @@ export function DoctorScheduleTab({ doctorId, readOnly = false, adminMode = fals
         readonlyType={!!editingEntry}
         title={
           adminMode
-            ? editingEntry ? "Propune modificare" : "Propune înregistrare nouă"
-            : editingEntry ? "Editează înregistrare" : "Adaugă înregistrare"
+            ? editingEntry
+              ? "Propune modificare"
+              : "Propune înregistrare nouă"
+            : editingEntry
+              ? "Editează înregistrare"
+              : "Adaugă înregistrare"
         }
       />
 
       {/* Delete Confirm Dialog */}
-      <Dialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}>
+      <Dialog
+        open={!!deleteTarget}
+        onOpenChange={(v) => {
+          if (!v) setDeleteTarget(null);
+        }}
+      >
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Eliminați înregistrarea?</DialogTitle>

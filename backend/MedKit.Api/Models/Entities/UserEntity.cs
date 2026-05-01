@@ -41,4 +41,5 @@ public class UserEntity
 
     public List<RefreshTokenEntity> RefreshTokens { get; set; } = [];
     public UserProfileEntity? Profile { get; set; }
+    public PatientEntity? Patient { get; set; }
 }
