@@ -55,7 +55,7 @@ const drugSchema = z.object({
 const medicalRecordSchema = z.object({
   date: z.string().min(1, "Data este obligatorie"),
   doctor: z.string().min(2, "Numele medicului este obligatoriu"),
-  visitType: z.enum(["In-person", "Telemedicine", "Emergency", "Follow-up", "Procedure"]),
+  visitType: z.enum(["În persoană", "Telemedicină", "Urgență", "Control", "Procedură"]),
   chiefComplaint: z.string().min(2, "Acuza principală este obligatorie"),
   diagnosis: z.string().min(2, "Diagnosticul este obligatoriu"),
   icdCode: z.string().optional(),
@@ -72,7 +72,7 @@ const medicalRecordSchema = z.object({
   treatment: z.string().min(2, "Planul de tratament este obligatoriu"),
   prescribedDrugs: z.array(drugSchema),
   procedures: z.string().optional(),
-  urgency: z.enum(["Routine", "Semi-urgent", "Urgent", "Emergency"]),
+  urgency: z.enum(["Rutină", "Semi-urgent", "Urgent", "Foarte Urgent"]),
   followUpIn: z.string().optional(),
   followUpType: z.string().optional(),
   referral: z.string().optional(),
@@ -88,26 +88,29 @@ type NoteFormData = z.infer<typeof noteSchema>;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const ROUTES: RouteOfAdministration[] = ["Oral","IV","IM","Subcutaneous","Topical","Inhalation","Sublingual","Rectal","Nasal","Ophthalmic","Other"];
-const FREQUENCIES: DrugFrequency[] = ["Once daily","Twice daily","Three times daily","Four times daily","Every 4 hours","Every 6 hours","Every 8 hours","Every 12 hours","Every 24 hours","PRN (as needed)","Weekly","Biweekly","Monthly","Single dose","Other"];
-const URGENCY_LEVELS: UrgencyLevel[] = ["Routine","Semi-urgent","Urgent","Emergency"];
-const FOLLOW_UP_TYPES: FollowUpType[] = ["Office visit","Phone call","Lab work","Imaging","Specialist referral","ER if symptoms worsen","None"];
-const VISIT_TYPES = ["In-person","Telemedicine","Emergency","Follow-up","Procedure"] as const;
+const ROUTES: RouteOfAdministration[] = ["Oral","IV","IM","Subcutanat","Topical","Inhalator","Sublingual","Rectal","Nazal","Ophthalmic","Altul"];
+const FREQUENCIES: DrugFrequency[] = ["O dată pe zi","De două ori pe zi","De trei ori pe zi","De patru ori pe zi","La 4 ore","La 6 ore","La 8 ore","La 12 ore","La 24 ore","PRN (la nevoie)","Săptămânal","La două săptămâni","Lunar","O singură doză","Altul"];
+const URGENCY_LEVELS: UrgencyLevel[] = ["Rutină","Semi-urgent","Urgent","Foarte Urgent"];
+const FOLLOW_UP_TYPES: FollowUpType[] = ["Vizită în cabinet","Apel telefonic","Analize laborator","Imagini","Referire la specialist","Cabinet de urgență dacă simptomele se agravează","Niciuna"];
+const VISIT_TYPES = ["În persoană","Telemedicină","Urgență","Control","Procedură"] as const;
 
 const urgencyConfig: Record<UrgencyLevel, { color: string; badge: "default" | "secondary" | "outline" }> = {
-  Routine:     { color: "text-emerald-600 bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800", badge: "secondary" },
+  Rutină:     { color: "text-emerald-600 bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800", badge: "secondary" },
   "Semi-urgent": { color: "text-yellow-600 bg-yellow-50 border-yellow-200 dark:bg-yellow-950/30 dark:border-yellow-800", badge: "secondary" },
   Urgent:      { color: "text-orange-600 bg-orange-50 border-orange-200 dark:bg-orange-950/30 dark:border-orange-800", badge: "secondary" },
-  Emergency:   { color: "text-red-600 bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800", badge: "secondary" },
+  "Foarte Urgent":   { color: "text-red-600 bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800", badge: "secondary" },
 };
 
 const routeBadgeColor: Record<string, string> = {
   Oral: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400",
   IV:   "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400",
   IM:   "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400",
-  Subcutaneous: "bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400",
+  Subcutanat: "bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400",
   Topical: "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400",
-  Inhalation: "bg-cyan-100 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-400",
+  Inhalator: "bg-cyan-100 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-400",
+  Nazal: "bg-lime-100 text-lime-700 dark:bg-lime-950/40 dark:text-lime-400",
+  Ophthalmic: "bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-400",
+  Altul: "bg-gray-100 text-gray-700 dark:bg-gray-950/40 dark:text-gray-400",
 };
 
 // ─── FormField helper ─────────────────────────────────────────────────────────
@@ -190,14 +193,14 @@ function DrugCard({ drug }: { drug: PrescribedDrug }) {
           {drug.instructions && (
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
-                Special instructions
+                Instrucțiuni speciale
               </p>
               <p className="text-sm bg-yellow-50 border border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-800 rounded-lg px-3 py-2 text-yellow-900 dark:text-yellow-300">
                 ⚠️ {drug.instructions}
               </p>
             </div>
           )}
-          <p className="text-xs text-muted-foreground">Prescribed by: <strong>{drug.prescribedBy}</strong></p>
+          <p className="text-xs text-muted-foreground">Prescris de: <strong>{drug.prescribedBy}</strong></p>
         </div>
       )}
     </div>
@@ -208,20 +211,20 @@ function DrugCard({ drug }: { drug: PrescribedDrug }) {
 
 function VitalSignsGrid({ vs }: { vs: NonNullable<MedicalRecord["vitalSigns"]> }) {
   const items = [
-    { icon: <Activity className="w-3.5 h-3.5" />, label: "BP", value: vs.bloodPressure, unit: "mmHg" },
-    { icon: <Heart className="w-3.5 h-3.5" />, label: "HR", value: vs.heartRate, unit: "" },
-    { icon: <Thermometer className="w-3.5 h-3.5" />, label: "Temp", value: vs.temperature, unit: "" },
-    { icon: <Wind className="w-3.5 h-3.5" />, label: "RR", value: vs.respiratoryRate, unit: "" },
-    { icon: <Eye className="w-3.5 h-3.5" />, label: "SpO₂", value: vs.oxygenSaturation, unit: "" },
-    { icon: <Weight className="w-3.5 h-3.5" />, label: "Weight", value: vs.weight, unit: "" },
-    { icon: <User className="w-3.5 h-3.5" />, label: "Height", value: vs.height, unit: "" },
+    { icon: <Activity className="w-3.5 h-3.5" />, label: "Presiune arterială", value: vs.bloodPressure, unit: "mmHg" },
+    { icon: <Heart className="w-3.5 h-3.5" />, label: "Frecvență cardiacă", value: vs.heartRate, unit: "" },
+    { icon: <Thermometer className="w-3.5 h-3.5" />, label: "Temperatură", value: vs.temperature, unit: "" },
+    { icon: <Wind className="w-3.5 h-3.5" />, label: "Frecvență respiratorie", value: vs.respiratoryRate, unit: "" },
+    { icon: <Eye className="w-3.5 h-3.5" />, label: "Saturație de oxigen", value: vs.oxygenSaturation, unit: "" },
+    { icon: <Weight className="w-3.5 h-3.5" />, label: "Greutate", value: vs.weight, unit: "" },
+    { icon: <User className="w-3.5 h-3.5" />, label: "Înălțime", value: vs.height, unit: "" },
   ].filter((i) => i.value);
 
   if (!items.length) return null;
 
   return (
     <div>
-      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Vital Signs</p>
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Semne vitale</p>
       <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2">
         {items.map((item) => (
           <div key={item.label} className="flex flex-col items-center justify-center bg-muted/40 rounded-xl p-2.5 border border-border gap-1">
@@ -276,20 +279,20 @@ function DrugFormRow({
         <div className="p-3 space-y-3">
           {/* Row 1: Name + Generic name */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <FormField label="Drug name" required error={drugErrors?.name?.message}>
+            <FormField label="Nume medicament" required error={drugErrors?.name?.message}>
               <Input {...register(`prescribedDrugs.${index}.name`)} placeholder="e.g. Tamsulosin" />
             </FormField>
-            <FormField label="Generic name" error={drugErrors?.genericName?.message}>
+            <FormField label="Nume generic" error={drugErrors?.genericName?.message}>
               <Input {...register(`prescribedDrugs.${index}.genericName`)} placeholder="e.g. Tamsulosin HCl" />
             </FormField>
           </div>
 
           {/* Row 2: Dose + Route + Frequency */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <FormField label="Dose" required error={drugErrors?.dose?.message}>
+            <FormField label="Doză" required error={drugErrors?.dose?.message}>
               <Input {...register(`prescribedDrugs.${index}.dose`)} placeholder="e.g. 0.4mg" />
             </FormField>
-            <FormField label="Route" required error={drugErrors?.route?.message}>
+            <FormField label="Cale de administrare" required error={drugErrors?.route?.message}>
               <Select
                 defaultValue={getValues(`prescribedDrugs.${index}.route`) || "Oral"}
                 onValueChange={(v) => setValue(`prescribedDrugs.${index}.route`, v as RouteOfAdministration)}
@@ -300,7 +303,7 @@ function DrugFormRow({
                 </SelectContent>
               </Select>
             </FormField>
-            <FormField label="Frequency" required error={drugErrors?.frequency?.message}>
+            <FormField label="Frecvență" required error={drugErrors?.frequency?.message}>
               <Select
                 defaultValue={getValues(`prescribedDrugs.${index}.frequency`) || "Once daily"}
                 onValueChange={(v) => setValue(`prescribedDrugs.${index}.frequency`, v as DrugFrequency)}
@@ -315,34 +318,34 @@ function DrugFormRow({
 
           {/* Row 3: Duration + Quantity + Refills */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <FormField label="Duration" required error={drugErrors?.duration?.message}>
+            <FormField label="Durată" required error={drugErrors?.duration?.message}>
               <Input {...register(`prescribedDrugs.${index}.duration`)} placeholder="e.g. 7 days, Ongoing" />
             </FormField>
-            <FormField label="Quantity" error={drugErrors?.quantity?.message}>
+            <FormField label="Cantitate" error={drugErrors?.quantity?.message}>
               <Input {...register(`prescribedDrugs.${index}.quantity`)} placeholder="e.g. 30 tablets" />
             </FormField>
-            <FormField label="Refills" error={drugErrors?.refills?.message}>
+            <FormField label="Reaprovizionare" error={drugErrors?.refills?.message}>
               <Input {...register(`prescribedDrugs.${index}.refills`)} placeholder="e.g. No refills" />
             </FormField>
           </div>
 
           {/* Row 4: Start + End date */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <FormField label="Start date" error={drugErrors?.startDate?.message}>
+            <FormField label="Data de început" error={drugErrors?.startDate?.message}>
               <Input type="date" {...register(`prescribedDrugs.${index}.startDate`)} />
             </FormField>
-            <FormField label="End date" error={drugErrors?.endDate?.message}>
+            <FormField label="Data de sfârșit" error={drugErrors?.endDate?.message}>
               <Input type="date" {...register(`prescribedDrugs.${index}.endDate`)} />
             </FormField>
           </div>
 
           {/* Row 5: Indication */}
-          <FormField label="Indication (reason for prescribing)" error={drugErrors?.indication?.message}>
+          <FormField label="Indicație (motivul prescrierii)" error={drugErrors?.indication?.message}>
             <Input {...register(`prescribedDrugs.${index}.indication`)} placeholder="e.g. Renal colic pain management" />
           </FormField>
 
           {/* Row 6: Special instructions */}
-          <FormField label="Special instructions" error={drugErrors?.instructions?.message}>
+          <FormField label="Instrucțiuni speciale" error={drugErrors?.instructions?.message}>
             <Textarea
               {...register(`prescribedDrugs.${index}.instructions`)}
               placeholder="e.g. Take with food. Avoid NSAIDs. Monitor renal function."
@@ -457,13 +460,13 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
   const handleStartLabProcessing = async (reqId: string) => {
     setProcessingReqId(reqId);
     try {
-      await updateLabRequestStatus(reqId, "In Progress");
-      toast.success("Status updated to In Progress");
+      await updateLabRequestStatus(reqId, "În procesare");
+      toast.success("Status actualizat la În procesare.");
       setExpandedReqId(reqId);
       setLabReqObs("");
       setLabReqFile(null);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to update status.");
+      toast.error(err instanceof Error ? err.message : "Eroare la actualizarea statusului.");
     } finally {
       setProcessingReqId(null);
     }
@@ -477,12 +480,12 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
     setSubmittingReqId(reqId);
     try {
       await submitLabResult(reqId, labReqObs.trim() || undefined, labReqFile ?? undefined);
-      toast.success("Results submitted. Lab request marked as Completed.");
+      toast.success("Rezultate trimise cu succes. Status actualizat la Complet.");
       setExpandedReqId(null);
       setLabReqObs("");
       setLabReqFile(null);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to submit results.");
+      toast.error(err instanceof Error ? err.message : "Eroare la trimiterea rezultatelor.");
     } finally {
       setSubmittingReqId(null);
     }
@@ -495,7 +498,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
         prev.map((a) => a.id === id ? { ...a, status: status as Appointment["status"] } : a)
       );
     } catch (err) {
-      console.error("Failed to update appointment status:", err);
+      console.error("Eroare la actualizarea statusului programării:", err);
     }
   };
 
@@ -522,8 +525,8 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
     resolver: zodResolver(medicalRecordSchema),
     defaultValues: {
       date: new Date().toISOString().split("T")[0],
-      visitType: "In-person",
-      urgency: "Routine",
+      visitType: "În persoană",
+      urgency: "Rutină",
       prescribedDrugs: [],
     },
   });
@@ -548,9 +551,9 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
   if (!patient) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <p className="text-muted-foreground">Patient not found.</p>
+        <p className="text-muted-foreground">Pacientul nu a fost găsit.</p>
         <Button variant="ghost" className="mt-4" onClick={() => onNavigate("patients")}>
-          <ArrowLeft className="w-4 h-4 mr-2" /> Back to patients
+          <ArrowLeft className="w-4 h-4 mr-2" /> Înapoi la lista de pacienți
         </Button>
       </div>
     );
@@ -573,7 +576,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
 
   const openAddModal = () => {
     setEditingRecord(null);
-    reset({ date: new Date().toISOString().split("T")[0], visitType: "In-person", urgency: "Routine", prescribedDrugs: [] });
+    reset({ date: new Date().toISOString().split("T")[0], visitType: "În persoană", urgency: "Rutină", prescribedDrugs: [] });
     setAttachments([]);
     setSelectedSamples([]);
     setLabRequestNotes("");
@@ -583,7 +586,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
   const closeModal = () => {
     setIsRecordModalOpen(false);
     setEditingRecord(null);
-    reset({ date: new Date().toISOString().split("T")[0], visitType: "In-person", urgency: "Routine", prescribedDrugs: [] });
+    reset({ date: new Date().toISOString().split("T")[0], visitType: "În persoană", urgency: "Rutină", prescribedDrugs: [] });
     setAttachments([]);
     setSelectedSamples([]);
     setLabRequestNotes("");
@@ -659,7 +662,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
       closeModal();
       void fetchLabRequestsByPatient(patientId);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to save medical record.";
+      const msg = err instanceof Error ? err.message : "Eroare la salvarea înregistrării medicale.";
       toast.error(msg);
     }
   };
@@ -704,7 +707,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
         endDate: d.endDate ?? "",
       })),
     });
-    if (record.labRequest?.status === "Pending") {
+    if (record.labRequest?.status === "În așteptare") {
       setSelectedSamples(record.labRequest.sampleTypes ?? []);
       setLabRequestNotes(record.labRequest.notes ?? "");
     } else {
@@ -726,7 +729,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
 
   const openAddNoteModal = () => {
     if (isAdmin && !user?.doctorId) {
-      toast.error("Admin accounts without a linked doctor profile cannot author notes.");
+      toast.error("Conturile de admin fără un profil de medic asociat nu pot crea note.");
       return;
     }
     setIsNoteModalOpen(true);
@@ -738,7 +741,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
       setIsNoteModalOpen(false);
       resetNote();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to add note.";
+      const msg = err instanceof Error ? err.message : "Eroare la adăugarea notei.";
       toast.error(msg);
     }
   };
@@ -752,7 +755,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
   };
 
   const onDeleteNote = async (id: string) => {
-    if (!window.confirm("Delete this note? This action cannot be undone.")) return;
+    if (!window.confirm("Șterge această notă? Această acțiune nu poate fi anulată.")) return;
     await deleteNote(id);
   };
 
@@ -770,24 +773,24 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
     setLabFile(file);
     setLabFileError(null);
     if (file && !ALLOWED_LAB_TYPES.includes(file.type))
-      setLabFileError("Only PDF, JPEG, and PNG files are accepted.");
+      setLabFileError("Doar fișiere PDF, JPEG și PNG sunt acceptate.");
     else if (file && file.size > MAX_LAB_SIZE)
-      setLabFileError("File must not exceed 10 MB.");
+      setLabFileError("Dimensiunea fișierului nu trebuie să depășească 10 MB.");
   };
 
   const onUploadLabResult = async () => {
-    if (!labFile) { setLabFileError("Please select a file."); return; }
+    if (!labFile) { setLabFileError("Selectați un fișier."); return; }
     if (labFileError) return;
     setIsLabUploading(true);
     try {
       await uploadLabResult(patientId, labFile);
       setIsLabModalOpen(false);
       setLabFile(null);
-      toast.success("Lab result uploaded successfully.");
+      toast.success("Rezultatul de laborator a fost încărcat cu succes.");
       setIsLabResultsLoading(true);
       void fetchLabResults(patientId).finally(() => setIsLabResultsLoading(false));
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Upload failed.";
+      const msg = err instanceof Error ? err.message : "Eroare la încărcarea rezultatului de laborator.";
       toast.error(msg);
     } finally {
       setIsLabUploading(false);
@@ -820,7 +823,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
     <div className="space-y-6">
       {/* Back */}
       <Button variant="ghost" className="gap-1.5 -ml-2 text-sm" onClick={() => onNavigate("patients")}>
-        <ArrowLeft className="w-4 h-4" /> Back to patients
+        <ArrowLeft className="w-4 h-4" /> Înapoi la pacienți
       </Button>
 
       {/* Patient Header */}
@@ -836,7 +839,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
               <div>
                 <h1 className="text-2xl font-bold">{patient.fullName}</h1>
                 <p className="text-muted-foreground text-sm mt-0.5">
-                  {age} years old · {patient.sex} · DOB: {formatDate(patient.dateOfBirth)}
+                  {age} ani · {patient.sex} · Data nasterii: {formatDate(patient.dateOfBirth)}
                 </p>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
@@ -845,7 +848,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                 </Badge>
                 {isLabDoctor && (
                   <Badge variant="outline" className="text-xs border-purple-300 text-purple-700 dark:text-purple-400 gap-1.5">
-                    <FlaskConical className="w-3 h-3" />Lab access only
+                    <FlaskConical className="w-3 h-3" />Acces laborator doar
                   </Badge>
                 )}
                 {canAddRecords && (
@@ -856,7 +859,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                     className="gap-1.5"
                   >
                     <Pencil className="w-3.5 h-3.5" />
-                    {isSpecialist ? "Edit Medical Info" : "Edit Patient"}
+                    {isSpecialist ? "Edit Medical Info" : "Edit Pacient"}
                   </Button>
                 )}
                 {canScheduleAppointments && (
@@ -865,12 +868,12 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                     onClick={() => onNavigate(`create-appointment-patient-${patientId}`)}
                     className="gap-1.5"
                   >
-                    <CalendarDays className="w-3.5 h-3.5" />Schedule Appointment
+                    <CalendarDays className="w-3.5 h-3.5" />Programare Intervenție
                   </Button>
                 )}
                 {canAddLabResults && isLabDoctor && (
                   <Button size="sm" variant="outline" onClick={() => setIsLabModalOpen(true)} className="gap-1.5">
-                    <Upload className="w-3.5 h-3.5" />Upload Lab Result
+                    <Upload className="w-3.5 h-3.5" />Încarcare Rezultat Laboratoe
                   </Button>
                 )}
               </div>
@@ -890,14 +893,14 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
               {patient.allergies && (
                 <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive/10 border border-destructive/20">
                   <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0" />
-                  <span className="text-xs text-destructive font-medium">Allergies: {patient.allergies}</span>
+                  <span className="text-xs text-destructive font-medium">Alergii: {patient.allergies}</span>
                 </div>
               )}
               {patient.currentMedications && (
                 <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
                   <Pill className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                   <span className="text-xs text-blue-700 dark:text-blue-400 font-medium">
-                    Meds: {patient.currentMedications}
+                    Medicamentație: {patient.currentMedications}
                   </span>
                 </div>
               )}
@@ -916,25 +919,25 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
           )}
           {!isLabDoctor && (
             <TabsTrigger value="medical-history" className="gap-1.5 text-xs sm:text-sm">
-              <ClipboardList className="w-3.5 h-3.5" /><span className="hidden sm:inline">History</span>
+              <ClipboardList className="w-3.5 h-3.5" /><span className="hidden sm:inline">Istoric Medical</span>
             </TabsTrigger>
           )}
           <TabsTrigger value="lab-results" className="gap-1.5 text-xs sm:text-sm">
-            <FlaskConical className="w-3.5 h-3.5" /><span className="hidden sm:inline">Labs</span>
+            <FlaskConical className="w-3.5 h-3.5" /><span className="hidden sm:inline">Rezultate Laborator</span>
           </TabsTrigger>
           {!isLabDoctor && (
             <TabsTrigger value="appointments" className="gap-1.5 text-xs sm:text-sm">
-              <CalendarDays className="w-3.5 h-3.5" /><span className="hidden sm:inline">Appointments</span>
+              <CalendarDays className="w-3.5 h-3.5" /><span className="hidden sm:inline">Programări</span>
             </TabsTrigger>
           )}
           {!isLabDoctor && (
             <TabsTrigger value="notes" className="gap-1.5 text-xs sm:text-sm">
-              <StickyNote className="w-3.5 h-3.5" /><span className="hidden sm:inline">Notes</span>
+              <StickyNote className="w-3.5 h-3.5" /><span className="hidden sm:inline">Note</span>
             </TabsTrigger>
           )}
           {isLabDoctor && (
             <TabsTrigger value="patient-info" className="gap-1.5 text-xs sm:text-sm">
-              <User className="w-3.5 h-3.5" /><span className="hidden sm:inline">Patient Info</span>
+              <User className="w-3.5 h-3.5" /><span className="hidden sm:inline">Info Pacient</span>
             </TabsTrigger>
           )}
         </TabsList>
@@ -942,17 +945,17 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
         {/* ── Personal ── */}
         <TabsContent value="personal">
           <Card>
-            <CardHeader><CardTitle className="text-base">Personal Information</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">Info Personale</CardTitle></CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[
-                  { label: "Full name", value: patient.fullName, icon: <User className="w-4 h-4" /> },
-                  { label: "Date of birth", value: formatDate(patient.dateOfBirth), icon: <Calendar className="w-4 h-4" /> },
-                  { label: "Age", value: `${age} years old`, icon: <User className="w-4 h-4" /> },
+                  { label: "Nume complet", value: patient.fullName, icon: <User className="w-4 h-4" /> },
+                  { label: "Data nașterii", value: formatDate(patient.dateOfBirth), icon: <Calendar className="w-4 h-4" /> },
+                  { label: "Vârstă", value: `${age} ani`, icon: <User className="w-4 h-4" /> },
                   { label: "Sex", value: patient.sex, icon: <User className="w-4 h-4" /> },
-                  { label: "National ID", value: patient.nationalId, icon: <CreditCard className="w-4 h-4" /> },
-                  { label: "Blood type", value: patient.bloodType, icon: <Droplets className="w-4 h-4" /> },
-                  { label: "Phone", value: patient.phone, icon: <Phone className="w-4 h-4" /> },
+                  { label: "ID Național", value: patient.nationalId, icon: <CreditCard className="w-4 h-4" /> },
+                  { label: "Tip de sânge", value: patient.bloodType, icon: <Droplets className="w-4 h-4" /> },
+                  { label: "Telefon", value: patient.phone, icon: <Phone className="w-4 h-4" /> },
                   { label: "Email", value: patient.email, icon: <Mail className="w-4 h-4" /> },
                 ].map((item) => (
                   <div key={item.label} className="space-y-1">
@@ -964,15 +967,15 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                 ))}
                 <div className="sm:col-span-2 space-y-1">
                   <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                    <AlertTriangle className="w-4 h-4" />Allergies
+                    <AlertTriangle className="w-4 h-4" />Alergii
                   </p>
-                  <p className="text-sm font-medium">{patient.allergies || "None documented"}</p>
+                  <p className="text-sm font-medium">{patient.allergies || "Niciuna documentată"}</p>
                 </div>
                 <div className="sm:col-span-2 space-y-1">
                   <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                    <Pill className="w-4 h-4" />Current medications
+                    <Pill className="w-4 h-4" />Medicamente curente
                   </p>
-                  <p className="text-sm font-medium">{patient.currentMedications || "None documented"}</p>
+                  <p className="text-sm font-medium">{patient.currentMedications || "Niciuna documentată"}</p>
                 </div>
               </div>
             </CardContent>
@@ -985,16 +988,16 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
             <div className="bg-card rounded-xl border border-border p-5 space-y-4">
               <div className="flex items-center gap-2 text-sm text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-lg px-3 py-2">
                 <FlaskConical className="w-4 h-4 shrink-0" />
-                <span>As a lab doctor, you have read-only access to patient information and can upload lab results.</span>
+                <span>Doctorul de Laborator are drept de citire la informațiile pacientului și poate încărca rezultatele de laborator.</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 {[
-                  { label: "Full name", value: patient.fullName },
-                  { label: "Date of birth", value: formatDate(patient.dateOfBirth) },
+                  { label: "Nume complet", value: patient.fullName },
+                  { label: "Data nașterii", value: formatDate(patient.dateOfBirth) },
                   { label: "Sex", value: patient.sex },
-                  { label: "Blood type", value: patient.bloodType },
-                  { label: "National ID", value: patient.nationalId },
-                  { label: "Phone", value: patient.phone },
+                  { label: "Tip de sânge", value: patient.bloodType },
+                  { label: "ID Național", value: patient.nationalId },
+                  { label: "Telefon", value: patient.phone },
                   { label: "Email", value: patient.email },
                 ].map((item) => (
                   <div key={item.label}>
@@ -1004,7 +1007,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                 ))}
                 {patient.allergies && (
                   <div className="sm:col-span-2">
-                    <p className="text-xs text-muted-foreground mb-0.5">Allergies</p>
+                    <p className="text-xs text-muted-foreground mb-0.5">Alergii</p>
                     <p className="font-medium text-destructive">{patient.allergies}</p>
                   </div>
                 )}
@@ -1017,11 +1020,11 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
         <TabsContent value="medical-history" className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-              Medical History Timeline
+              Istoric Medical
             </h3>
             {canAddRecords && (
               <Button size="sm" onClick={openAddModal} className="gap-1.5">
-                <Plus className="w-4 h-4" />Add record
+                <Plus className="w-4 h-4" />Adaugă înregistrare
               </Button>
             )}
           </div>
@@ -1029,18 +1032,18 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
           {isMedicalRecordsLoading ? (
             <div className="flex items-center justify-center py-12 text-muted-foreground">
               <Loader2 className="w-5 h-5 animate-spin mr-2" />
-              <span className="text-sm">Loading medical records…</span>
+              <span className="text-sm">Încărcare înregistrări medicale…</span>
             </div>
           ) : medicalRecords.length === 0 ? (
             <Empty>
               <EmptyHeader>
-                <EmptyTitle>No medical records yet</EmptyTitle>
-                <EmptyDescription>Add the first medical record for this patient.</EmptyDescription>
+                <EmptyTitle>Nu există înregistrări medicale încă</EmptyTitle>
+                <EmptyDescription>Adaugă prima înregistrare medicală pentru acest pacient.</EmptyDescription>
               </EmptyHeader>
               {canAddRecords && (
                 <EmptyContent>
                   <Button onClick={openAddModal} className="gap-2">
-                    <Plus className="w-4 h-4" />Add record
+                    <Plus className="w-4 h-4" />Adaugă înregistrare
                   </Button>
                 </EmptyContent>
               )}
@@ -1051,7 +1054,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
               <div className="space-y-5">
                 {medicalRecords.map((record) => {
                   const urg = record.urgency ?? "Routine";
-                  const urgStyle = urgencyConfig[urg]?.color ?? urgencyConfig.Routine.color;
+                  const urgStyle = urgencyConfig[urg]?.color ?? urgencyConfig.Rutină.color;
                   return (
                     <div key={record.id} className="relative pl-12">
                       <div className="absolute left-3 top-5 w-4 h-4 rounded-full bg-primary border-2 border-background shadow" />
@@ -1098,7 +1101,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                           </div>
                           {record.chiefComplaint && (
                             <p className="text-sm mt-2 text-muted-foreground">
-                              <span className="font-medium text-foreground">Chief complaint:</span>{" "}
+                              <span className="font-medium text-foreground">Plângere principală:</span>{" "}
                               {record.chiefComplaint}
                             </p>
                           )}
@@ -1126,21 +1129,21 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
 
                           {/* Symptoms */}
                           <div>
-                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Symptoms</p>
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Simptome</p>
                             <p className="text-sm">{record.symptoms}</p>
                           </div>
 
                           {/* Physical Exam */}
                           {record.physicalExam && (
                             <div>
-                              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Physical examination</p>
+                              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Examinare fizică</p>
                               <p className="text-sm">{record.physicalExam}</p>
                             </div>
                           )}
 
                           {/* Treatment narrative */}
                           <div>
-                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Treatment plan</p>
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Plan de tratament</p>
                             <p className="text-sm leading-relaxed">{record.treatment}</p>
                           </div>
 
@@ -1149,7 +1152,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                             <div>
                               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
                                 <Pill className="w-3.5 h-3.5" />
-                                Prescribed medications ({record.prescribedDrugs?.length ?? 0})
+                                Medicamente prescrise ({record.prescribedDrugs?.length ?? 0})
                               </p>
                               <div className="space-y-2">
                                 {(record.prescribedDrugs ?? []).map((drug) => (
@@ -1163,7 +1166,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                           {record.procedures && (
                             <div>
                               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1 flex items-center gap-1.5">
-                                <Activity className="w-3.5 h-3.5" />Procedures
+                                <Activity className="w-3.5 h-3.5" />Proceduri
                               </p>
                               <p className="text-sm">{record.procedures}</p>
                             </div>
@@ -1174,7 +1177,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               {record.followUpIn && (
                                 <div className="rounded-lg bg-muted/50 border border-border p-3">
-                                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Follow-up</p>
+                                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Programare de urmărire</p>
                                   <p className="text-sm font-medium">{record.followUpIn}</p>
                                   {record.followUpType && (
                                     <p className="text-xs text-muted-foreground">{record.followUpType}</p>
@@ -1184,7 +1187,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                               {record.referral && (
                                 <div className="rounded-lg bg-muted/50 border border-border p-3">
                                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1 flex items-center gap-1">
-                                    <UserCheck className="w-3.5 h-3.5" />Referral
+                                    <UserCheck className="w-3.5 h-3.5" />Recomandare
                                   </p>
                                   <p className="text-sm">{record.referral}</p>
                                 </div>
@@ -1196,7 +1199,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                           {record.patientEducation && (
                             <div className="rounded-lg bg-blue-50 border border-blue-200 dark:bg-blue-950/20 dark:border-blue-800 p-3">
                               <p className="text-xs font-medium text-blue-700 dark:text-blue-400 uppercase tracking-wide mb-1 flex items-center gap-1.5">
-                                <BookOpen className="w-3.5 h-3.5" />Patient education provided
+                                <BookOpen className="w-3.5 h-3.5" />Educație pentru pacient
                               </p>
                               <p className="text-sm text-blue-800 dark:text-blue-300">{record.patientEducation}</p>
                             </div>
@@ -1206,7 +1209,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                           {(record.attachments?.length ?? 0) > 0 && (
                             <div>
                               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5">
-                                Attachments ({record.attachments!.length})
+                                Atasamente ({record.attachments!.length})
                               </p>
                               <div className="flex flex-wrap gap-2">
                                 {record.attachments!.map((att) => (
@@ -1229,11 +1232,11 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                           {record.labRequest && (
                             <div className="flex items-center gap-2 pt-1">
                               <FlaskConical className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                              <span className="text-xs text-muted-foreground">Lab request:</span>
+                              <span className="text-xs text-muted-foreground">Cerere laborator</span>
                               <span className={`text-xs px-2 py-0.5 rounded-full font-semibold border ${
-                                record.labRequest.status === "Pending"
+                                record.labRequest.status === "În așteptare"
                                   ? "text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950/30 dark:border-amber-800"
-                                  : record.labRequest.status === "In Progress"
+                                  : record.labRequest.status === "În procesare"
                                   ? "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800"
                                   : "text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950/30 dark:border-emerald-800"
                               }`}>
@@ -1260,7 +1263,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
           {labRequests.length > 0 && (
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                <FlaskConical className="w-3.5 h-3.5" />Lab Requests
+                <FlaskConical className="w-3.5 h-3.5" />Cereri de laborator
               </h3>
               <div className="space-y-3">
                 {labRequests.map((req) => (
@@ -1269,14 +1272,14 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                       <div className="flex flex-wrap items-center gap-2">
                         {req.sampleTypes.map((s) => (
                           <span key={s} className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground capitalize">
-                            {s === "csf" ? "CSF" : s}
+                            {s === "lcr" ? "LCR" : s}
                           </span>
                         ))}
                       </div>
                       <span className={`text-xs px-2.5 py-1 rounded-full font-semibold border shrink-0 ${
-                        req.status === "Pending"
+                        req.status === "În așteptare"
                           ? "text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950/30 dark:border-amber-800"
-                          : req.status === "In Progress"
+                          : req.status === "În procesare"
                           ? "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800"
                           : "text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950/30 dark:border-emerald-800"
                       }`}>
@@ -1284,14 +1287,14 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Requested by {req.requestedByDoctorName} · {formatDate(req.createdAt)}
+                      Cerut de {req.requestedByDoctorName} · {formatDate(req.createdAt)}
                     </p>
                     {req.notes && (
                       <p className="text-xs text-muted-foreground italic">"{req.notes}"</p>
                     )}
                     {req.results.length > 0 && (
                       <div className="pt-1 space-y-1.5">
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Results</p>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Resultate</p>
                         {req.results.map((res) => (
                           <div key={res.id} className="rounded-lg bg-muted/50 border border-border px-3 py-2 text-xs space-y-1">
                             {res.observations && <p className="text-sm">{res.observations}</p>}
@@ -1307,7 +1310,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                     )}
 
                     {/* Lab doctor — Start Processing */}
-                    {isLabDoctor && req.status === "Pending" && (
+                    {isLabDoctor && req.status === "În așteptare" && (
                       <div className="pt-2 border-t border-border">
                         <Button
                           size="sm"
@@ -1318,13 +1321,13 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                           {processingReqId === req.id
                             ? <Loader2 className="w-4 h-4 animate-spin" />
                             : <FlaskConical className="w-4 h-4" />}
-                          Start Processing
+                          În procesare
                         </Button>
                       </div>
                     )}
 
                     {/* Lab doctor — Submit Results */}
-                    {isLabDoctor && req.status === "In Progress" && (
+                    {isLabDoctor && req.status === "În procesare" && (
                       <div className="pt-2 border-t border-border space-y-3">
                         {expandedReqId !== req.id ? (
                           <Button
@@ -1333,22 +1336,22 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                             className="w-full gap-2"
                             onClick={() => { setExpandedReqId(req.id); setLabReqObs(""); setLabReqFile(null); }}
                           >
-                            <CheckCircle2 className="w-4 h-4" />Submit Results
+                            <CheckCircle2 className="w-4 h-4" />Rezultate încărcate
                           </Button>
                         ) : (
                           <div className="space-y-3">
                             <div className="space-y-1.5">
-                              <Label className="text-xs">Observations</Label>
+                              <Label className="text-xs">Observații</Label>
                               <Textarea
                                 value={labReqObs}
                                 onChange={(e) => setLabReqObs(e.target.value)}
-                                placeholder="Enter findings, measurements, or observations…"
+                                placeholder="Adaugă rezultate, măsurători, sau observații..."
                                 rows={3}
                                 className="resize-none text-sm"
                               />
                             </div>
                             <div className="space-y-1.5">
-                              <Label className="text-xs">Attach file (PDF / JPEG / PNG, max 10 MB)</Label>
+                              <Label className="text-xs">Atașează fișier (PDF / JPEG / PNG, max 10 MB)</Label>
                               {labReqFile ? (
                                 <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg text-sm border border-border">
                                   <FileText className="w-4 h-4 shrink-0 text-muted-foreground" />
@@ -1369,7 +1372,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                                   className="w-full flex flex-col items-center gap-1.5 py-4 rounded-xl border-2 border-dashed border-border hover:border-primary/40 transition-colors text-muted-foreground hover:text-primary text-sm"
                                 >
                                   <Upload className="w-4 h-4" />
-                                  Click to upload result file
+                                  Click să incarci un fișier de rezultat
                                 </button>
                               )}
                               <input
@@ -1390,7 +1393,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                                 className="flex-1"
                                 onClick={() => { setExpandedReqId(null); setLabReqObs(""); setLabReqFile(null); }}
                               >
-                                Cancel
+                                Anulează
                               </Button>
                               <Button
                                 size="sm"
@@ -1420,20 +1423,20 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Lab Results</h3>
             {canAddLabResults && (
               <Button size="sm" onClick={() => setIsLabModalOpen(true)} className="gap-1.5">
-                <Upload className="w-4 h-4" />Upload Result
+                <Upload className="w-4 h-4" />Încarcă rezultate
               </Button>
             )}
           </div>
           {isLabResultsLoading ? (
             <div className="flex items-center justify-center py-12 text-muted-foreground">
               <Loader2 className="w-5 h-5 animate-spin mr-2" />
-              <span className="text-sm">Loading lab results…</span>
+              <span className="text-sm">Încărcare rezultate de laborator...</span>
             </div>
           ) : labResults.length === 0 ? (
             <Empty>
               <EmptyHeader>
-                <EmptyTitle>No lab results</EmptyTitle>
-                <EmptyDescription>No laboratory result files have been uploaded yet.</EmptyDescription>
+                <EmptyTitle>Niciun fișier de rezultate</EmptyTitle>
+                <EmptyDescription>Nu au fost încărcate fișiere de rezultate de laborator.</EmptyDescription>
               </EmptyHeader>
             </Empty>
           ) : (
@@ -1446,7 +1449,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm truncate">{result.originalFileName}</p>
                     <p className="text-xs text-muted-foreground">
-                      {formatDate(result.uploadedAt)} · {formatFileSize(result.fileSizeBytes)} · Uploaded by {result.uploaderName}
+                      {formatDate(result.uploadedAt)} · {formatFileSize(result.fileSizeBytes)} · Încărcat de {result.uploaderName}
                     </p>
                   </div>
                   <Button
@@ -1458,11 +1461,11 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                         const url = await getLabResultDownloadUrl(result.id);
                         window.open(url, "_blank", "noopener,noreferrer");
                       } catch {
-                        toast.error("Could not generate download link. Please try again.");
+                        toast.error("Nu s-a putut descărca fișierul. Vă rugăm să încercați din nou.");
                       }
                     }}
                   >
-                    <Eye className="w-3.5 h-3.5" />View
+                    <Eye className="w-3.5 h-3.5" />Vezi
                   </Button>
                 </div>
               ))}
@@ -1475,11 +1478,11 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
         <TabsContent value="appointments" className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-              Appointment History
+              Istoric programări
             </h3>
             {canScheduleAppointments && (
               <Button size="sm" onClick={() => onNavigate(`create-appointment-patient-${patientId}`)} className="gap-1.5">
-                <Plus className="w-4 h-4" />Schedule
+                <Plus className="w-4 h-4" />Programat
               </Button>
             )}
           </div>
@@ -1487,18 +1490,18 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
           {patientApptLoading ? (
             <div className="flex items-center justify-center py-12 text-muted-foreground">
               <Loader2 className="w-5 h-5 animate-spin mr-2" />
-              <span className="text-sm">Loading appointments…</span>
+              <span className="text-sm">Încărcare programări...</span>
             </div>
           ) : patientAppointments.length === 0 ? (
             <Empty>
               <EmptyHeader>
-                <EmptyTitle>No appointments yet</EmptyTitle>
-                <EmptyDescription>Schedule the first appointment for this patient.</EmptyDescription>
+                <EmptyTitle>Nu există programări</EmptyTitle>
+                <EmptyDescription>Programează prima vizită.</EmptyDescription>
               </EmptyHeader>
               {canScheduleAppointments && (
                 <EmptyContent>
                   <Button onClick={() => onNavigate(`create-appointment-patient-${patientId}`)} className="gap-2">
-                    <CalendarDays className="w-4 h-4" />Schedule Appointment
+                    <CalendarDays className="w-4 h-4" />Programare vizită
                   </Button>
                 </EmptyContent>
               )}
@@ -1511,14 +1514,14 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                 const isPast = aptDate < new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
                 const statusStyles: Record<string, string> = {
-                  Scheduled: "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800",
-                  Completed: "text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950/30 dark:border-emerald-800",
-                  Cancelled: "text-muted-foreground bg-muted border-border",
+                  Planificată: "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800",
+                  Finalizată: "text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950/30 dark:border-emerald-800",
+                  Anulată: "text-muted-foreground bg-muted border-border",
                 };
                 const statusIcons: Record<string, React.ReactNode> = {
-                  Scheduled: <AlertCircle className="w-3 h-3" />,
-                  Completed: <CheckCircle2 className="w-3 h-3" />,
-                  Cancelled: <XCircle className="w-3 h-3" />,
+                  Planificată: <AlertCircle className="w-3 h-3" />,
+                  Finalizată: <CheckCircle2 className="w-3 h-3" />,
+                  Anulată: <XCircle className="w-3 h-3" />,
                 };
 
                 return (
@@ -1563,7 +1566,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                       </div>
 
                       {/* Actions */}
-                      {apt.status !== "Completed" && (
+                      {apt.status !== "Finalizată" && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
@@ -1575,29 +1578,29 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            {apt.status === "Scheduled" && (
+                            {apt.status === "Planificată" && (
                               <DropdownMenuItem
-                                onClick={() => handleApptStatusChange(apt.id, "Completed")}
+                                onClick={() => handleApptStatusChange(apt.id, "Finalizată")}
                               >
                                 <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />
-                                Mark as completed
+                                Marchează ca finalizată
                               </DropdownMenuItem>
                             )}
-                            {apt.status === "Scheduled" && (
+                            {apt.status === "Planificată" && (
                               <DropdownMenuItem
                                 className="text-destructive"
-                                onClick={() => handleApptStatusChange(apt.id, "Cancelled")}
+                                onClick={() => handleApptStatusChange(apt.id, "Anulată")}
                               >
                                 <XCircle className="w-4 h-4 mr-2" />
-                                Cancel appointment
+                                Anulează programare
                               </DropdownMenuItem>
                             )}
-                            {apt.status === "Cancelled" && (
+                            {apt.status === "Anulată" && (
                               <DropdownMenuItem
-                                onClick={() => handleApptStatusChange(apt.id, "Scheduled")}
+                                onClick={() => handleApptStatusChange(apt.id, "Planificată")}
                               >
                                 <CalendarDays className="w-4 h-4 mr-2 text-blue-600" />
-                                Reschedule
+                                Reprogramează
                               </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>
@@ -1614,10 +1617,10 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
         {/* ── Notes ── */}
         <TabsContent value="notes" className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Clinical Notes</h3>
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Note de clinică</h3>
             {canAddNotes && (
               <Button size="sm" onClick={openAddNoteModal} className="gap-1.5">
-                <Plus className="w-4 h-4" />Add note
+                <Plus className="w-4 h-4" />Adaugă notă
               </Button>
             )}
           </div>
@@ -1628,13 +1631,13 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
           ) : notes.length === 0 ? (
             <Empty>
               <EmptyHeader>
-                <EmptyTitle>No clinical notes</EmptyTitle>
-                <EmptyDescription>Add the first clinical note for this patient.</EmptyDescription>
+                <EmptyTitle>Nicio notă de clinică</EmptyTitle>
+                <EmptyDescription>Adaugă prima notă de clinică pentru acest pacient.</EmptyDescription>
               </EmptyHeader>
               {canAddNotes && (
                 <EmptyContent>
                   <Button onClick={openAddNoteModal} className="gap-2">
-                    <Plus className="w-4 h-4" />Add note
+                    <Plus className="w-4 h-4" />Adaugă notă
                   </Button>
                 </EmptyContent>
               )}
@@ -1694,7 +1697,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
           <DialogHeader className="px-8 pt-6 pb-4 border-b border-border shrink-0">
             <DialogTitle className="flex items-center gap-2 text-lg">
               <FileText className="w-5 h-5 text-primary" />
-              {editingRecord ? "Edit Medical Record" : "New Medical Record"}
+              {editingRecord ? "Editează" : "Adaugă Record Medical"}
             </DialogTitle>
           </DialogHeader>
 
@@ -1709,14 +1712,14 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                 {/* Section 1: Visit info */}
                 <div className="space-y-3">
                   <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border pb-1.5 flex items-center gap-1.5">
-                    <FileText className="w-3.5 h-3.5" />Visit Information
+                    <FileText className="w-3.5 h-3.5" />Informații despre vizită
                   </h3>
                   <div className="grid grid-cols-2 gap-3">
-                    <FormField label="Date" required error={errors.date?.message}>
+                    <FormField label="Data" required error={errors.date?.message}>
                       <Input type="date" {...register("date")} />
                     </FormField>
-                    <FormField label="Urgency" required error={errors.urgency?.message}>
-                      <Select value={watch("urgency") ?? "Routine"} onValueChange={(v) => setValue("urgency", v as UrgencyLevel)}>
+                    <FormField label="Urgență" required error={errors.urgency?.message}>
+                      <Select value={watch("urgency") ?? "Rutină"} onValueChange={(v) => setValue("urgency", v as UrgencyLevel)}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {URGENCY_LEVELS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
@@ -1725,8 +1728,8 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                     </FormField>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <FormField label="Visit type" required error={errors.visitType?.message}>
-                      <Select value={watch("visitType") ?? "In-person"} onValueChange={(v) => setValue("visitType", v as MedicalRecordFormData["visitType"])}>
+                    <FormField label="Tip vizită" required error={errors.visitType?.message}>
+                      <Select value={watch("visitType") ?? "În persoană"} onValueChange={(v) => setValue("visitType", v as MedicalRecordFormData["visitType"])}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {VISIT_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
@@ -1770,30 +1773,30 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                 {/* Section 3: Clinical findings */}
                 <div className="space-y-3">
                   <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border pb-1.5 flex items-center gap-1.5">
-                    <Activity className="w-3.5 h-3.5" />Clinical Findings
+                    <Activity className="w-3.5 h-3.5" />Constatări clinice
                   </h3>
-                  <FormField label="Symptoms" required error={errors.symptoms?.message}>
-                    <Textarea {...register("symptoms")} placeholder="Describe patient symptoms in detail..." rows={3} />
+                  <FormField label="Simptome" required error={errors.symptoms?.message}>
+                    <Textarea {...register("symptoms")} placeholder="Descrie simptomele pacientului în detaliu..." rows={3} />
                   </FormField>
-                  <FormField label="Physical examination findings" error={errors.physicalExam?.message}>
-                    <Textarea {...register("physicalExam")} placeholder="e.g. CVA tenderness right side ++. Abdomen soft..." rows={2} />
+                  <FormField label="Găsele de examen fizic" error={errors.physicalExam?.message}>
+                    <Textarea {...register("physicalExam")} placeholder="ex. Sensibilitate la nivelul ACV pe partea dreaptă ++. Abdomen moale..." rows={2} />
                   </FormField>
                 </div>
 
                 {/* Section 4: Vital signs */}
                 <div className="space-y-3">
                   <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border pb-1.5 flex items-center gap-1.5">
-                    <Heart className="w-3.5 h-3.5" />Vital Signs
+                    <Heart className="w-3.5 h-3.5" /> Semne vitale
                   </h3>
                   <div className="grid grid-cols-2 gap-2">
                     {[
-                      { field: "bp" as const,     label: "Blood pressure",  placeholder: "120/80 mmHg",  icon: <Activity className="w-3 h-3" /> },
-                      { field: "hr" as const,     label: "Heart rate",      placeholder: "72 bpm",       icon: <Heart className="w-3 h-3" /> },
-                      { field: "temp" as const,   label: "Temperature",     placeholder: "37.0 °C",      icon: <Thermometer className="w-3 h-3" /> },
-                      { field: "rr" as const,     label: "Respiratory rate",placeholder: "16 /min",      icon: <Wind className="w-3 h-3" /> },
-                      { field: "spo2" as const,   label: "SpO₂",            placeholder: "98 %",         icon: <Eye className="w-3 h-3" /> },
-                      { field: "weight" as const, label: "Weight",          placeholder: "70 kg",        icon: <Weight className="w-3 h-3" /> },
-                      { field: "height" as const, label: "Height",          placeholder: "175 cm",       icon: <User className="w-3 h-3" /> },
+                      { field: "bp" as const,     label: "Presiunea arterială",  placeholder: "120/80 mmHg",  icon: <Activity className="w-3 h-3" /> },
+                      { field: "hr" as const,     label: "Frecvența cardiacă",      placeholder: "72 bpm",       icon: <Heart className="w-3 h-3" /> },
+                      { field: "temp" as const,   label: "Temperatura",     placeholder: "37.0 °C",      icon: <Thermometer className="w-3 h-3" /> },
+                      { field: "rr" as const,     label: "Frecvența respiratorie",placeholder: "16 /min",      icon: <Wind className="w-3 h-3" /> },
+                      { field: "spo2" as const,   label: "Saturatia de oxigen",            placeholder: "98 %",         icon: <Eye className="w-3 h-3" /> },
+                      { field: "weight" as const, label: "Greutate",          placeholder: "70 kg",        icon: <Weight className="w-3 h-3" /> },
+                      { field: "height" as const, label: "Înălțime",          placeholder: "175 cm",       icon: <User className="w-3 h-3" /> },
                     ].map(({ field, label, placeholder, icon }) => (
                       <div key={field} className="space-y-1">
                         <Label className="text-xs flex items-center gap-1 text-muted-foreground">{icon}{label}</Label>
@@ -1806,28 +1809,28 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                 {/* Section 5: Treatment plan */}
                 <div className="space-y-3">
                   <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border pb-1.5 flex items-center gap-1.5">
-                    <ClipboardList className="w-3.5 h-3.5" />Treatment Plan
+                    <ClipboardList className="w-3.5 h-3.5" />Plan de tratament
                   </h3>
                   <FormField label="Treatment plan narrative" required error={errors.treatment?.message}>
-                    <Textarea {...register("treatment")} placeholder="Describe the overall treatment approach, interventions, and clinical decisions made..." rows={3} />
+                    <Textarea {...register("treatment")} placeholder="Descrie abordarea generală de tratament, intervențiile și deciziile clinice luate..." rows={3} />
                   </FormField>
                   <FormField label="Procedures performed" error={errors.procedures?.message}>
-                    <Input {...register("procedures")} placeholder="e.g. CT abdomen/pelvis, IV access, Urinalysis" />
+                    <Input {...register("procedures")} placeholder="de ex. CT abdomen/pelvin, acces intravenos, analiză de urină" />
                   </FormField>
                 </div>
 
                 {/* Section 6: Follow-up & Referral */}
                 <div className="space-y-3">
                   <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border pb-1.5 flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5" />Follow-up & Referral
+                    <Calendar className="w-3.5 h-3.5" />Consultatie viitoare și trimitere
                   </h3>
                   <div className="grid grid-cols-2 gap-3">
                     <FormField label="Follow-up in" error={errors.followUpIn?.message}>
-                      <Input {...register("followUpIn")} placeholder="e.g. 1 week, 3 months" />
+                      <Input {...register("followUpIn")} placeholder="de ex. 1 săptămână, 3 luni" />
                     </FormField>
                     <FormField label="Follow-up type" error={errors.followUpType?.message}>
                       <Select value={watch("followUpType") ?? ""} onValueChange={(v) => setValue("followUpType", v)}>
-                        <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Selectează tipul de consultatie" /></SelectTrigger>
                         <SelectContent>
                           {FOLLOW_UP_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                         </SelectContent>
@@ -1835,19 +1838,19 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                     </FormField>
                   </div>
                   <FormField label="Referral" error={errors.referral?.message}>
-                    <Input {...register("referral")} placeholder="e.g. Urology — Dr. Patterson — within 1 week" />
+                    <Input {...register("referral")} placeholder="de ex. Urologie — Dr. Mihail — în termen de 1 săptămână" />
                   </FormField>
                 </div>
 
                 {/* Section 7: Patient education */}
                 <div className="space-y-3">
                   <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border pb-1.5 flex items-center gap-1.5">
-                    <BookOpen className="w-3.5 h-3.5" />Patient Education
+                    <BookOpen className="w-3.5 h-3.5" />Educație pentru pacient
                   </h3>
-                  <FormField label="Instructions given to patient" error={errors.patientEducation?.message}>
+                  <FormField label="Instrucțiuni oferite pacientului" error={errors.patientEducation?.message}>
                     <Textarea
                       {...register("patientEducation")}
-                      placeholder="Lifestyle advice, warning signs to watch for, medication instructions..."
+                      placeholder="Sfaturi pentru stilul de viață, semne de avertizare de urmărit, instrucțiuni privind medicamentele..."
                       rows={3}
                     />
                   </FormField>
@@ -1862,10 +1865,10 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                 <div className="space-y-3">
                   <div className="flex items-center justify-between border-b border-border pb-1.5">
                     <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                      <Pill className="w-3.5 h-3.5" />Prescribed Medications ({fields.length})
+                      <Pill className="w-3.5 h-3.5" />Medicamente prescrise ({fields.length})
                     </h3>
                     <Button type="button" variant="outline" size="sm" onClick={addEmptyDrug} className="gap-1.5 h-7 text-xs">
-                      <Plus className="w-3.5 h-3.5" />Add drug
+                      <Plus className="w-3.5 h-3.5" />Adaugă medicament
                     </Button>
                   </div>
 
@@ -1876,8 +1879,8 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                       className="w-full flex flex-col items-center justify-center gap-2 py-10 rounded-xl border-2 border-dashed border-border hover:border-primary/40 transition-colors text-muted-foreground hover:text-primary"
                     >
                       <Pill className="w-8 h-8" />
-                      <span className="text-sm font-medium">No medications prescribed yet</span>
-                      <span className="text-xs">Click to add a drug prescription</span>
+                      <span className="text-sm font-medium">Nu există medicamente prescrise încă</span>
+                      <span className="text-xs">Click pentru a adăuga o prescripție de medicament</span>
                     </button>
                   ) : (
                     <div className="space-y-3 max-h-[calc(96vh-260px)] overflow-y-auto pr-1">
@@ -1893,7 +1896,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                         />
                       ))}
                       <Button type="button" variant="outline" size="sm" onClick={addEmptyDrug} className="w-full gap-1.5">
-                        <Plus className="w-4 h-4" />Add another drug
+                        <Plus className="w-4 h-4" />Adaugă un alt medicament
                       </Button>
                     </div>
                   )}
@@ -1902,15 +1905,15 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                 {/* Section 9: Attachments */}
                 <div className="space-y-3">
                   <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border pb-1.5 flex items-center gap-1.5">
-                    <Paperclip className="w-3.5 h-3.5" />Attachments
+                    <Paperclip className="w-3.5 h-3.5" />Atașamente
                   </h3>
                   <div
                     onClick={() => fileInputRef.current?.click()}
                     className="border-2 border-dashed border-border rounded-xl p-5 text-center cursor-pointer hover:border-primary/40 transition-colors"
                   >
                     <Upload className="w-7 h-7 mx-auto text-muted-foreground mb-1.5" />
-                    <p className="text-sm font-medium text-muted-foreground">Click to upload files</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">PDF, PNG, JPG up to 10MB each</p>
+                    <p className="text-sm font-medium text-muted-foreground">Click pentru a încărca fișiere</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">PDF, PNG, JPG până la 10MB fiecare</p>
                   </div>
                   <input
                     ref={fileInputRef}
@@ -1937,25 +1940,25 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                 {/* Section 10: Laboratory Samples */}
                 <div className="space-y-3">
                   <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border pb-1.5 flex items-center gap-1.5">
-                    <FlaskConical className="w-3.5 h-3.5" />Laboratory Samples
+                    <FlaskConical className="w-3.5 h-3.5" />Mostre de Laborator
                   </h3>
-                  {editingRecord?.labRequest && editingRecord.labRequest.status !== "Pending" ? (
+                  {editingRecord?.labRequest && editingRecord.labRequest.status !== "În așteptare" ? (
                     <div className="flex items-center gap-2 rounded-lg bg-muted/50 border border-border px-3 py-2 text-sm">
                       <FlaskConical className="w-4 h-4 shrink-0 text-muted-foreground" />
-                      <span className="text-muted-foreground">Lab request is</span>
+                      <span className="text-muted-foreground">Cerere de laborator este</span>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${
-                        editingRecord.labRequest.status === "In Progress"
+                        editingRecord.labRequest.status === "În procesare"
                           ? "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800"
                           : "text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950/30 dark:border-emerald-800"
                       }`}>
                         {editingRecord.labRequest.status}
                       </span>
-                      <span className="text-muted-foreground text-xs">— cannot be modified</span>
+                      <span className="text-muted-foreground text-xs">— nu poate fi modificată</span>
                     </div>
                   ) : (
                     <>
                       <div className="grid grid-cols-2 gap-2">
-                        {(["blood", "urine", "stool", "csf", "sputum", "tissue", "other"] as SampleType[]).map((s) => (
+                        {(["sânge", "urină", "scaun", "lcr", "spută", "țesut", "altele"] as SampleType[]).map((s) => (
                           <label key={s} className="flex items-center gap-2 cursor-pointer select-none">
                             <input
                               type="checkbox"
@@ -1967,26 +1970,26 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                               }
                               className="w-4 h-4 rounded border-border accent-primary"
                             />
-                            <span className="text-sm capitalize">{s === "csf" ? "CSF" : s}</span>
+                            <span className="text-sm capitalize">{s === "lcr" ? "LCR" : s}</span>
                           </label>
                         ))}
                       </div>
                       {selectedSamples.length > 0 && (
                         <div className="space-y-1.5">
-                          <Label className="text-xs">Notes for lab (optional)</Label>
+                          <Label className="text-xs">Notițe pentru laborator (optional)</Label>
                           <Textarea
                             value={labRequestNotes}
                             onChange={(e) => setLabRequestNotes(e.target.value)}
-                            placeholder="Special instructions for the lab team…"
+                            placeholder="Instrucțiuni speciale pentru laborator, teste specifice de efectuat, sau alte informații relevante despre mostre..."
                             rows={2}
                             className="text-sm resize-none"
                           />
                         </div>
                       )}
-                      {editingRecord?.labRequest?.status === "Pending" && (
+                      {editingRecord?.labRequest?.status === "În așteptare" && (
                         <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
                           <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                          Editing will update the existing pending lab request.
+                          Se va actualiza.
                         </p>
                       )}
                     </>
@@ -2004,12 +2007,12 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
           <div className="shrink-0 border-t border-border bg-background px-8 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>This record is protected under HIPAA. Ensure all information entered is accurate and clinically relevant.</span>
+              <span>Acest record este protejat sub HIPAA. Asigurați-vă că toate informațiile introduse sunt exacte și relevantă clinic.</span>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <Button type="button" variant="secondary" onClick={closeModal}>Cancel</Button>
+              <Button type="button" variant="secondary" onClick={closeModal}>Anulează</Button>
               <Button type="submit" form="record-form" disabled={isSubmitting} className="gap-2">
-                {isSubmitting ? "Saving..." : editingRecord ? "Save changes" : "Save record"}
+                {isSubmitting ? "Salvare..." : editingRecord ? "Salvează modificările" : "Salvează record"}
               </Button>
             </div>
           </div>
@@ -2020,14 +2023,14 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
       <Dialog open={isNoteModalOpen} onOpenChange={(open) => { if (!open) { setIsNoteModalOpen(false); resetNote(); } }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Add Clinical Note</DialogTitle>
+            <DialogTitle>Adaugă Notă Clinică</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleNoteSubmit(onAddNote)} className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Note <span className="text-destructive">*</span></Label>
               <Textarea
                 {...registerNote("content")}
-                placeholder="Enter clinical observations, follow-up notes, or relevant information..."
+                placeholder="Adaugă observații clinice, notițe de urmărire sau alte informații relevante..."
                 rows={5}
               />
               {noteErrors.content && <p className="text-xs text-destructive">{noteErrors.content.message}</p>}
@@ -2037,10 +2040,10 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
             </p>
             <DialogFooter>
               <Button type="button" variant="secondary" onClick={() => { setIsNoteModalOpen(false); resetNote(); }}>
-                Cancel
+                Anulează
               </Button>
               <Button type="submit" disabled={isNoteSubmitting}>
-                {isNoteSubmitting ? "Saving..." : "Save note"}
+                {isNoteSubmitting ? "Salvare..." : "Salvează notă"}
               </Button>
             </DialogFooter>
           </form>
@@ -2051,24 +2054,24 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
       <Dialog open={isEditNoteModalOpen} onOpenChange={(open) => { if (!open) { setIsEditNoteModalOpen(false); setEditingNoteId(null); resetEditNote(); } }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Edit Clinical Note</DialogTitle>
+            <DialogTitle>Editează Notă Clinică</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleEditNoteSubmit(onEditNote)} className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Note <span className="text-destructive">*</span></Label>
               <Textarea
                 {...registerEditNote("content")}
-                placeholder="Enter clinical observations, follow-up notes, or relevant information..."
+                placeholder="Adaugă observații clinice, notițe de urmărire sau alte informații relevante..."
                 rows={5}
               />
               {editNoteErrors.content && <p className="text-xs text-destructive">{editNoteErrors.content.message}</p>}
             </div>
             <DialogFooter>
               <Button type="button" variant="secondary" onClick={() => { setIsEditNoteModalOpen(false); setEditingNoteId(null); resetEditNote(); }}>
-                Cancel
+                Anulează
               </Button>
               <Button type="submit" disabled={isEditNoteSubmitting}>
-                {isEditNoteSubmitting ? "Saving..." : "Save changes"}
+                {isEditNoteSubmitting ? "Salvare..." : "Salvează modificările"}
               </Button>
             </DialogFooter>
           </form>
@@ -2116,14 +2119,14 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
               ) : (
                 <>
                   <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground opacity-50" />
-                  <p className="text-sm font-medium">Click to select a file</p>
-                  <p className="text-xs text-muted-foreground mt-1">PDF, JPEG, or PNG · max 10 MB</p>
+                  <p className="text-sm font-medium">Click pentru a selecta un fișier</p>
+                  <p className="text-xs text-muted-foreground mt-1">PDF, JPEG, sau PNG · max 10 MB</p>
                 </>
               )}
             </div>
             {labFileError && <p className="text-xs text-destructive">{labFileError}</p>}
             <p className="text-xs text-muted-foreground">
-              Uploading as: <strong>{user?.name}</strong> · {new Date().toLocaleDateString()}
+              Încărcat de: <strong>{user?.name}</strong> · {new Date().toLocaleDateString()}
             </p>
           </div>
           <DialogFooter>
@@ -2132,10 +2135,10 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
               variant="secondary"
               onClick={() => { setIsLabModalOpen(false); setLabFile(null); setLabFileError(null); }}
             >
-              Cancel
+              Anulează
             </Button>
             <Button onClick={onUploadLabResult} disabled={isLabUploading || !labFile || !!labFileError}>
-              {isLabUploading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Uploading...</> : "Upload"}
+              {isLabUploading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Încărcare...</> : "Încarcă"}
             </Button>
           </DialogFooter>
         </DialogContent>

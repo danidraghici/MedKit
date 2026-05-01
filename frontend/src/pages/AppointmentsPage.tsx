@@ -93,7 +93,7 @@ export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) 
     void fetchData();
   }, [fetchData]);
 
-  const handleStatusChange = async (id: string, status: "Completed" | "Cancelled") => {
+  const handleStatusChange = async (id: string, status: "Finalizată" | "Anulată") => {
     try {
       await api.patch(`/api/appointments/${id}/status`, { status });
       setAppointments((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a)));
@@ -365,23 +365,23 @@ export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) 
                                   <User className="w-4 h-4 mr-2" />
                                   Vezi fișa pacientului
                                 </DropdownMenuItem>
-                                {apt.status === "Scheduled" && (
+                                {apt.status === "Planificată" && (
                                   <>
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem onClick={() => void handleStatusChange(apt.id, "Completed")}>
+                                    <DropdownMenuItem onClick={() => void handleStatusChange(apt.id, "Finalizată")}>
                                       <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />
                                       Marchează finalizat
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                       className="text-destructive"
-                                      onClick={() => void handleStatusChange(apt.id, "Cancelled")}
+                                      onClick={() => void handleStatusChange(apt.id, "Anulată")}
                                     >
                                       <XCircle className="w-4 h-4 mr-2" />
                                       Marchează anulat
                                     </DropdownMenuItem>
                                   </>
                                 )}
-                                {apt.status === "Cancelled" && (
+                                {apt.status === "Anulată" && (
                                   <>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem onClick={() => onNavigate("create-appointment")}>

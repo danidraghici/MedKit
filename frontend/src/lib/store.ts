@@ -135,21 +135,6 @@ interface AppState {
   fetchDoctorStats: () => Promise<void>;
 }
 
-const DEMO_USERS: User[] = [
-  { id: "u001", email: "doctor@medkit.com", name: "Dr. Emily Carter", role: "specialist_doctor", doctorId: "d001" },
-  { id: "u002", email: "admin@medkit.com", name: "Admin User", role: "admin" },
-  { id: "u003", email: "dr.torres@medkit.com", name: "Dr. Michael Torres", role: "specialist_doctor", doctorId: "d002" },
-  { id: "u010", email: "lab@medkit.com", name: "Dr. Sarah Lin", role: "lab_doctor", doctorId: "d003" },
-  // Patient accounts — each linked to a Patient record
-  { id: "u004", email: "james.harrison@email.com", name: "James Harrison", role: "patient", patientId: "p001" },
-  { id: "u005", email: "maria.santos@email.com", name: "Maria Santos", role: "patient", patientId: "p002" },
-  { id: "u006", email: "robert.chen@email.com", name: "Robert Chen", role: "patient", patientId: "p003" },
-  { id: "u007", email: "susan.mitchell@email.com", name: "Susan Mitchell", role: "patient", patientId: "p004" },
-  { id: "u008", email: "david.park@email.com", name: "David Park", role: "patient", patientId: "p005" },
-  { id: "u009", email: "linda.johnson@email.com", name: "Linda Johnson", role: "patient", patientId: "p006" },
-];
-
-const DEMO_PASSWORD = "MedKit2025!";
 
 export const useAppStore = create<AppState>()(
   persist(
@@ -616,7 +601,7 @@ export const useAppStore = create<AppState>()(
       getUpcomingAppointments: () => {
         const now = new Date();
         return get()
-          .appointments.filter((a) => new Date(a.date) >= now && a.status === "Scheduled")
+          .appointments.filter((a) => new Date(a.date) >= now && a.status === "Planificată")
           .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
           .slice(0, 5);
       },

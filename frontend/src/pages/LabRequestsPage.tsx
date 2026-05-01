@@ -30,23 +30,23 @@ type ResultFormData = z.infer<typeof resultSchema>;
 // ─── Status badge helper ──────────────────────────────────────────────────────
 
 const statusLabelMap: Record<LabRequestStatus, string> = {
-  Pending: "În așteptare",
-  "In Progress": "În procesare",
-  Completed: "Finalizat",
+  "În așteptare": "În așteptare",
+  "În procesare": "În procesare",
+  "Finalizat": "Finalizat",
 };
 
 function decodeStatus(status: string): LabRequestStatus {
-  if (status === "Pending" || status === "În așteptare") return "Pending";
-  if (status === "In Progress" || status === "În procesare") return "In Progress";
-  return "Completed";
+  if (status === "Pending" || status === "În așteptare") return "În așteptare";
+  if (status === "In Progress" || status === "În procesare") return "În procesare";
+  return "Finalizat";
 }
 
 function statusBadge(status: string) {
   const base = "text-xs px-2.5 py-1 rounded-full font-semibold border";
   const normalized = decodeStatus(status);
-  if (normalized === "Pending")
+  if (normalized === "În așteptare")
     return `${base} text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950/30 dark:border-amber-800`;
-  if (normalized === "In Progress")
+  if (normalized === "În procesare")
     return `${base} text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800`;
   return `${base} text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950/30 dark:border-emerald-800`;
 }
@@ -113,8 +113,8 @@ export default function LabRequestsPage() {
     if (!selectedRequest) return;
     setIsProcessing(true);
     try {
-      await updateLabRequestStatus(selectedRequest.id, "In Progress");
-      setSelectedRequest((prev) => (prev ? { ...prev, status: "In Progress" } : prev));
+      await updateLabRequestStatus(selectedRequest.id, "În procesare");
+      setSelectedRequest((prev) => (prev ? { ...prev, status: "În procesare" } : prev));
       toast.success("Status actualizat la În procesare");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Actualizarea statusului a eșuat.");
@@ -204,7 +204,7 @@ export default function LabRequestsPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     {req.sampleTypes.map((s) => (
                       <span key={s} className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground capitalize">
-                        {s === "csf" ? "CSF" : s}
+                        {s === "lcr" ? "LCR" : s}
                       </span>
                     ))}
                   </div>
@@ -273,7 +273,7 @@ export default function LabRequestsPage() {
                         key={s}
                         className="text-xs px-2.5 py-1 rounded-full bg-muted border border-border capitalize font-medium"
                       >
-                        {s === "csf" ? "CSF" : s}
+                        {s === "lcr" ? "LCR" : s}
                       </span>
                     ))}
                   </div>
@@ -291,14 +291,14 @@ export default function LabRequestsPage() {
                 )}
 
                 {/* Actions by status */}
-                {liveRequest.status === "Pending" && (
+                {liveRequest.status === "În așteptare" && (
                   <Button onClick={() => void handleStartProcessing()} disabled={isProcessing} className="w-full gap-2">
                     {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <FlaskConical className="w-4 h-4" />}
                     Marchează ca În procesare
                   </Button>
                 )}
 
-                {liveRequest.status === "In Progress" && (
+                {liveRequest.status === "În procesare" && (
                   <form onSubmit={handleSubmit(onSubmitResult)} className="space-y-4">
                     <div className="space-y-1.5">
                       <Label>Observații</Label>
@@ -367,7 +367,7 @@ export default function LabRequestsPage() {
                 )}
 
                 {/* Completed: read-only results */}
-                {liveRequest.status === "Completed" && liveRequest.results.length > 0 && (
+                {liveRequest.status === "Finalizat" && liveRequest.results.length > 0 && (
                   <div className="space-y-3">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                       Rezultate trimise

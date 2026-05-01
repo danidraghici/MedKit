@@ -116,18 +116,18 @@ const roleConfig: Record<DoctorRole, { label: string; icon: React.ReactNode; col
 };
 
 const statusConfig: Record<Appointment["status"], { label: string; icon: React.ReactNode; className: string }> = {
-  Scheduled: {
+  Planificată: {
     label: "Programat",
     icon: <AlertCircle className="w-3.5 h-3.5" />,
     className: "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800",
   },
-  Completed: {
+  Finalizată: {
     label: "Finalizat",
     icon: <CheckCircle2 className="w-3.5 h-3.5" />,
     className:
       "text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950/30 dark:border-emerald-800",
   },
-  Cancelled: {
+  Anulată: {
     label: "Anulat",
     icon: <XCircle className="w-3.5 h-3.5" />,
     className: "text-muted-foreground bg-muted border-border",
@@ -219,7 +219,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
         new Date(r.createdAt) >= thirtyDaysAgo &&
         (!isDoctorUser || (!!currentDoctorId && r.doctorId.toLowerCase() === currentDoctorId)),
     );
-    const upcomingApts = appointments.filter((a) => new Date(a.date) >= today && a.status === "Scheduled");
+    const upcomingApts = appointments.filter((a) => new Date(a.date) >= today && a.status === "Planificată");
     // Lab-specific stats (file-based: no status, use uploadedAt for date filtering)
     const todayResults = labResults.filter((r) => r.uploadedAt.startsWith(todayStr));
     const recentLabResults = [...labResults]
@@ -416,14 +416,14 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
     const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
     return {
       total: dashboardAppts.length,
-      scheduled: dashboardAppts.filter((a) => a.status === "Scheduled").length,
+      scheduled: dashboardAppts.filter((a) => a.status === "Planificată").length,
       today: dashboardAppts.filter((a) => {
         const d = new Date(a.date);
-        return d >= today && d < new Date(today.getTime() + 24 * 60 * 60 * 1000) && a.status === "Scheduled";
+        return d >= today && d < new Date(today.getTime() + 24 * 60 * 60 * 1000) && a.status === "Planificată";
       }).length,
       thisWeek: dashboardAppts.filter((a) => {
         const d = new Date(a.date);
-        return d >= today && d < nextWeek && a.status === "Scheduled";
+        return d >= today && d < nextWeek && a.status === "Planificată";
       }).length,
     };
   }, [dashboardAppts]);
@@ -1015,9 +1015,9 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                             <Badge
                               variant="secondary"
                               className={`text-[10px] shrink-0 ${
-                                apt.status === "Completed"
+                                apt.status === "Finalizată"
                                   ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                  : apt.status === "Cancelled"
+                                  : apt.status === "Anulată"
                                     ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                                     : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
                               }`}
@@ -1470,29 +1470,29 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
                                         <User className="w-4 h-4 mr-2" />
                                         Vezi dosar pacient
                                       </DropdownMenuItem>
-                                      {apt.status !== "Completed" && (
+                                      {apt.status !== "Finalizată" && (
                                         <>
                                           <DropdownMenuSeparator />
-                                          {apt.status === "Scheduled" && (
+                                          {apt.status === "Planificată" && (
                                             <DropdownMenuItem
-                                              onClick={() => handleApptStatusChange(apt.id, "Completed")}
+                                              onClick={() => handleApptStatusChange(apt.id, "Finalizată")}
                                             >
                                               <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />
                                               Marchează ca finalizat
                                             </DropdownMenuItem>
                                           )}
-                                          {apt.status === "Scheduled" && (
+                                          {apt.status === "Planificată" && (
                                             <DropdownMenuItem
                                               className="text-destructive"
-                                              onClick={() => handleApptStatusChange(apt.id, "Cancelled")}
+                                              onClick={() => handleApptStatusChange(apt.id, "Anulată")}
                                             >
                                               <XCircle className="w-4 h-4 mr-2" />
                                               Anulează programarea
                                             </DropdownMenuItem>
                                           )}
-                                          {apt.status === "Cancelled" && (
+                                          {apt.status === "Anulată" && (
                                             <DropdownMenuItem
-                                              onClick={() => handleApptStatusChange(apt.id, "Scheduled")}
+                                              onClick={() => handleApptStatusChange(apt.id, "Planificată")}
                                             >
                                               <CalendarDays className="w-4 h-4 mr-2 text-blue-600" />
                                               Reprogramează

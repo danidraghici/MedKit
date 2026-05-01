@@ -36,13 +36,13 @@ import type { Patient } from "@/lib/types";
 
 const PAGE_SIZE = 8;
 
-function labStatusBadge(status: "Pending" | "In Progress" | "Completed") {
+function labStatusBadge(status: "În așteptare" | "În procesare" | "Finalizat") {
   const base = "text-xs px-2 py-0.5 rounded-full font-semibold border";
-  if (status === "Pending")
-    return `${base} text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950/30 dark:border-amber-800`;
-  if (status === "In Progress")
-    return `${base} text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800`;
-  return `${base} text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950/30 dark:border-emerald-800`;
+    if (status === "În așteptare")
+      return `${base} text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950/30 dark:border-amber-800`;
+    if (status === "În procesare")
+      return `${base} text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800`;
+    return `${base} text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950/30 dark:border-emerald-800`;
 }
 
 interface PatientsPageProps {
@@ -72,7 +72,7 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterSex, setFilterSex] = useState<string>("all");
   const [filterBloodType, setFilterBloodType] = useState<string>("all");
-  const [labStatusFilter, setLabStatusFilter] = useState<"All" | "Pending" | "In Progress" | "Completed">("All");
+  const [labStatusFilter, setLabStatusFilter] = useState<"Toate" | "În așteptare" | "În procesare" | "Finalizat">("Toate");
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteConfirm, setDeleteConfirm] = useState<Patient | null>(null);
 
@@ -80,12 +80,14 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
 
   // For lab doctors: map patientId (normalised) → most-urgent lab request status
   const labStatusByPatient = useMemo(() => {
-    const priority: Record<string, number> = { Pending: 0, "In Progress": 1, Completed: 2 };
-    const map = new Map<string, "Pending" | "In Progress" | "Completed">();
+    const priority: Record<string, number> = { "În așteptare": 0, "În procesare": 1, "Finalizat": 2 };
+    const map = new Map<string, "În așteptare" | "În procesare" | "Finalizat">();
     for (const r of labRequests) {
+      const status: "În așteptare" | "În procesare" | "Finalizat" =
+        r.status === "În așteptare" ? "În așteptare" : r.status === "În procesare" ? "În procesare" : "Finalizat";
       const key = pid(r.patientId);
       const cur = map.get(key);
-      if (!cur || priority[r.status] < priority[cur]) map.set(key, r.status);
+      if (!cur || priority[status] < priority[cur]) map.set(key, status);
     }
     return map;
   }, [labRequests]);
@@ -96,9 +98,12 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
     if (isLabDoctor) {
       const labPatientIds = new Set(labRequests.map((r) => pid(r.patientId)));
       filtered = filtered.filter((p) => labPatientIds.has(pid(p.id)));
-      if (labStatusFilter !== "All") {
+      if (labStatusFilter !== "Toate") {
         filtered = filtered.filter((p) =>
-          labRequests.some((r) => pid(r.patientId) === pid(p.id) && r.status === labStatusFilter)
+          labRequests.some((r) => {
+            const status = r.status === "În așteptare" ? "În așteptare" : r.status === "În procesare" ? "În procesare" : "Finalizat";
+            return pid(r.patientId) === pid(p.id) && status === labStatusFilter;
+          })
         );
       }
     }
@@ -158,10 +163,11 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
       {/* Lab status filter tabs — lab doctors only */}
       {isLabDoctor && (
         <div className="flex gap-1 border-b border-border">
-          {(["All", "Pending", "In Progress", "Completed"] as const).map((tab) => {
-            const count = tab === "All"
+          {(["Toate", "În așteptare", "În procesare", "Finalizat"] as const).map((tab) => {
+            const statusKey = tab === "În așteptare" ? "În așteptare" : tab === "În procesare" ? "În procesare" : tab === "Finalizat" ? "Finalizat" : null;
+            const count = tab === "Toate"
               ? new Set(labRequests.map((r) => pid(r.patientId))).size
-              : new Set(labRequests.filter((r) => r.status === tab).map((r) => pid(r.patientId))).size;
+              : new Set(labRequests.filter((r) => r.status === statusKey).map((r) => pid(r.patientId))).size;
             return (
               <button
                 key={tab}
@@ -172,7 +178,7 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
                     : "border-transparent text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {tab === "All" ? "Toate" : tab === "Pending" ? "În așteptare" : tab === "In Progress" ? "În procesare" : "Finalizat"}
+                {tab}
                 <span className="ml-1.5 text-xs text-muted-foreground">({count})</span>
               </button>
             );
@@ -308,7 +314,7 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
                       <FlaskConical className="w-3.5 h-3.5 text-muted-foreground" />
                       {labStatusByPatient.get(pid(patient.id)) && (
                         <span className={labStatusBadge(labStatusByPatient.get(pid(patient.id))!)}>
-                          {labStatusByPatient.get(pid(patient.id)) === "Pending" ? "În așteptare" : labStatusByPatient.get(pid(patient.id)) === "In Progress" ? "În procesare" : "Finalizat"}
+                          {labStatusByPatient.get(pid(patient.id))}
                         </span>
                       )}
                     </>

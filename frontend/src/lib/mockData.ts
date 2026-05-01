@@ -128,7 +128,7 @@ export const MOCK_APPOINTMENTS: Appointment[] = [
     time: "09:00",
     type: "Follow-up - Kidney Stone",
     doctor: "Dr. Emily Carter",
-    status: "Scheduled",
+    status: "Planificată",
   },
   {
     id: "apt002",
@@ -138,7 +138,7 @@ export const MOCK_APPOINTMENTS: Appointment[] = [
     time: "10:30",
     type: "Diabetes Review",
     doctor: "Dr. Michael Torres",
-    status: "Scheduled",
+    status: "Planificată",
   },
   {
     id: "apt003",
@@ -148,7 +148,7 @@ export const MOCK_APPOINTMENTS: Appointment[] = [
     time: "14:00",
     type: "Urology Consult",
     doctor: "Dr. Emily Carter",
-    status: "Scheduled",
+    status: "Planificată",
   },
   {
     id: "apt004",
@@ -158,7 +158,7 @@ export const MOCK_APPOINTMENTS: Appointment[] = [
     time: "11:00",
     type: "Thyroid Review",
     doctor: "Dr. Michael Torres",
-    status: "Scheduled",
+    status: "Planificată",
   },
 ];
 
@@ -177,7 +177,7 @@ export const MOCK_APPOINTMENT_REQUESTS: import("./types").AppointmentRequest[] =
     patientName: "James Harrison",
     requestedDate: "2025-02-10",
     requestedTime: "10:00 AM",
-    type: "Follow-up",
+    type: "Consult",
     reason: "Post-kidney stone follow-up and repeat ultrasound review",
     preferredDoctor: "Dr. Emily Carter",
     status: "Approved",
@@ -190,7 +190,7 @@ export const MOCK_APPOINTMENT_REQUESTS: import("./types").AppointmentRequest[] =
     patientName: "James Harrison",
     requestedDate: "2025-03-05",
     requestedTime: "02:00 PM",
-    type: "Lab Review",
+    type: "Analize laborator - prelevare",
     reason: "Review metabolic panel and calcium levels",
     preferredDoctor: "Dr. Emily Carter",
     status: "Pending",
@@ -202,7 +202,7 @@ export const MOCK_APPOINTMENT_REQUESTS: import("./types").AppointmentRequest[] =
     patientName: "Maria Santos",
     requestedDate: "2025-02-14",
     requestedTime: "09:30 AM",
-    type: "General Consultation",
+    type: "Control",
     reason: "Routine diabetes check and HbA1c review",
     preferredDoctor: "Dr. Michael Torres",
     status: "Approved",

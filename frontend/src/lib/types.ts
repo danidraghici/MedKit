@@ -20,32 +20,32 @@ export type RouteOfAdministration =
   | "Oral"
   | "IV"
   | "IM"
-  | "Subcutaneous"
+  | "Subcutanat"
   | "Topical"
-  | "Inhalation"
+  | "Inhalator"
   | "Sublingual"
   | "Rectal"
-  | "Nasal"
+  | "Nazal"
   | "Ophthalmic"
-  | "Other";
+  | "Altul";
 
 export type DrugFrequency =
-  | "Once daily"
-  | "Twice daily"
-  | "Three times daily"
-  | "Four times daily"
-  | "Every 4 hours"
-  | "Every 5 minutes"
-  | "Every 6 hours"
-  | "Every 8 hours"
-  | "Every 12 hours"
-  | "Every 24 hours"
-  | "PRN (as needed)"
-  | "Weekly"
-  | "Biweekly"
-  | "Monthly"
-  | "Single dose"
-  | "Other";
+  | "O dată pe zi"
+  | "De două ori pe zi"
+  | "De trei ori pe zi"
+  | "De patru ori pe zi"
+  | "La 4 ore"
+  | "La 5 minute"
+  | "La 6 ore"
+  | "La 8 ore"
+  | "La 12 ore"
+  | "La 24 ore"
+  | "PRN (la nevoie)"
+  | "Săptămânal"
+  | "La două săptămâni"
+  | "Lunar"
+  | "O singură doză"
+  | "Altul";
 
 export interface PrescribedDrug {
   id: string;
@@ -64,11 +64,11 @@ export interface PrescribedDrug {
   prescribedBy: string;                // Doctor name
 }
 
-export type UrgencyLevel = "Routine" | "Semi-urgent" | "Urgent" | "Emergency";
-export type FollowUpType = "Office visit" | "Phone call" | "Lab work" | "Imaging" | "Specialist referral" | "ER if symptoms worsen" | "None";
+export type UrgencyLevel = "Rutină" | "Semi-urgent" | "Urgent" | "Foarte Urgent";
+export type FollowUpType = "Vizită în cabinet" | "Apel telefonic" | "Analize laborator" | "Imagini" | "Referire la specialist" | "Cabinet de urgență dacă simptomele se agravează" | "Niciuna";
 
-export type LabRequestStatus = "Pending" | "In Progress" | "Completed";
-export type SampleType = "blood" | "urine" | "stool" | "csf" | "sputum" | "tissue" | "other";
+export type LabRequestStatus = "În așteptare" | "În procesare" | "Finalizat";
+export type SampleType = "sânge" | "urină" | "scaun" | "lcr" | "spută" | "țesut" | "altele";
 
 export interface LabRequestResult {
   id: string;
@@ -103,7 +103,7 @@ export interface MedicalRecord {
   doctorId: string;
   date: string;                        // ISO date string
   doctor: string;
-  visitType: "In-person" | "Telemedicine" | "Emergency" | "Follow-up" | "Procedure";
+  visitType: "În persoană" | "Telemedicină" | "Urgență" | "Control" | "Procedură";
   chiefComplaint: string;              // Primary reason for visit
   diagnosis: string;                   // Primary diagnosis (ICD description)
   icdCode?: string;                    // ICD-10 code
@@ -173,7 +173,7 @@ export interface Appointment {
   time: string;
   type: string;
   doctor: string;
-  status: "Scheduled" | "Completed" | "Cancelled";
+  status: "Planificată" | "Finalizată" | "Anulată";
   notes?: string;
 }
 
@@ -233,15 +233,15 @@ export interface DoctorProfileStats {
 
 // ─── Patient Portal ────────────────────────────────────────────────────────
 
-export type AppointmentStatus = "Scheduled" | "Completed" | "Cancelled" | "Pending";
+export type AppointmentStatus = "Programată" | "Finalizată" | "Anulată" | "În desfășurare";
 export type AppointmentType =
-  | "General Consultation"
-  | "Follow-up"
-  | "Lab Review"
-  | "Emergency"
-  | "Telemedicine"
-  | "Specialist Referral"
-  | "Annual Check-up";
+  | "Consult"
+  | "Control"
+  | "Analize laborator - prelevare"
+  | "Urgență"
+  | "Telemedicină"
+  | "Procedură"
+  | "Control Anual";
 
 export interface AppointmentRequest {
   id: string;

@@ -107,13 +107,13 @@ const URGENCY_CONFIG = {
 };
 
 const APPOINTMENT_TYPES: AppointmentType[] = [
-  "General Consultation",
-  "Follow-up",
-  "Lab Review",
-  "Emergency",
-  "Telemedicine",
-  "Specialist Referral",
-  "Annual Check-up",
+  "Consult",
+  "Control",
+  "Analize laborator - prelevare",
+  "Urgență",
+  "Telemedicină",
+  "Procedură",
+  "Control Anual",
 ];
 
 const TIME_SLOTS = [
@@ -172,7 +172,7 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
     .filter((r) => matchesCurrentPatient(r.patientId))
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   const upcomingItems = [
-    ...myAppointments.filter((a) => a.status === "Scheduled" && getDaysUntil(a.date) >= 0),
+    ...myAppointments.filter((a) => a.status === "Planificată" && getDaysUntil(a.date) >= 0),
     ...myRequests.filter((r) => r.status !== "Rejected" && getDaysUntil(r.requestedDate) >= 0),
   ];
   const reminders = notifications
@@ -596,7 +596,7 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
                         <Badge variant="outline">{rec.visitType}</Badge>
                         <Badge
                           variant={
-                            rec.urgency === "Emergency"
+                            rec.urgency === "Foarte Urgent"
                               ? "destructive"
                               : rec.urgency === "Urgent"
                                 ? "warning"
@@ -1134,7 +1134,7 @@ function resolveAppointmentForReminder(
   }
 
   const upcoming = appointments
-    .filter((item) => item.status === "Scheduled" && getDaysUntil(item.date) >= 0)
+    .filter((item) => item.status === "Planificată" && getDaysUntil(item.date) >= 0)
     .sort((a, b) => getDaysUntil(a.date) - getDaysUntil(b.date));
 
   return upcoming[0] ?? appointments[0];

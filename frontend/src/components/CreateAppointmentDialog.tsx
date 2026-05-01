@@ -43,7 +43,7 @@ import type { BloodType, Sex, Doctor, Department } from "@/lib/types";
 // ── Appointment types ──────────────────────────────────────────────────────
 const APPOINTMENT_TYPES = [
   "Consultație generală",
-  "Urmărire",
+  "Consult",
   "Revizuire analize",
   "Control anual",
   "Telemedicină",
@@ -237,7 +237,7 @@ export default function CreateAppointmentDialog({
       time: data.time,
       type: data.type,
       doctor: data.doctor,
-      status: "Scheduled",
+      status: "Planificată",
     });
     handleClose();
     onSuccess?.();
@@ -265,7 +265,7 @@ export default function CreateAppointmentDialog({
       time: data.time,
       type: data.type,
       doctor: data.doctor,
-      status: "Scheduled",
+      status: "Planificată",
     });
     handleClose();
     onSuccess?.();

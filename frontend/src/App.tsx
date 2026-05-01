@@ -59,7 +59,7 @@ const specialistNavigation = [
   { id: "dashboard", label: "Tablou de bord", icon: LayoutDashboard },
   { id: "patients", label: "Pacienți", icon: Users },
   { id: "appointments", label: "Programări", icon: Calendar },
-  { id: "chatbot", label: "AI Calculi Renali", icon: MessageSquare },
+  // { id: "chatbot", label: "AI Calculi Renali", icon: MessageSquare },
   { id: "profile", label: "Profilul meu", icon: UserCircle },
 ];
 
@@ -302,7 +302,7 @@ export default function App() {
         showSearch={false}
         appName="MedKit"
         appLogoSrc="https://api.dicebear.com/9.x/initials/svg?seed=MK&backgroundColor=059669&fontFamily=Arial&fontSize=40&textColor=ffffff"
-        appLogoAlt="MedKit Patient Portal"
+        appLogoAlt="MedKit Pacient Portal"
       >
         {/* Patient top bar */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-2.5 border-b border-border bg-background/60 backdrop-blur-sm shrink-0">
@@ -389,7 +389,7 @@ export default function App() {
     if (activePage.startsWith("edit-patient-")) return [{ label: "Pacienți" }, { label: "Editează pacient" }];
     if (activePage === "appointments") return [{ label: "Programări" }];
     if (activePage === "create-appointment") return [{ label: "Programări" }, { label: "Programează consultație" }];
-    if (activePage === "chatbot") return [{ label: "Chatbot AI Calculi Renali" }];
+    // if (activePage === "chatbot") return [{ label: "Chatbot AI Calculi Renali" }];
     if (activePage === "doctors") return [{ label: "Medici" }];
     if (activePage === "add-doctor") return [{ label: "Medici" }, { label: "Adaugă medic nou" }];
     if (activePage.startsWith("edit-doctor-")) return [{ label: "Medici" }, { label: "Editează medic" }];

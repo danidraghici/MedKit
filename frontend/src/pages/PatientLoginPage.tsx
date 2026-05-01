@@ -48,7 +48,7 @@ export default function PatientLoginPage({ onLoginSuccess, onSwitchToDoctor }: P
 
   const fillDemo = (email: string) => {
     setValue("email", email);
-    setValue("password", "MedKit2025!");
+    setValue("password", "MedKit2026!");
   };
 
   return (
@@ -156,25 +156,6 @@ export default function PatientLoginPage({ onLoginSuccess, onSwitchToDoctor }: P
               ) : "Autentificare în Portalul Pacientului"}
             </Button>
           </form>
-
-          {/* Demo accounts */}
-          <div className="mt-6 p-4 bg-emerald-50 dark:bg-emerald-950/30 rounded-xl border border-emerald-200 dark:border-emerald-800">
-            <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-2">Conturi demo pacient</p>
-            <div className="space-y-1.5">
-              {[
-                { name: "James Harrison", email: "james.harrison@email.com" },
-                { name: "Maria Santos", email: "maria.santos@email.com" },
-                { name: "Robert Chen", email: "robert.chen@email.com" },
-              ].map((p) => (
-                <button key={p.email} type="button" onClick={() => fillDemo(p.email)}
-                  className="w-full text-left px-3 py-1.5 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors">
-                  <span className="text-xs font-medium text-emerald-800 dark:text-emerald-300">{p.name}</span>
-                  <span className="text-xs text-emerald-600 dark:text-emerald-500 ml-2">{p.email}</span>
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-emerald-600 dark:text-emerald-500 mt-2">Password: <code className="bg-emerald-100 dark:bg-emerald-900 px-1 rounded">MedKit2025!</code></p>
-          </div>
 
           <div className="mt-6 flex items-start gap-2 text-xs text-muted-foreground">
             <ShieldCheck className="w-3.5 h-3.5 mt-0.5 text-emerald-600 shrink-0" />

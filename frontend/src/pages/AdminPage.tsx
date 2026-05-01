@@ -331,11 +331,11 @@ export default function AdminPage() {
               <p className="text-xs text-muted-foreground mt-0.5">Pacienți</p>
             </div>
             <div className="text-center p-3 rounded-lg bg-muted/40 border border-border">
-              <p className="text-xl font-bold text-blue-600">{appointments.filter(a => a.status === "Scheduled").length}</p>
+              <p className="text-xl font-bold text-blue-600">{appointments.filter(a => a.status === "Planificată").length}</p>
               <p className="text-xs text-muted-foreground mt-0.5">Programări programate</p>
             </div>
             <div className="text-center p-3 rounded-lg bg-muted/40 border border-border">
-              <p className="text-xl font-bold text-emerald-600">{appointments.filter(a => a.status === "Completed").length}</p>
+              <p className="text-xl font-bold text-emerald-600">{appointments.filter(a => a.status === "Finalizată").length}</p>
               <p className="text-xs text-muted-foreground mt-0.5">Programări finalizate</p>
             </div>
             <div className="text-center p-3 rounded-lg bg-muted/40 border border-border">
