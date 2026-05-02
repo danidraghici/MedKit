@@ -29,4 +29,18 @@ public class LabResultEntity
 
     [Column("uploaded_at")]
     public DateTimeOffset UploadedAt { get; set; }
+
+    // AI processing tracking — added in migration 010
+    // Values: 'pending', 'processing', 'completed', 'failed', 'skipped'
+    [Column("ai_processing_status")]
+    public string AiProcessingStatus { get; set; } = "pending";
+
+    [Column("ai_processing_error")]
+    public string? AiProcessingError { get; set; }
+
+    [Column("ai_processing_started_at")]
+    public DateTimeOffset? AiProcessingStartedAt { get; set; }
+
+    [Column("ai_processing_completed_at")]
+    public DateTimeOffset? AiProcessingCompletedAt { get; set; }
 }

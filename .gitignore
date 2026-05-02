@@ -26,6 +26,7 @@ packages/
 project.lock.json
 project.fragment.lock.json
 artifacts/
+*.lscache
 
 # .NET user secrets (stored in %APPDATA%\Microsoft\UserSecrets, not the project)
 # The secrets.json file is never inside the repo, but the ID in .csproj is fine to commit.

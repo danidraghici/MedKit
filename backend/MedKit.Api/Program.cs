@@ -1,10 +1,17 @@
 using System.Text;
+using MedKit.AiInsights.Abstractions;
+using MedKit.AiInsights.Llm;
+using MedKit.AiInsights.Models;
+using MedKit.AiInsights.PdfProcessing;
 using MedKit.Api.Models;
 using MedKit.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Polly;
+using Polly.Extensions.Http;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -71,6 +78,35 @@ builder.Services.AddCors(opt => opt.AddPolicy("frontend", policy =>
         .AllowCredentials()
         .AllowAnyHeader()
         .AllowAnyMethod()));
+
+// ── AI Insights ───────────────────────────────────────────────────────────────
+builder.Services.Configure<AiInsightsOptions>(
+    builder.Configuration.GetSection(AiInsightsOptions.SectionName));
+
+var aiOpts = builder.Configuration
+    .GetSection(AiInsightsOptions.SectionName)
+    .Get<AiInsightsOptions>() ?? new AiInsightsOptions();
+
+if (aiOpts.EnableAiFeatures)
+{
+    static IAsyncPolicy<HttpResponseMessage> RetryPolicy() =>
+        HttpPolicyExtensions
+            .HandleTransientHttpError()
+            .WaitAndRetryAsync(3, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)));
+
+    static IAsyncPolicy<HttpResponseMessage> CircuitBreakerPolicy() =>
+        HttpPolicyExtensions
+            .HandleTransientHttpError()
+            .CircuitBreakerAsync(5, TimeSpan.FromSeconds(30));
+
+    builder.Services
+        .AddHttpClient<ILlmClient, OpenAiCompatibleLlmClient>()
+        .AddPolicyHandler(RetryPolicy())
+        .AddPolicyHandler(CircuitBreakerPolicy());
+
+    builder.Services.AddScoped<TesseractOcrFallback>();
+    builder.Services.AddScoped<IPdfTextExtractor, PdfPigTextExtractor>();
+}
 
 // ── Application Services ──────────────────────────────────────────────────────
 builder.Services.AddControllers();

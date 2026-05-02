@@ -25,6 +25,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<AttachmentEntity> Attachments => Set<AttachmentEntity>();
     public DbSet<DoctorScheduleEntity> DoctorSchedules => Set<DoctorScheduleEntity>();
     public DbSet<UserNotificationEntity> UserNotifications => Set<UserNotificationEntity>();
+    public DbSet<LabAiInsightEntity> LabAiInsights => Set<LabAiInsightEntity>();
+    public DbSet<ConsultationReminderEntity> ConsultationReminders => Set<ConsultationReminderEntity>();
+    public DbSet<ChatSessionEntity> ChatSessions => Set<ChatSessionEntity>();
+    public DbSet<ChatMessageEntity> ChatMessages => Set<ChatMessageEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -201,6 +205,66 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
              .OnDelete(DeleteBehavior.SetNull);
 
             e.Property(n => n.CreatedAt)
+             .HasDefaultValueSql("SYSDATETIMEOFFSET()");
+        });
+
+        modelBuilder.Entity<LabAiInsightEntity>(e =>
+        {
+            // lab_ai_insights has audit trigger — OUTPUT clause is forbidden on triggered tables
+            e.ToTable(t => t.UseSqlOutputClause(false));
+
+            e.HasOne(i => i.LabResult)
+             .WithMany()
+             .HasForeignKey(i => i.LabResultId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne<PatientEntity>()
+             .WithMany()
+             .HasForeignKey(i => i.PatientId)
+             .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<ConsultationReminderEntity>(e =>
+        {
+            e.HasOne<PatientEntity>()
+             .WithMany()
+             .HasForeignKey(r => r.PatientId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.Property(r => r.CreatedAt)
+             .HasDefaultValueSql("SYSDATETIMEOFFSET()");
+
+            e.Property(r => r.UpdatedAt)
+             .HasDefaultValueSql("SYSDATETIMEOFFSET()");
+        });
+
+        modelBuilder.Entity<ChatSessionEntity>(e =>
+        {
+            e.HasMany(s => s.Messages)
+             .WithOne(m => m.Session)
+             .HasForeignKey(m => m.SessionId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne<PatientEntity>()
+             .WithMany()
+             .HasForeignKey(s => s.PatientId)
+             .OnDelete(DeleteBehavior.SetNull);
+
+            e.HasOne<UserEntity>()
+             .WithMany()
+             .HasForeignKey(s => s.InitiatedByUserId)
+             .OnDelete(DeleteBehavior.SetNull);
+
+            e.Property(s => s.CreatedAt)
+             .HasDefaultValueSql("SYSDATETIMEOFFSET()");
+
+            e.Property(s => s.UpdatedAt)
+             .HasDefaultValueSql("SYSDATETIMEOFFSET()");
+        });
+
+        modelBuilder.Entity<ChatMessageEntity>(e =>
+        {
+            e.Property(m => m.Timestamp)
              .HasDefaultValueSql("SYSDATETIMEOFFSET()");
         });
 
