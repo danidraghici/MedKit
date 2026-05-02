@@ -19,6 +19,9 @@ public class AppointmentController(AppointmentService appointmentService, AppDbC
         var role = User.FindFirstValue(ClaimTypes.Role);
         if (role == "admin") return (null, null);
 
+        // Lab doctors see all appointments (not filtered by doctorId)
+        if (role == "lab_doctor") return (null, null);
+
         var user = await ctx.Users.FindAsync(userId);
         if (user?.DoctorId is null) return (null, Forbid());
         return (user.DoctorId, null);
@@ -48,7 +51,7 @@ public class AppointmentController(AppointmentService appointmentService, AppDbC
     }
 
     [HttpGet]
-    [Authorize(Roles = "admin,specialist_doctor")]
+    [Authorize(Roles = "admin,specialist_doctor,lab_doctor")]
     public async Task<IActionResult> GetAll()
     {
         var (doctorId, error) = await ResolveCallerDoctorIdAsync();
@@ -112,10 +115,10 @@ public class AppointmentController(AppointmentService appointmentService, AppDbC
         return error switch
         {
             "invalid_patient_id" => BadRequest(new { error = "Pacient invalid." }),
-            "invalid_doctor_id"  => BadRequest(new { error = "Medic invalid." }),
-            "patient_not_found"  => NotFound(new { error = "Pacientul nu a fost găsit." }),
-            "doctor_not_found"   => NotFound(new { error = "Medicul nu a fost găsit." }),
-            "slot_unavailable"   => Conflict(new { error = "Acest interval nu mai este disponibil. Alegeți altă oră." }),
+            "invalid_doctor_id" => BadRequest(new { error = "Medic invalid." }),
+            "patient_not_found" => NotFound(new { error = "Pacientul nu a fost găsit." }),
+            "doctor_not_found" => NotFound(new { error = "Medicul nu a fost găsit." }),
+            "slot_unavailable" => Conflict(new { error = "Acest interval nu mai este disponibil. Alegeți altă oră." }),
             null when dto is not null => CreatedAtAction(nameof(GetAll), dto),
             _ => StatusCode(500, new { error = "Eroare neașteptată." }),
         };
@@ -135,12 +138,12 @@ public class AppointmentController(AppointmentService appointmentService, AppDbC
 
         return error switch
         {
-            "not_found"           => NotFound(new { message = "Programarea nu a fost găsită." }),
-            "already_programat"   => Conflict(new { message = "Programarea este deja planificată." }),
-            "already_finalizat"   => Conflict(new { message = "Programarea este deja finalizată." }),
-            "already_anulat"      => Conflict(new { message = "Programarea este deja anulată." }),
-            null                  => Ok(new { message = "Statusul a fost actualizat." }),
-            _                     => StatusCode(500, new { message = "Eroare neașteptată." }),
+            "not_found" => NotFound(new { message = "Programarea nu a fost găsită." }),
+            "already_programat" => Conflict(new { message = "Programarea este deja planificată." }),
+            "already_finalizat" => Conflict(new { message = "Programarea este deja finalizată." }),
+            "already_anulat" => Conflict(new { message = "Programarea este deja anulată." }),
+            null => Ok(new { message = "Statusul a fost actualizat." }),
+            _ => StatusCode(500, new { message = "Eroare neașteptată." }),
         };
     }
 }

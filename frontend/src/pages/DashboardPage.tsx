@@ -187,12 +187,15 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
   const user = useAppStore((s) => s.user);
   const fetchPatients = useAppStore((s) => s.fetchPatients);
   const fetchAllLabResults = useAppStore((s) => s.fetchAllLabResults);
+  const fetchAllAppointments = useAppStore((s) => s.fetchAllAppointments);
+  const fetchLabDoctorStats = useAppStore((s) => s.fetchLabDoctorStats);
+  const labDoctorStats = useAppStore((s) => s.labDoctorStats);
   const setAppointments = useAppStore((s) => s.setAppointments);
+  const updateAppointmentStatusAsync = useAppStore((s) => s.updateAppointmentStatusAsync);
 
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [staffList, setStaffList] = useState<DoctorSummary[] | null>(null);
   const [staffLoading, setStaffLoading] = useState(false);
-  const [dashboardAppts, setDashboardAppts] = useState<Appointment[]>([]);
   const [apptLoading, setApptLoading] = useState(false);
 
   useEffect(() => {
@@ -217,26 +220,33 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
     if (user?.role === "lab_doctor") {
       void fetchPatients();
       void fetchAllLabResults();
+      void fetchLabDoctorStats();
+      setApptLoading(true);
+      void fetchAllAppointments().finally(() => setApptLoading(false));
     }
-    if (user?.role != null) {
-      const appointmentsPath =
-        user.role === "patient" && user.patientId ? `/api/appointments/patient/${user.patientId}` : "/api/appointments";
-
+    if (user?.role === "patient" && user?.patientId) {
       setApptLoading(true);
       void api
-        .get<Appointment[]>(appointmentsPath)
+        .get<Appointment[]>(`/api/appointments/patient/${user.patientId}`)
         .then((data) => {
           const normalizedData = data.map((a) => ({
             ...a,
             status: normalizeAppointmentStatus(a.status),
           }));
-          setDashboardAppts(normalizedData);
           setAppointments(normalizedData);
         })
         .catch(console.error)
         .finally(() => setApptLoading(false));
     }
-  }, [user?.role, user?.patientId, fetchPatients, fetchAllLabResults, setAppointments]);
+  }, [
+    user?.role,
+    user?.patientId,
+    fetchPatients,
+    fetchAllLabResults,
+    fetchLabDoctorStats,
+    fetchAllAppointments,
+    setAppointments,
+  ]);
 
   const isAdmin = user?.role === "admin";
   const isLabDoctor = user?.role === "lab_doctor";
@@ -260,26 +270,39 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
         (!isDoctorUser || (!!currentDoctorId && r.doctorId.toLowerCase() === currentDoctorId)),
     );
     const upcomingApts = appointments.filter((a) => new Date(a.date) >= today && a.status === "Planificată");
-    // Lab-specific stats (file-based: no status, use uploadedAt for date filtering)
-    const todayResults = labResults.filter((r) => r.uploadedAt.startsWith(todayStr));
+
+    // Lab-specific stats - use API stats when available, otherwise calculate locally
+    let totalLabResults = labResults.length;
+    let todayCount = 0;
+    let patientsWithLabWork = new Set(labResults.map((r) => r.patientId)).size;
+
+    if (user?.role === "lab_doctor" && labDoctorStats) {
+      totalLabResults = labDoctorStats.totalLabResults;
+      todayCount = labDoctorStats.uploadedToday;
+      patientsWithLabWork = labDoctorStats.patientsWithLabWork;
+    } else {
+      const todayResults = labResults.filter((r) => r.uploadedAt.startsWith(todayStr));
+      todayCount = todayResults.length;
+    }
+
     const recentLabResults = [...labResults]
       .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())
       .slice(0, 6);
-    const patientsWithLabWork = new Set(labResults.map((r) => r.patientId)).size;
+
     return {
       totalPatients: patients.length,
       recentRecords: recentRecords.length,
       upcomingAppointments: upcomingApts.length,
       upcomingList: upcomingApts.slice(0, 5),
       // Lab stats
-      totalLabResults: labResults.length,
-      todayCount: todayResults.length,
+      totalLabResults,
+      todayCount,
       patientsWithLabWork,
       recentLabResults,
       // Upcoming harvests = all upcoming scheduled appointments (lab doctor view)
       upcomingHarvests: upcomingApts,
     };
-  }, [patients, medicalRecords, appointments, labResults, user?.role, user?.doctorId]);
+  }, [patients, medicalRecords, appointments, labResults, user?.role, user?.doctorId, labDoctorStats]);
 
   const recentPatients = useMemo(
     () => [...patients].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).slice(0, 5),
@@ -441,8 +464,9 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
 
   const handleApptStatusChange = async (id: string, status: DashboardAppointmentStatus) => {
     try {
-      await api.patch(`/api/appointments/${id}/status`, { status: toApiAppointmentStatus(status) });
-      setDashboardAppts((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a)));
+      // Convert to store format
+      const storeStatus = status === "Planificată" ? "Planificată" : status === "Finalizată" ? "Finalizată" : "Anulată";
+      await updateAppointmentStatusAsync(id, storeStatus);
     } catch (err) {
       console.error("Failed to update appointment status:", err);
     }
@@ -453,23 +477,23 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
     return {
-      total: dashboardAppts.length,
-      scheduled: dashboardAppts.filter((a) => a.status === "Planificată").length,
-      today: dashboardAppts.filter((a) => {
+      total: appointments.length,
+      scheduled: appointments.filter((a) => a.status === "Planificată").length,
+      today: appointments.filter((a) => {
         const d = new Date(a.date);
         return d >= today && d < new Date(today.getTime() + 24 * 60 * 60 * 1000) && a.status === "Planificată";
       }).length,
-      thisWeek: dashboardAppts.filter((a) => {
+      thisWeek: appointments.filter((a) => {
         const d = new Date(a.date);
         return d >= today && d < nextWeek && a.status === "Planificată";
       }).length,
     };
-  }, [dashboardAppts]);
+  }, [appointments]);
 
   const filteredAppointments = useMemo(() => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    let list = [...dashboardAppts];
+    let list = [...appointments];
     if (apptSearch) {
       const q = apptSearch.toLowerCase();
       list = list.filter(
@@ -501,7 +525,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
       return da >= nowTs ? -1 : 1;
     });
     return list;
-  }, [dashboardAppts, apptSearch, apptFilterStatus, apptFilterPeriod]);
+  }, [appointments, apptSearch, apptFilterStatus, apptFilterPeriod]);
 
   const groupedAppointments = useMemo(() => {
     const map = new Map<string, Appointment[]>();

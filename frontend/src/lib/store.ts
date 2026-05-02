@@ -89,8 +89,19 @@ interface AppState {
   setAppointments: (apts: Appointment[]) => void;
   addAppointment: (apt: Omit<Appointment, "id">) => Appointment;
   updateAppointmentStatus: (id: string, status: Appointment["status"]) => void;
+  updateAppointmentStatusAsync: (id: string, status: Appointment["status"]) => Promise<void>;
   getPatientAppointments: (patientId: string) => Appointment[];
   getUpcomingAppointments: () => Appointment[];
+  fetchAllAppointments: () => Promise<void>;
+
+  // Lab Doctor Dashboard
+  labDoctorStats: {
+    totalLabResults: number;
+    uploadedToday: number;
+    patientsWithLabWork: number;
+    upcomingHarvests: number;
+  } | null;
+  fetchLabDoctorStats: () => Promise<void>;
 
   // Chat
   chatSessions: ChatSession[];
@@ -604,6 +615,46 @@ export const useAppStore = create<AppState>()(
           .appointments.filter((a) => new Date(a.date) >= now && a.status === "Planificată")
           .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
           .slice(0, 5);
+      },
+
+      fetchAllAppointments: async () => {
+        try {
+          const data = await api.get<Appointment[]>("/api/appointments");
+          set({ appointments: data });
+        } catch {
+          // silently keep existing state
+        }
+      },
+
+      updateAppointmentStatusAsync: async (id, status) => {
+        const apiStatus = status === "Planificată" ? "Scheduled" : status === "Finalizată" ? "Completed" : "Cancelled";
+        try {
+          await api.patch(`/api/appointments/${id}/status`, { status: apiStatus });
+          set((state) => ({
+            appointments: state.appointments.map((a) =>
+              a.id === id ? { ...a, status } : a
+            ),
+          }));
+        } catch {
+          // silently ignore
+        }
+      },
+
+      // Lab Doctor Dashboard
+      labDoctorStats: null,
+
+      fetchLabDoctorStats: async () => {
+        try {
+          const data = await api.get<{
+            totalLabResults: number;
+            uploadedToday: number;
+            patientsWithLabWork: number;
+            upcomingHarvests: number;
+          }>("/api/dashboard/lab-doctor/stats");
+          set({ labDoctorStats: data });
+        } catch {
+          // silently keep existing state
+        }
       },
 
       // Chat

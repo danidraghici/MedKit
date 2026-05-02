@@ -23,4 +23,12 @@ public class DashboardController(DashboardService dashboardService) : Controller
         var staff = await dashboardService.GetStaffAsync();
         return Ok(staff);
     }
+
+    [HttpGet("lab-doctor/stats")]
+    [Authorize(Roles = "lab_doctor")]
+    public async Task<IActionResult> GetLabDoctorStats()
+    {
+        var stats = await dashboardService.GetLabDoctorStatsAsync();
+        return Ok(stats);
+    }
 }

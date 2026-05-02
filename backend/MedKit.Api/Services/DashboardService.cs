@@ -44,4 +44,38 @@ public class DashboardService(AppDbContext db)
                 d.DoctorRole))
             .ToListAsync();
     }
+
+    public async Task<LabDoctorDashboardStatsDto> GetLabDoctorStatsAsync()
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var todayStart = new DateTimeOffset(today.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+        var todayEnd = new DateTimeOffset(today.ToDateTime(TimeOnly.MaxValue), TimeSpan.Zero);
+
+        // Lab results stats
+        var totalLabResults = await db.LabResults.CountAsync();
+        var todayLabResults = await db.LabResults
+            .CountAsync(lr => lr.UploadedAt >= todayStart && lr.UploadedAt <= todayEnd);
+        var patientsWithLabResults = await db.LabResults
+            .Select(lr => lr.PatientId)
+            .Distinct()
+            .CountAsync();
+
+        // Upcoming appointments/harvests stats
+        var upcomingAppointments = await db.Appointments
+            .CountAsync(a => a.AppointmentDate >= today && a.Status == "Programat");
+
+        return new LabDoctorDashboardStatsDto(
+            totalLabResults: totalLabResults,
+            uploadedToday: todayLabResults,
+            patientsWithLabWork: patientsWithLabResults,
+            upcomingHarvests: upcomingAppointments
+        );
+    }
 }
+
+public record LabDoctorDashboardStatsDto(
+    int totalLabResults,
+    int uploadedToday,
+    int patientsWithLabWork,
+    int upcomingHarvests
+);
