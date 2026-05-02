@@ -27,7 +27,7 @@ public class AppointmentRequestService(AppDbContext db)
         return trimmedType switch
         {
             "Consultație generală" or "General Consultation" => ["Consultație generală", "General Consultation"],
-            "Urmărire" or "Follow-up" => ["Urmărire", "Follow-up"],
+            "Consult" or "Follow-up" => ["Consult", "Follow-up"],
             "Revizuire analize" or "Lab Review" => ["Revizuire analize", "Lab Review"],
             "Urgență" or "Emergency" => ["Urgență", "Emergency"],
             "Telemedicină" or "Telemedicine" => ["Telemedicină", "Telemedicine"],
@@ -144,7 +144,7 @@ public class AppointmentRequestService(AppDbContext db)
             Reason = entity.Reason,
             PreferredDoctor = preferredDoctor?.Name,
             PreferredDoctorId = entity.PreferredDoctorId?.ToString(),
-            Status = "Pending",
+            Status = NormalizeStatusForClient(entity.Status),
             CreatedAt = entity.CreatedAt.ToString("O"),
             ResponseNote = entity.ResponseNote,
         }, null);

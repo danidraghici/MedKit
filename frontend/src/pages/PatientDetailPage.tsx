@@ -55,7 +55,7 @@ const drugSchema = z.object({
 const medicalRecordSchema = z.object({
   date: z.string().min(1, "Data este obligatorie"),
   doctor: z.string().min(2, "Numele medicului este obligatoriu"),
-  visitType: z.enum(["În persoană", "Telemedicină", "Urgență", "Control", "Procedură"]),
+  visitType: z.enum(["În persoană", "Telemedicină", "Urgență", "Consult", "Procedură"]),
   chiefComplaint: z.string().min(2, "Acuza principală este obligatorie"),
   diagnosis: z.string().min(2, "Diagnosticul este obligatoriu"),
   icdCode: z.string().optional(),
@@ -72,7 +72,7 @@ const medicalRecordSchema = z.object({
   treatment: z.string().min(2, "Planul de tratament este obligatoriu"),
   prescribedDrugs: z.array(drugSchema),
   procedures: z.string().optional(),
-  urgency: z.enum(["Rutină", "Semi-urgent", "Urgent", "Foarte Urgent"]),
+  urgency: z.enum(["Rutină", "Semi-urgent", "Urgent", "Urgență"]),
   followUpIn: z.string().optional(),
   followUpType: z.string().optional(),
   referral: z.string().optional(),
@@ -88,11 +88,11 @@ type NoteFormData = z.infer<typeof noteSchema>;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const ROUTES: RouteOfAdministration[] = ["Oral","IV","IM","Subcutanat","Topical","Inhalator","Sublingual","Rectal","Nazal","Ophthalmic","Altul"];
+const ROUTES: RouteOfAdministration[] = ["Oral","IV","IM","Subcutanat","Topic","Inhalator","Sublingual","Rectal","Nazal","Oftalmic","Transdermal","Altul"];
 const FREQUENCIES: DrugFrequency[] = ["O dată pe zi","De două ori pe zi","De trei ori pe zi","De patru ori pe zi","La 4 ore","La 6 ore","La 8 ore","La 12 ore","La 24 ore","PRN (la nevoie)","Săptămânal","La două săptămâni","Lunar","O singură doză","Altul"];
-const URGENCY_LEVELS: UrgencyLevel[] = ["Rutină","Semi-urgent","Urgent","Foarte Urgent"];
-const FOLLOW_UP_TYPES: FollowUpType[] = ["Vizită în cabinet","Apel telefonic","Analize laborator","Imagini","Referire la specialist","Cabinet de urgență dacă simptomele se agravează","Niciuna"];
-const VISIT_TYPES = ["În persoană","Telemedicină","Urgență","Control","Procedură"] as const;
+const URGENCY_LEVELS: UrgencyLevel[] = ["Rutină","Semi-urgent","Urgent","Urgență"];
+const FOLLOW_UP_TYPES: FollowUpType[] = ["Consultație la cabinet","Apel telefonic","Analize de laborator","Imagistică","Trimitere la specialist","Urgențe dacă simptomele se agravează","Niciunul"];
+const VISIT_TYPES = ["În persoană","Telemedicină","Urgență","Consult","Procedură"] as const;
 
 type PatientAppointmentStatus = "Planificată" | "Finalizată" | "Anulată";
 
@@ -131,7 +131,7 @@ const urgencyConfig: Record<UrgencyLevel, { color: string; badge: "default" | "s
   Rutină:     { color: "text-emerald-600 bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800", badge: "secondary" },
   "Semi-urgent": { color: "text-yellow-600 bg-yellow-50 border-yellow-200 dark:bg-yellow-950/30 dark:border-yellow-800", badge: "secondary" },
   Urgent:      { color: "text-orange-600 bg-orange-50 border-orange-200 dark:bg-orange-950/30 dark:border-orange-800", badge: "secondary" },
-  "Foarte Urgent":   { color: "text-red-600 bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800", badge: "secondary" },
+  Urgență:   { color: "text-red-600 bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800", badge: "secondary" },
 };
 
 const routeBadgeColor: Record<string, string> = {
@@ -139,10 +139,13 @@ const routeBadgeColor: Record<string, string> = {
   IV:   "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400",
   IM:   "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400",
   Subcutanat: "bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400",
-  Topical: "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400",
+  Topic: "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400",
   Inhalator: "bg-cyan-100 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-400",
+  Sublingual: "bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-400",
+  Rectal: "bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-400",
   Nazal: "bg-lime-100 text-lime-700 dark:bg-lime-950/40 dark:text-lime-400",
-  Ophthalmic: "bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-400",
+  Oftalmic: "bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-400",
+  Transdermal: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400",
   Altul: "bg-gray-100 text-gray-700 dark:bg-gray-950/40 dark:text-gray-400",
 };
 
@@ -291,7 +294,7 @@ function DrugFormRow({
       {/* Header row */}
       <div className="flex items-center gap-2 px-3 py-2.5 bg-muted/30">
         <Pill className="w-4 h-4 text-primary shrink-0" />
-        <span className="text-sm font-medium flex-1">Drug #{index + 1}</span>
+        <span className="text-sm font-medium flex-1">Medicament #{index + 1}</span>
         <button
           type="button"
           onClick={() => setExpanded((p) => !p)}
@@ -352,13 +355,13 @@ function DrugFormRow({
           {/* Row 3: Duration + Quantity + Refills */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <FormField label="Durată" required error={drugErrors?.duration?.message}>
-              <Input {...register(`prescribedDrugs.${index}.duration`)} placeholder="e.g. 7 days, Ongoing" />
+              <Input {...register(`prescribedDrugs.${index}.duration`)} placeholder="de ex. 7 zile, În curs" />
             </FormField>
             <FormField label="Cantitate" error={drugErrors?.quantity?.message}>
-              <Input {...register(`prescribedDrugs.${index}.quantity`)} placeholder="e.g. 30 tablets" />
+              <Input {...register(`prescribedDrugs.${index}.quantity`)} placeholder="de ex. 30 comprimate" />
             </FormField>
             <FormField label="Reaprovizionare" error={drugErrors?.refills?.message}>
-              <Input {...register(`prescribedDrugs.${index}.refills`)} placeholder="e.g. No refills" />
+              <Input {...register(`prescribedDrugs.${index}.refills`)} placeholder="de ex. Fără reaprovizionare" />
             </FormField>
           </div>
 
@@ -374,14 +377,14 @@ function DrugFormRow({
 
           {/* Row 5: Indication */}
           <FormField label="Indicație (motivul prescrierii)" error={drugErrors?.indication?.message}>
-            <Input {...register(`prescribedDrugs.${index}.indication`)} placeholder="e.g. Renal colic pain management" />
+            <Input {...register(`prescribedDrugs.${index}.indication`)} placeholder="de ex. Tratament pentru colică renală" />
           </FormField>
 
           {/* Row 6: Special instructions */}
           <FormField label="Instrucțiuni speciale" error={drugErrors?.instructions?.message}>
             <Textarea
               {...register(`prescribedDrugs.${index}.instructions`)}
-              placeholder="e.g. Take with food. Avoid NSAIDs. Monitor renal function."
+              placeholder="de ex. A se administra cu alimente, A nu se întrerupe brusc, Monitorizați tensiunea arterială"
               rows={2}
             />
           </FormField>
@@ -1850,10 +1853,10 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                   <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border pb-1.5 flex items-center gap-1.5">
                     <ClipboardList className="w-3.5 h-3.5" />Plan de tratament
                   </h3>
-                  <FormField label="Treatment plan narrative" required error={errors.treatment?.message}>
+                  <FormField label="Tratament" required error={errors.treatment?.message}>
                     <Textarea {...register("treatment")} placeholder="Descrie abordarea generală de tratament, intervențiile și deciziile clinice luate..." rows={3} />
                   </FormField>
-                  <FormField label="Procedures performed" error={errors.procedures?.message}>
+                  <FormField label="Proceduri efectuate" error={errors.procedures?.message}>
                     <Input {...register("procedures")} placeholder="de ex. CT abdomen/pelvin, acces intravenos, analiză de urină" />
                   </FormField>
                 </div>
@@ -1864,10 +1867,10 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                     <Calendar className="w-3.5 h-3.5" />Consultatie viitoare și trimitere
                   </h3>
                   <div className="grid grid-cols-2 gap-3">
-                    <FormField label="Follow-up in" error={errors.followUpIn?.message}>
+                    <FormField label="Următoarea consultatie" error={errors.followUpIn?.message}>
                       <Input {...register("followUpIn")} placeholder="de ex. 1 săptămână, 3 luni" />
                     </FormField>
-                    <FormField label="Follow-up type" error={errors.followUpType?.message}>
+                    <FormField label="Tipul consultatiei" error={errors.followUpType?.message}>
                       <Select value={watch("followUpType") ?? ""} onValueChange={(v) => setValue("followUpType", v)}>
                         <SelectTrigger><SelectValue placeholder="Selectează tipul de consultatie" /></SelectTrigger>
                         <SelectContent>
@@ -1876,7 +1879,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                       </Select>
                     </FormField>
                   </div>
-                  <FormField label="Referral" error={errors.referral?.message}>
+                  <FormField label="Trimitere" error={errors.referral?.message}>
                     <Input {...register("referral")} placeholder="de ex. Urologie — Dr. Mihail — în termen de 1 săptămână" />
                   </FormField>
                 </div>

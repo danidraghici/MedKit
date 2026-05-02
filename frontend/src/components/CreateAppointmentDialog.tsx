@@ -45,7 +45,7 @@ const APPOINTMENT_TYPES = [
 
 const PATIENT_APPOINTMENT_REQUEST_TYPES = [
   "Consultație generală",
-  "Urmărire",
+  "Consult",
   "Revizuire analize",
   "Urgență",
   "Telemedicină",

@@ -21,12 +21,13 @@ export type RouteOfAdministration =
   | "IV"
   | "IM"
   | "Subcutanat"
-  | "Topical"
+  | "Topic"
   | "Inhalator"
   | "Sublingual"
   | "Rectal"
   | "Nazal"
-  | "Ophthalmic"
+  | "Oftalmic"
+  | "Transdermal"
   | "Altul";
 
 export type DrugFrequency =
@@ -64,8 +65,8 @@ export interface PrescribedDrug {
   prescribedBy: string;                // Doctor name
 }
 
-export type UrgencyLevel = "Rutină" | "Semi-urgent" | "Urgent" | "Foarte Urgent";
-export type FollowUpType = "Vizită în cabinet" | "Apel telefonic" | "Analize laborator" | "Imagini" | "Referire la specialist" | "Cabinet de urgență dacă simptomele se agravează" | "Niciuna";
+export type UrgencyLevel = "Rutină" | "Semi-urgent" | "Urgent" | "Urgență";
+export type FollowUpType = "Consultație la cabinet" | "Apel telefonic" | "Analize de laborator" | "Imagistică" | "Trimitere la specialist" | "Urgențe dacă simptomele se agravează" | "Niciunul";
 
 export type LabRequestStatus = "În așteptare" | "În procesare" | "Finalizat";
 export type SampleType = "sânge" | "urină" | "scaun" | "lcr" | "spută" | "țesut" | "altele";
@@ -103,7 +104,7 @@ export interface MedicalRecord {
   doctorId: string;
   date: string;                        // ISO date string
   doctor: string;
-  visitType: "În persoană" | "Telemedicină" | "Urgență" | "Control" | "Procedură";
+  visitType: "În persoană" | "Telemedicină" | "Urgență" | "Consult" | "Procedură";
   chiefComplaint: string;              // Primary reason for visit
   diagnosis: string;                   // Primary diagnosis (ICD description)
   icdCode?: string;                    // ICD-10 code

@@ -47,7 +47,7 @@ import type { BloodType, Sex, Patient, Appointment, Doctor, Department } from "@
 
 const APPOINTMENT_TYPES = [
   "Consultație generală",
-  "Urmărire",
+  "Consult",
   "Revizuire analize",
   "Control anual",
   "Telemedicină",

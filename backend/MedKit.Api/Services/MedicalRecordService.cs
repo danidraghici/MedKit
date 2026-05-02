@@ -60,62 +60,62 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
 
             return new MedicalRecordDto
             {
-                Id                 = r.Id.ToString(),
-                PatientId          = r.PatientId.ToString(),
-                DoctorId           = r.DoctorId.ToString(),
-                Doctor             = x.DoctorName,
-                Date               = r.VisitDate.ToString("yyyy-MM-dd"),
-                VisitType          = r.VisitType,
-                ChiefComplaint     = r.ChiefComplaint,
-                Diagnosis          = r.Diagnosis,
-                IcdCode            = r.IcdCode,
+                Id = r.Id.ToString(),
+                PatientId = r.PatientId.ToString(),
+                DoctorId = r.DoctorId.ToString(),
+                Doctor = x.DoctorName,
+                Date = r.VisitDate.ToString("yyyy-MM-dd"),
+                VisitType = r.VisitType,
+                ChiefComplaint = r.ChiefComplaint,
+                Diagnosis = r.Diagnosis,
+                IcdCode = r.IcdCode,
                 SecondaryDiagnoses = r.SecondaryDiagnoses,
-                Symptoms           = r.Symptoms,
-                PhysicalExam       = r.PhysicalExam,
-                Treatment          = r.Treatment,
-                Procedures         = r.Procedures,
-                Urgency            = r.Urgency,
-                FollowUpIn         = r.FollowUpIn,
-                FollowUpType       = r.FollowUpType,
-                Referral           = r.Referral,
-                PatientEducation   = r.PatientEducation,
-                CreatedAt          = r.CreatedAt.ToString("o"),
-                VitalSigns         = vs is null ? null : new VitalSignsDto
+                Symptoms = r.Symptoms,
+                PhysicalExam = r.PhysicalExam,
+                Treatment = r.Treatment,
+                Procedures = r.Procedures,
+                Urgency = r.Urgency,
+                FollowUpIn = r.FollowUpIn,
+                FollowUpType = r.FollowUpType,
+                Referral = r.Referral,
+                PatientEducation = r.PatientEducation,
+                CreatedAt = r.CreatedAt.ToString("o"),
+                VitalSigns = vs is null ? null : new VitalSignsDto
                 {
-                    BloodPressure    = vs.BloodPressure,
-                    HeartRate        = vs.HeartRate,
-                    Temperature      = vs.Temperature,
-                    RespiratoryRate  = vs.RespiratoryRate,
+                    BloodPressure = vs.BloodPressure,
+                    HeartRate = vs.HeartRate,
+                    Temperature = vs.Temperature,
+                    RespiratoryRate = vs.RespiratoryRate,
                     OxygenSaturation = vs.OxygenSaturation,
-                    Weight           = vs.Weight,
-                    Height           = vs.Height,
+                    Weight = vs.Weight,
+                    Height = vs.Height,
                 },
                 PrescribedDrugs = (drugs ?? []).Select(d => new PrescribedDrugDto
                 {
-                    Id           = d.Drug.Id.ToString(),
-                    Name         = d.Drug.Name,
-                    GenericName  = d.Drug.GenericName,
-                    Dose         = d.Drug.Dose,
-                    Route        = d.Drug.Route,
-                    Frequency    = d.Drug.Frequency,
-                    Duration     = d.Drug.Duration,
-                    Quantity     = d.Drug.Quantity,
-                    Refills      = d.Drug.Refills,
+                    Id = d.Drug.Id.ToString(),
+                    Name = d.Drug.Name,
+                    GenericName = d.Drug.GenericName,
+                    Dose = d.Drug.Dose,
+                    Route = d.Drug.Route,
+                    Frequency = d.Drug.Frequency,
+                    Duration = d.Drug.Duration,
+                    Quantity = d.Drug.Quantity,
+                    Refills = d.Drug.Refills,
                     Instructions = d.Drug.Instructions,
-                    Indication   = d.Drug.Indication,
-                    StartDate    = d.Drug.StartDate?.ToString("yyyy-MM-dd"),
-                    EndDate      = d.Drug.EndDate?.ToString("yyyy-MM-dd"),
+                    Indication = d.Drug.Indication,
+                    StartDate = d.Drug.StartDate?.ToString("yyyy-MM-dd"),
+                    EndDate = d.Drug.EndDate?.ToString("yyyy-MM-dd"),
                     PrescribedBy = d.DoctorName,
                 }).ToList(),
                 LabRequest = labRequest,
                 Attachments = (attachments ?? []).Select(a => new AttachmentDto
                 {
-                    Id              = a.Id.ToString(),
+                    Id = a.Id.ToString(),
                     MedicalRecordId = a.MedicalRecordId.ToString(),
-                    Name            = a.Name,
-                    Type            = a.MimeType,
-                    Size            = a.SizeBytes,
-                    UploadedAt      = a.UploadedAt.ToString("o"),
+                    Name = a.Name,
+                    Type = a.MimeType,
+                    Size = a.SizeBytes,
+                    UploadedAt = a.UploadedAt.ToString("o"),
                 }).ToList(),
             };
         }).ToList();
@@ -145,25 +145,25 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
         var now = DateTimeOffset.UtcNow;
         var record = new MedicalRecordEntity
         {
-            Id                 = Guid.NewGuid(),
-            PatientId          = patientId,
-            DoctorId           = doctor.Id,
-            VisitDate          = visitDate,
-            VisitType          = request.VisitType,
-            ChiefComplaint     = request.ChiefComplaint,
-            Diagnosis          = request.Diagnosis,
-            IcdCode            = request.IcdCode,
+            Id = Guid.NewGuid(),
+            PatientId = patientId,
+            DoctorId = doctor.Id,
+            VisitDate = visitDate,
+            VisitType = request.VisitType,
+            ChiefComplaint = request.ChiefComplaint,
+            Diagnosis = request.Diagnosis,
+            IcdCode = request.IcdCode,
             SecondaryDiagnoses = request.SecondaryDiagnoses,
-            Symptoms           = request.Symptoms,
-            PhysicalExam       = request.PhysicalExam,
-            Treatment          = request.Treatment,
-            Procedures         = request.Procedures,
-            Urgency            = request.Urgency,
-            FollowUpIn         = string.IsNullOrEmpty(request.FollowUpIn) ? null : request.FollowUpIn,
-            FollowUpType       = string.IsNullOrEmpty(request.FollowUpType) ? null : request.FollowUpType,
-            Referral           = request.Referral,
-            PatientEducation   = request.PatientEducation,
-            CreatedAt          = now,
+            Symptoms = request.Symptoms,
+            PhysicalExam = request.PhysicalExam,
+            Treatment = request.Treatment,
+            Procedures = request.Procedures,
+            Urgency = request.Urgency,
+            FollowUpIn = string.IsNullOrEmpty(request.FollowUpIn) ? null : request.FollowUpIn,
+            FollowUpType = string.IsNullOrEmpty(request.FollowUpType) ? null : request.FollowUpType,
+            Referral = request.Referral,
+            PatientEducation = request.PatientEducation,
+            CreatedAt = now,
         };
 
         VitalSignEntity? vitalSign = null;
@@ -175,37 +175,37 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
         {
             vitalSign = new VitalSignEntity
             {
-                Id              = Guid.NewGuid(),
+                Id = Guid.NewGuid(),
                 MedicalRecordId = record.Id,
-                BloodPressure   = vs.BloodPressure,
-                HeartRate       = vs.HeartRate,
-                Temperature     = vs.Temperature,
+                BloodPressure = vs.BloodPressure,
+                HeartRate = vs.HeartRate,
+                Temperature = vs.Temperature,
                 RespiratoryRate = vs.RespiratoryRate,
                 OxygenSaturation = vs.OxygenSaturation,
-                Weight          = vs.Weight,
-                Height          = vs.Height,
-                RecordedAt      = now,
+                Weight = vs.Weight,
+                Height = vs.Height,
+                RecordedAt = now,
             };
         }
 
         var drugs = request.PrescribedDrugs.Select(d => new PrescribedDrugEntity
         {
-            Id                  = Guid.NewGuid(),
-            MedicalRecordId     = record.Id,
+            Id = Guid.NewGuid(),
+            MedicalRecordId = record.Id,
             PrescribedByDoctorId = doctor.Id,
-            Name                = d.Name,
-            GenericName         = d.GenericName,
-            Dose                = d.Dose,
-            Route               = d.Route,
-            Frequency           = d.Frequency,
-            Duration            = d.Duration,
-            Quantity            = d.Quantity,
-            Refills             = d.Refills,
-            Instructions        = d.Instructions,
-            Indication          = d.Indication,
-            StartDate           = d.StartDate is not null && DateOnly.TryParse(d.StartDate, out var sd) ? sd : null,
-            EndDate             = d.EndDate is not null && DateOnly.TryParse(d.EndDate, out var ed) ? ed : null,
-            CreatedAt           = now,
+            Name = d.Name,
+            GenericName = d.GenericName,
+            Dose = d.Dose,
+            Route = d.Route,
+            Frequency = d.Frequency,
+            Duration = d.Duration,
+            Quantity = d.Quantity,
+            Refills = d.Refills,
+            Instructions = d.Instructions,
+            Indication = d.Indication,
+            StartDate = d.StartDate is not null && DateOnly.TryParse(d.StartDate, out var sd) ? sd : null,
+            EndDate = d.EndDate is not null && DateOnly.TryParse(d.EndDate, out var ed) ? ed : null,
+            CreatedAt = now,
         }).ToList();
 
         LabRequestEntity? labRequestEntity = null;
@@ -219,7 +219,7 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
                 PatientId = patientId,
                 RequestedByDoctorId = doctor.Id,
                 SampleTypes = string.Join(",", sampleTypes),
-                Status = "Pending",
+                Status = "În așteptare",
                 Notes = request.LabRequestNotes,
                 CreatedAt = now,
                 UpdatedAt = now,
@@ -244,51 +244,51 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
 
         var dto = new MedicalRecordDto
         {
-            Id                 = record.Id.ToString(),
-            PatientId          = record.PatientId.ToString(),
-            DoctorId           = record.DoctorId.ToString(),
-            Doctor             = doctor.Name,
-            Date               = record.VisitDate.ToString("yyyy-MM-dd"),
-            VisitType          = record.VisitType,
-            ChiefComplaint     = record.ChiefComplaint,
-            Diagnosis          = record.Diagnosis,
-            IcdCode            = record.IcdCode,
+            Id = record.Id.ToString(),
+            PatientId = record.PatientId.ToString(),
+            DoctorId = record.DoctorId.ToString(),
+            Doctor = doctor.Name,
+            Date = record.VisitDate.ToString("yyyy-MM-dd"),
+            VisitType = record.VisitType,
+            ChiefComplaint = record.ChiefComplaint,
+            Diagnosis = record.Diagnosis,
+            IcdCode = record.IcdCode,
             SecondaryDiagnoses = record.SecondaryDiagnoses,
-            Symptoms           = record.Symptoms,
-            PhysicalExam       = record.PhysicalExam,
-            Treatment          = record.Treatment,
-            Procedures         = record.Procedures,
-            Urgency            = record.Urgency,
-            FollowUpIn         = record.FollowUpIn,
-            FollowUpType       = record.FollowUpType,
-            Referral           = record.Referral,
-            PatientEducation   = record.PatientEducation,
-            CreatedAt          = record.CreatedAt.ToString("o"),
-            VitalSigns         = vitalSign is null ? null : new VitalSignsDto
+            Symptoms = record.Symptoms,
+            PhysicalExam = record.PhysicalExam,
+            Treatment = record.Treatment,
+            Procedures = record.Procedures,
+            Urgency = record.Urgency,
+            FollowUpIn = record.FollowUpIn,
+            FollowUpType = record.FollowUpType,
+            Referral = record.Referral,
+            PatientEducation = record.PatientEducation,
+            CreatedAt = record.CreatedAt.ToString("o"),
+            VitalSigns = vitalSign is null ? null : new VitalSignsDto
             {
-                BloodPressure    = vitalSign.BloodPressure,
-                HeartRate        = vitalSign.HeartRate,
-                Temperature      = vitalSign.Temperature,
-                RespiratoryRate  = vitalSign.RespiratoryRate,
+                BloodPressure = vitalSign.BloodPressure,
+                HeartRate = vitalSign.HeartRate,
+                Temperature = vitalSign.Temperature,
+                RespiratoryRate = vitalSign.RespiratoryRate,
                 OxygenSaturation = vitalSign.OxygenSaturation,
-                Weight           = vitalSign.Weight,
-                Height           = vitalSign.Height,
+                Weight = vitalSign.Weight,
+                Height = vitalSign.Height,
             },
             PrescribedDrugs = drugs.Select(d => new PrescribedDrugDto
             {
-                Id           = d.Id.ToString(),
-                Name         = d.Name,
-                GenericName  = d.GenericName,
-                Dose         = d.Dose,
-                Route        = d.Route,
-                Frequency    = d.Frequency,
-                Duration     = d.Duration,
-                Quantity     = d.Quantity,
-                Refills      = d.Refills,
+                Id = d.Id.ToString(),
+                Name = d.Name,
+                GenericName = d.GenericName,
+                Dose = d.Dose,
+                Route = d.Route,
+                Frequency = d.Frequency,
+                Duration = d.Duration,
+                Quantity = d.Quantity,
+                Refills = d.Refills,
                 Instructions = d.Instructions,
-                Indication   = d.Indication,
-                StartDate    = d.StartDate?.ToString("yyyy-MM-dd"),
-                EndDate      = d.EndDate?.ToString("yyyy-MM-dd"),
+                Indication = d.Indication,
+                StartDate = d.StartDate?.ToString("yyyy-MM-dd"),
+                EndDate = d.EndDate?.ToString("yyyy-MM-dd"),
                 PrescribedBy = doctor.Name,
             }).ToList(),
             LabRequest = labRequestDto,
@@ -322,20 +322,20 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
             doctor = d;
         }
 
-        record.VisitType          = request.VisitType;
-        record.ChiefComplaint     = request.ChiefComplaint;
-        record.Diagnosis          = request.Diagnosis;
-        record.IcdCode            = request.IcdCode;
+        record.VisitType = request.VisitType;
+        record.ChiefComplaint = request.ChiefComplaint;
+        record.Diagnosis = request.Diagnosis;
+        record.IcdCode = request.IcdCode;
         record.SecondaryDiagnoses = request.SecondaryDiagnoses;
-        record.Symptoms           = request.Symptoms;
-        record.PhysicalExam       = request.PhysicalExam;
-        record.Treatment          = request.Treatment;
-        record.Procedures         = request.Procedures;
-        record.Urgency            = request.Urgency;
-        record.FollowUpIn         = string.IsNullOrEmpty(request.FollowUpIn) ? null : request.FollowUpIn;
-        record.FollowUpType       = string.IsNullOrEmpty(request.FollowUpType) ? null : request.FollowUpType;
-        record.Referral           = request.Referral;
-        record.PatientEducation   = request.PatientEducation;
+        record.Symptoms = request.Symptoms;
+        record.PhysicalExam = request.PhysicalExam;
+        record.Treatment = request.Treatment;
+        record.Procedures = request.Procedures;
+        record.Urgency = request.Urgency;
+        record.FollowUpIn = string.IsNullOrEmpty(request.FollowUpIn) ? null : request.FollowUpIn;
+        record.FollowUpType = string.IsNullOrEmpty(request.FollowUpType) ? null : request.FollowUpType;
+        record.Referral = request.Referral;
+        record.PatientEducation = request.PatientEducation;
 
         var now = DateTimeOffset.UtcNow;
 
@@ -351,29 +351,29 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
         {
             if (existingVital is not null)
             {
-                existingVital.BloodPressure    = vs!.BloodPressure;
-                existingVital.HeartRate        = vs.HeartRate;
-                existingVital.Temperature      = vs.Temperature;
-                existingVital.RespiratoryRate  = vs.RespiratoryRate;
+                existingVital.BloodPressure = vs!.BloodPressure;
+                existingVital.HeartRate = vs.HeartRate;
+                existingVital.Temperature = vs.Temperature;
+                existingVital.RespiratoryRate = vs.RespiratoryRate;
                 existingVital.OxygenSaturation = vs.OxygenSaturation;
-                existingVital.Weight           = vs.Weight;
-                existingVital.Height           = vs.Height;
+                existingVital.Weight = vs.Weight;
+                existingVital.Height = vs.Height;
                 updatedVital = existingVital;
             }
             else
             {
                 updatedVital = new VitalSignEntity
                 {
-                    Id              = Guid.NewGuid(),
+                    Id = Guid.NewGuid(),
                     MedicalRecordId = recordId,
-                    BloodPressure   = vs!.BloodPressure,
-                    HeartRate       = vs.HeartRate,
-                    Temperature     = vs.Temperature,
+                    BloodPressure = vs!.BloodPressure,
+                    HeartRate = vs.HeartRate,
+                    Temperature = vs.Temperature,
                     RespiratoryRate = vs.RespiratoryRate,
                     OxygenSaturation = vs.OxygenSaturation,
-                    Weight          = vs.Weight,
-                    Height          = vs.Height,
-                    RecordedAt      = now,
+                    Weight = vs.Weight,
+                    Height = vs.Height,
+                    RecordedAt = now,
                 };
                 db.VitalSigns.Add(updatedVital);
             }
@@ -388,22 +388,22 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
 
         var newDrugs = request.PrescribedDrugs.Select(d => new PrescribedDrugEntity
         {
-            Id                   = Guid.NewGuid(),
-            MedicalRecordId      = recordId,
+            Id = Guid.NewGuid(),
+            MedicalRecordId = recordId,
             PrescribedByDoctorId = doctor.Id,
-            Name                 = d.Name,
-            GenericName          = d.GenericName,
-            Dose                 = d.Dose,
-            Route                = d.Route,
-            Frequency            = d.Frequency,
-            Duration             = d.Duration,
-            Quantity             = d.Quantity,
-            Refills              = d.Refills,
-            Instructions         = d.Instructions,
-            Indication           = d.Indication,
-            StartDate            = d.StartDate is not null && DateOnly.TryParse(d.StartDate, out var sd) ? sd : null,
-            EndDate              = d.EndDate is not null && DateOnly.TryParse(d.EndDate, out var ed) ? ed : null,
-            CreatedAt            = now,
+            Name = d.Name,
+            GenericName = d.GenericName,
+            Dose = d.Dose,
+            Route = d.Route,
+            Frequency = d.Frequency,
+            Duration = d.Duration,
+            Quantity = d.Quantity,
+            Refills = d.Refills,
+            Instructions = d.Instructions,
+            Indication = d.Indication,
+            StartDate = d.StartDate is not null && DateOnly.TryParse(d.StartDate, out var sd) ? sd : null,
+            EndDate = d.EndDate is not null && DateOnly.TryParse(d.EndDate, out var ed) ? ed : null,
+            CreatedAt = now,
         }).ToList();
 
         db.PrescribedDrugs.AddRange(newDrugs);
@@ -417,7 +417,7 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
 
         await SessionContextHelper.SetAndExecuteAsync(db, userId, async () =>
         {
-            if (existingLabRequest is not null && existingLabRequest.Status == "Pending")
+            if (existingLabRequest is not null && existingLabRequest.Status == "În așteptare")
             {
                 if (hasSamples)
                 {
@@ -439,7 +439,7 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
                     PatientId = record.PatientId,
                     RequestedByDoctorId = doctor.Id,
                     SampleTypes = string.Join(",", newSampleTypes!),
-                    Status = "Pending",
+                    Status = "În așteptare",
                     Notes = request.LabRequestNotes,
                     CreatedAt = now,
                     UpdatedAt = now,
@@ -454,51 +454,51 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
 
         var dto = new MedicalRecordDto
         {
-            Id                 = record.Id.ToString(),
-            PatientId          = record.PatientId.ToString(),
-            DoctorId           = record.DoctorId.ToString(),
-            Doctor             = doctor.Name,
-            Date               = record.VisitDate.ToString("yyyy-MM-dd"),
-            VisitType          = record.VisitType,
-            ChiefComplaint     = record.ChiefComplaint,
-            Diagnosis          = record.Diagnosis,
-            IcdCode            = record.IcdCode,
+            Id = record.Id.ToString(),
+            PatientId = record.PatientId.ToString(),
+            DoctorId = record.DoctorId.ToString(),
+            Doctor = doctor.Name,
+            Date = record.VisitDate.ToString("yyyy-MM-dd"),
+            VisitType = record.VisitType,
+            ChiefComplaint = record.ChiefComplaint,
+            Diagnosis = record.Diagnosis,
+            IcdCode = record.IcdCode,
             SecondaryDiagnoses = record.SecondaryDiagnoses,
-            Symptoms           = record.Symptoms,
-            PhysicalExam       = record.PhysicalExam,
-            Treatment          = record.Treatment,
-            Procedures         = record.Procedures,
-            Urgency            = record.Urgency,
-            FollowUpIn         = record.FollowUpIn,
-            FollowUpType       = record.FollowUpType,
-            Referral           = record.Referral,
-            PatientEducation   = record.PatientEducation,
-            CreatedAt          = record.CreatedAt.ToString("o"),
-            VitalSigns         = (hasVitals && updatedVital is not null) ? new VitalSignsDto
+            Symptoms = record.Symptoms,
+            PhysicalExam = record.PhysicalExam,
+            Treatment = record.Treatment,
+            Procedures = record.Procedures,
+            Urgency = record.Urgency,
+            FollowUpIn = record.FollowUpIn,
+            FollowUpType = record.FollowUpType,
+            Referral = record.Referral,
+            PatientEducation = record.PatientEducation,
+            CreatedAt = record.CreatedAt.ToString("o"),
+            VitalSigns = (hasVitals && updatedVital is not null) ? new VitalSignsDto
             {
-                BloodPressure    = updatedVital.BloodPressure,
-                HeartRate        = updatedVital.HeartRate,
-                Temperature      = updatedVital.Temperature,
-                RespiratoryRate  = updatedVital.RespiratoryRate,
+                BloodPressure = updatedVital.BloodPressure,
+                HeartRate = updatedVital.HeartRate,
+                Temperature = updatedVital.Temperature,
+                RespiratoryRate = updatedVital.RespiratoryRate,
                 OxygenSaturation = updatedVital.OxygenSaturation,
-                Weight           = updatedVital.Weight,
-                Height           = updatedVital.Height,
+                Weight = updatedVital.Weight,
+                Height = updatedVital.Height,
             } : null,
             PrescribedDrugs = newDrugs.Select(d => new PrescribedDrugDto
             {
-                Id           = d.Id.ToString(),
-                Name         = d.Name,
-                GenericName  = d.GenericName,
-                Dose         = d.Dose,
-                Route        = d.Route,
-                Frequency    = d.Frequency,
-                Duration     = d.Duration,
-                Quantity     = d.Quantity,
-                Refills      = d.Refills,
+                Id = d.Id.ToString(),
+                Name = d.Name,
+                GenericName = d.GenericName,
+                Dose = d.Dose,
+                Route = d.Route,
+                Frequency = d.Frequency,
+                Duration = d.Duration,
+                Quantity = d.Quantity,
+                Refills = d.Refills,
                 Instructions = d.Instructions,
-                Indication   = d.Indication,
-                StartDate    = d.StartDate?.ToString("yyyy-MM-dd"),
-                EndDate      = d.EndDate?.ToString("yyyy-MM-dd"),
+                Indication = d.Indication,
+                StartDate = d.StartDate?.ToString("yyyy-MM-dd"),
+                EndDate = d.EndDate?.ToString("yyyy-MM-dd"),
                 PrescribedBy = doctor.Name,
             }).ToList(),
             LabRequest = labRequestDto,

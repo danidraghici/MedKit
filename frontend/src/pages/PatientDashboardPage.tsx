@@ -593,7 +593,7 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
                         <Badge variant="outline">{rec.visitType}</Badge>
                         <Badge
                           variant={
-                            rec.urgency === "Foarte Urgent"
+                            rec.urgency === "Urgență"
                               ? "destructive"
                               : rec.urgency === "Urgent"
                                 ? "warning"
