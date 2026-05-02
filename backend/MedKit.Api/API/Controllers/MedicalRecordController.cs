@@ -47,9 +47,13 @@ public class MedicalRecordController(MedicalRecordService medicalRecordService, 
 
         return error switch
         {
-            "not_found"    => NotFound(new { error = "Fișa medicală nu a fost găsită." }),
-            "forbidden"    => StatusCode(403, new { error = "Puteți edita doar propriile fișe medicale." }),
+            "not_found" => NotFound(new { error = "Fișa medicală nu a fost găsită." }),
+            "forbidden" => StatusCode(403, new { error = "Puteți edita doar propriile fișe medicale." }),
             "not_a_doctor" => BadRequest(new { error = "Utilizatorul nu este asociat cu un profil de medic." }),
+            "invalid_visit_type" => BadRequest(new { error = "Tipul vizitei este invalid." }),
+            "invalid_urgency" => BadRequest(new { error = "Nivelul de urgență este invalid." }),
+            "invalid_follow_up_type" => BadRequest(new { error = "Tipul de urmărire este invalid." }),
+            "invalid_drug_route" => BadRequest(new { error = "Calea de administrare a medicamentului este invalidă." }),
             null when dto is not null => Ok(dto),
             _ => StatusCode(500, new { error = "Eroare neașteptată." }),
         };
@@ -69,10 +73,14 @@ public class MedicalRecordController(MedicalRecordService medicalRecordService, 
 
         return error switch
         {
-            "not_a_doctor"       => BadRequest(new { error = "Utilizatorul nu este asociat cu un profil de medic." }),
-            "patient_not_found"  => NotFound(new { error = "Pacientul nu a fost găsit." }),
+            "not_a_doctor" => BadRequest(new { error = "Utilizatorul nu este asociat cu un profil de medic." }),
+            "patient_not_found" => NotFound(new { error = "Pacientul nu a fost găsit." }),
             "invalid_patient_id" => BadRequest(new { error = "ID pacient invalid." }),
-            "invalid_date"       => BadRequest(new { error = "Format de dată invalid." }),
+            "invalid_date" => BadRequest(new { error = "Format de dată invalid." }),
+            "invalid_visit_type" => BadRequest(new { error = "Tipul vizitei este invalid." }),
+            "invalid_urgency" => BadRequest(new { error = "Nivelul de urgență este invalid." }),
+            "invalid_follow_up_type" => BadRequest(new { error = "Tipul de urmărire este invalid." }),
+            "invalid_drug_route" => BadRequest(new { error = "Calea de administrare a medicamentului este invalidă." }),
             null when dto is not null => CreatedAtAction(
                 nameof(GetByPatient), new { patientId = dto.PatientId }, dto),
             _ => StatusCode(500, new { error = "Eroare neașteptată." }),

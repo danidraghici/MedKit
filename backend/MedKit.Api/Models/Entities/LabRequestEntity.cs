@@ -22,7 +22,7 @@ public class LabRequestEntity
     public string SampleTypes { get; set; } = "";
 
     [Column("status")]
-    public string Status { get; set; } = "Pending";
+    public string Status { get; set; } = "În așteptare";
 
     [Column("notes")]
     public string? Notes { get; set; }

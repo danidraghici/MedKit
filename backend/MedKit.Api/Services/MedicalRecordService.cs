@@ -8,6 +8,83 @@ namespace MedKit.Api.Services;
 
 public class MedicalRecordService(AppDbContext db, LabRequestService labRequestService)
 {
+    // DB uses Romanian values matching frontend labels after migration 008.
+    // visit_type constraint: ('În persoană', 'Telemedicină', 'Urgență', 'Consult', 'Procedură')
+    private static string? NormalizeVisitTypeForDb(string? value) => value?.Trim() switch
+    {
+        "In-person" or "La cabinet" or "În persoană" => "În persoană",
+        "Telemedicine" or "Telemedicină" => "Telemedicină",
+        "Emergency" or "Urgență" => "Urgență",
+        "Follow-up" or "Urmărire" or "Consult" => "Consult",
+        "Procedure" or "Procedură" => "Procedură",
+        _ => null,
+    };
+
+    // DB values now match frontend labels exactly — no remapping needed.
+    private static string NormalizeVisitTypeForClient(string value) => value;
+
+    // DB uses Romanian urgency values after migration 006: ('Rutină', 'Semi-urgent', 'Urgent', 'Urgență')
+    private static string? NormalizeUrgencyForDb(string? value) => value?.Trim() switch
+    {
+        "Routine" or "Rutină" => "Rutină",
+        "Semi-urgent" => "Semi-urgent",
+        "Urgent" => "Urgent",
+        "Emergency" or "Urgență" => "Urgență",
+        _ => null,
+    };
+
+    // DB urgency values already match the frontend labels after migration 006.
+    private static string NormalizeUrgencyForClient(string value) => value;
+
+    // DB uses Romanian follow_up_type values after migration 006.
+    private static string? NormalizeFollowUpTypeForDb(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+
+        return value.Trim() switch
+        {
+            "Office visit" or "Consultație la cabinet" => "Consultație la cabinet",
+            "Phone call" or "Apel telefonic" => "Apel telefonic",
+            "Lab work" or "Analize de laborator" => "Analize de laborator",
+            "Imaging" or "Imagistică" => "Imagistică",
+            "Specialist referral" or "Trimitere la specialist" => "Trimitere la specialist",
+            "ER if symptoms worsen" or "Urgențe dacă simptomele se agravează" => "Urgențe dacă simptomele se agravează",
+            "None" or "Niciunul" => "Niciunul",
+            _ => null,
+        };
+    }
+
+    // DB follow_up_type values already match frontend labels after migration 006.
+    private static string? NormalizeFollowUpTypeForClient(string? value) => value;
+
+    // DB uses Romanian route values after migration 006:
+    // ('Oral','IV','IM','Subcutanat','Topic','Inhalator','Sublingual','Rectal','Nazal','Oftalmic','Transdermal','Altul')
+    private static string? NormalizeRouteForDb(string? value) => value?.Trim() switch
+    {
+        "Oral" => "Oral",
+        "IV" => "IV",
+        "IM" => "IM",
+        "Subcutaneous" or "Subcutanat" => "Subcutanat",
+        "Topical" or "Topic" => "Topic",
+        "Inhalation" or "Inhalator" => "Inhalator",
+        "Sublingual" => "Sublingual",
+        "Rectal" => "Rectal",
+        "Nasal" or "Nazal" => "Nazal",
+        "Ophthalmic" or "Oftalmic" => "Oftalmic",
+        "Transdermal" => "Transdermal",
+        "Other" or "Altul" => "Altul",
+        _ => null,
+    };
+
+    // DB route values already match frontend labels after migration 006.
+    private static string NormalizeRouteForClient(string value) => value;
+
+    private static bool IsPendingLabRequestStatus(string status) => status switch
+    {
+        "În așteptare" or "Pending" => true,
+        _ => false,
+    };
+
     public async Task<List<MedicalRecordDto>> GetByPatientAsync(Guid patientId)
     {
         var records = await (
@@ -65,7 +142,7 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
                 DoctorId = r.DoctorId.ToString(),
                 Doctor = x.DoctorName,
                 Date = r.VisitDate.ToString("yyyy-MM-dd"),
-                VisitType = r.VisitType,
+                VisitType = NormalizeVisitTypeForClient(r.VisitType),
                 ChiefComplaint = r.ChiefComplaint,
                 Diagnosis = r.Diagnosis,
                 IcdCode = r.IcdCode,
@@ -74,9 +151,9 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
                 PhysicalExam = r.PhysicalExam,
                 Treatment = r.Treatment,
                 Procedures = r.Procedures,
-                Urgency = r.Urgency,
+                Urgency = NormalizeUrgencyForClient(r.Urgency),
                 FollowUpIn = r.FollowUpIn,
-                FollowUpType = r.FollowUpType,
+                FollowUpType = NormalizeFollowUpTypeForClient(r.FollowUpType),
                 Referral = r.Referral,
                 PatientEducation = r.PatientEducation,
                 CreatedAt = r.CreatedAt.ToString("o"),
@@ -96,7 +173,7 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
                     Name = d.Drug.Name,
                     GenericName = d.Drug.GenericName,
                     Dose = d.Drug.Dose,
-                    Route = d.Drug.Route,
+                    Route = NormalizeRouteForClient(d.Drug.Route),
                     Frequency = d.Drug.Frequency,
                     Duration = d.Drug.Duration,
                     Quantity = d.Drug.Quantity,
@@ -142,6 +219,18 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
         if (patient is null)
             return (null, "patient_not_found");
 
+        var visitTypeDb = NormalizeVisitTypeForDb(request.VisitType);
+        if (visitTypeDb is null)
+            return (null, "invalid_visit_type");
+
+        var urgencyDb = NormalizeUrgencyForDb(request.Urgency);
+        if (urgencyDb is null)
+            return (null, "invalid_urgency");
+
+        var followUpTypeDb = NormalizeFollowUpTypeForDb(request.FollowUpType);
+        if (!string.IsNullOrWhiteSpace(request.FollowUpType) && followUpTypeDb is null)
+            return (null, "invalid_follow_up_type");
+
         var now = DateTimeOffset.UtcNow;
         var record = new MedicalRecordEntity
         {
@@ -149,7 +238,7 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
             PatientId = patientId,
             DoctorId = doctor.Id,
             VisitDate = visitDate,
-            VisitType = request.VisitType,
+            VisitType = visitTypeDb,
             ChiefComplaint = request.ChiefComplaint,
             Diagnosis = request.Diagnosis,
             IcdCode = request.IcdCode,
@@ -158,9 +247,9 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
             PhysicalExam = request.PhysicalExam,
             Treatment = request.Treatment,
             Procedures = request.Procedures,
-            Urgency = request.Urgency,
+            Urgency = urgencyDb,
             FollowUpIn = string.IsNullOrEmpty(request.FollowUpIn) ? null : request.FollowUpIn,
-            FollowUpType = string.IsNullOrEmpty(request.FollowUpType) ? null : request.FollowUpType,
+            FollowUpType = followUpTypeDb,
             Referral = request.Referral,
             PatientEducation = request.PatientEducation,
             CreatedAt = now,
@@ -188,25 +277,33 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
             };
         }
 
-        var drugs = request.PrescribedDrugs.Select(d => new PrescribedDrugEntity
+        var drugs = new List<PrescribedDrugEntity>();
+        foreach (var d in request.PrescribedDrugs)
         {
-            Id = Guid.NewGuid(),
-            MedicalRecordId = record.Id,
-            PrescribedByDoctorId = doctor.Id,
-            Name = d.Name,
-            GenericName = d.GenericName,
-            Dose = d.Dose,
-            Route = d.Route,
-            Frequency = d.Frequency,
-            Duration = d.Duration,
-            Quantity = d.Quantity,
-            Refills = d.Refills,
-            Instructions = d.Instructions,
-            Indication = d.Indication,
-            StartDate = d.StartDate is not null && DateOnly.TryParse(d.StartDate, out var sd) ? sd : null,
-            EndDate = d.EndDate is not null && DateOnly.TryParse(d.EndDate, out var ed) ? ed : null,
-            CreatedAt = now,
-        }).ToList();
+            var routeDb = NormalizeRouteForDb(d.Route);
+            if (routeDb is null)
+                return (null, "invalid_drug_route");
+
+            drugs.Add(new PrescribedDrugEntity
+            {
+                Id = Guid.NewGuid(),
+                MedicalRecordId = record.Id,
+                PrescribedByDoctorId = doctor.Id,
+                Name = d.Name,
+                GenericName = d.GenericName,
+                Dose = d.Dose,
+                Route = routeDb,
+                Frequency = d.Frequency,
+                Duration = d.Duration,
+                Quantity = d.Quantity,
+                Refills = d.Refills,
+                Instructions = d.Instructions,
+                Indication = d.Indication,
+                StartDate = d.StartDate is not null && DateOnly.TryParse(d.StartDate, out var sd) ? sd : null,
+                EndDate = d.EndDate is not null && DateOnly.TryParse(d.EndDate, out var ed) ? ed : null,
+                CreatedAt = now,
+            });
+        }
 
         LabRequestEntity? labRequestEntity = null;
         var sampleTypes = request.SampleTypes?.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
@@ -249,7 +346,7 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
             DoctorId = record.DoctorId.ToString(),
             Doctor = doctor.Name,
             Date = record.VisitDate.ToString("yyyy-MM-dd"),
-            VisitType = record.VisitType,
+            VisitType = NormalizeVisitTypeForClient(record.VisitType),
             ChiefComplaint = record.ChiefComplaint,
             Diagnosis = record.Diagnosis,
             IcdCode = record.IcdCode,
@@ -258,9 +355,9 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
             PhysicalExam = record.PhysicalExam,
             Treatment = record.Treatment,
             Procedures = record.Procedures,
-            Urgency = record.Urgency,
+            Urgency = NormalizeUrgencyForClient(record.Urgency),
             FollowUpIn = record.FollowUpIn,
-            FollowUpType = record.FollowUpType,
+            FollowUpType = NormalizeFollowUpTypeForClient(record.FollowUpType),
             Referral = record.Referral,
             PatientEducation = record.PatientEducation,
             CreatedAt = record.CreatedAt.ToString("o"),
@@ -280,7 +377,7 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
                 Name = d.Name,
                 GenericName = d.GenericName,
                 Dose = d.Dose,
-                Route = d.Route,
+                Route = NormalizeRouteForClient(d.Route),
                 Frequency = d.Frequency,
                 Duration = d.Duration,
                 Quantity = d.Quantity,
@@ -322,7 +419,19 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
             doctor = d;
         }
 
-        record.VisitType = request.VisitType;
+        var visitTypeDb = NormalizeVisitTypeForDb(request.VisitType);
+        if (visitTypeDb is null)
+            return (null, "invalid_visit_type");
+
+        var urgencyDb = NormalizeUrgencyForDb(request.Urgency);
+        if (urgencyDb is null)
+            return (null, "invalid_urgency");
+
+        var followUpTypeDb = NormalizeFollowUpTypeForDb(request.FollowUpType);
+        if (!string.IsNullOrWhiteSpace(request.FollowUpType) && followUpTypeDb is null)
+            return (null, "invalid_follow_up_type");
+
+        record.VisitType = visitTypeDb;
         record.ChiefComplaint = request.ChiefComplaint;
         record.Diagnosis = request.Diagnosis;
         record.IcdCode = request.IcdCode;
@@ -331,9 +440,9 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
         record.PhysicalExam = request.PhysicalExam;
         record.Treatment = request.Treatment;
         record.Procedures = request.Procedures;
-        record.Urgency = request.Urgency;
+        record.Urgency = urgencyDb;
         record.FollowUpIn = string.IsNullOrEmpty(request.FollowUpIn) ? null : request.FollowUpIn;
-        record.FollowUpType = string.IsNullOrEmpty(request.FollowUpType) ? null : request.FollowUpType;
+        record.FollowUpType = followUpTypeDb;
         record.Referral = request.Referral;
         record.PatientEducation = request.PatientEducation;
 
@@ -386,25 +495,33 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
         var oldDrugs = await db.PrescribedDrugs.Where(d => d.MedicalRecordId == recordId).ToListAsync();
         db.PrescribedDrugs.RemoveRange(oldDrugs);
 
-        var newDrugs = request.PrescribedDrugs.Select(d => new PrescribedDrugEntity
+        var newDrugs = new List<PrescribedDrugEntity>();
+        foreach (var d in request.PrescribedDrugs)
         {
-            Id = Guid.NewGuid(),
-            MedicalRecordId = recordId,
-            PrescribedByDoctorId = doctor.Id,
-            Name = d.Name,
-            GenericName = d.GenericName,
-            Dose = d.Dose,
-            Route = d.Route,
-            Frequency = d.Frequency,
-            Duration = d.Duration,
-            Quantity = d.Quantity,
-            Refills = d.Refills,
-            Instructions = d.Instructions,
-            Indication = d.Indication,
-            StartDate = d.StartDate is not null && DateOnly.TryParse(d.StartDate, out var sd) ? sd : null,
-            EndDate = d.EndDate is not null && DateOnly.TryParse(d.EndDate, out var ed) ? ed : null,
-            CreatedAt = now,
-        }).ToList();
+            var routeDb = NormalizeRouteForDb(d.Route);
+            if (routeDb is null)
+                return (null, "invalid_drug_route");
+
+            newDrugs.Add(new PrescribedDrugEntity
+            {
+                Id = Guid.NewGuid(),
+                MedicalRecordId = recordId,
+                PrescribedByDoctorId = doctor.Id,
+                Name = d.Name,
+                GenericName = d.GenericName,
+                Dose = d.Dose,
+                Route = routeDb,
+                Frequency = d.Frequency,
+                Duration = d.Duration,
+                Quantity = d.Quantity,
+                Refills = d.Refills,
+                Instructions = d.Instructions,
+                Indication = d.Indication,
+                StartDate = d.StartDate is not null && DateOnly.TryParse(d.StartDate, out var sd) ? sd : null,
+                EndDate = d.EndDate is not null && DateOnly.TryParse(d.EndDate, out var ed) ? ed : null,
+                CreatedAt = now,
+            });
+        }
 
         db.PrescribedDrugs.AddRange(newDrugs);
 
@@ -417,7 +534,7 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
 
         await SessionContextHelper.SetAndExecuteAsync(db, userId, async () =>
         {
-            if (existingLabRequest is not null && existingLabRequest.Status == "În așteptare")
+            if (existingLabRequest is not null && IsPendingLabRequestStatus(existingLabRequest.Status))
             {
                 if (hasSamples)
                 {
@@ -459,7 +576,7 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
             DoctorId = record.DoctorId.ToString(),
             Doctor = doctor.Name,
             Date = record.VisitDate.ToString("yyyy-MM-dd"),
-            VisitType = record.VisitType,
+            VisitType = NormalizeVisitTypeForClient(record.VisitType),
             ChiefComplaint = record.ChiefComplaint,
             Diagnosis = record.Diagnosis,
             IcdCode = record.IcdCode,
@@ -468,9 +585,9 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
             PhysicalExam = record.PhysicalExam,
             Treatment = record.Treatment,
             Procedures = record.Procedures,
-            Urgency = record.Urgency,
+            Urgency = NormalizeUrgencyForClient(record.Urgency),
             FollowUpIn = record.FollowUpIn,
-            FollowUpType = record.FollowUpType,
+            FollowUpType = NormalizeFollowUpTypeForClient(record.FollowUpType),
             Referral = record.Referral,
             PatientEducation = record.PatientEducation,
             CreatedAt = record.CreatedAt.ToString("o"),
@@ -490,7 +607,7 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
                 Name = d.Name,
                 GenericName = d.GenericName,
                 Dose = d.Dose,
-                Route = d.Route,
+                Route = NormalizeRouteForClient(d.Route),
                 Frequency = d.Frequency,
                 Duration = d.Duration,
                 Quantity = d.Quantity,

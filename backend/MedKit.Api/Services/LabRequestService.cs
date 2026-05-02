@@ -8,11 +8,26 @@ namespace MedKit.Api.Services;
 
 public class LabRequestService(AppDbContext db, LabResultService labResultService, NotificationDeliveryService notificationService)
 {
-    private static readonly HashSet<string> ValidStatuses = ["În așteptare", "În procesare", "Finalizat"];
+    // DB uses Romanian status values after migration 006.
+    // CK_lab_requests_status: ('În așteptare', 'În procesare', 'Finalizat')
+    private static readonly HashSet<string> ValidStatusesForDb = ["În așteptare", "În procesare", "Finalizat"];
     private static readonly Dictionary<string, int> StatusOrder = new()
     {
-        ["În așteptare"] = 0, ["În procesare"] = 1, ["Finalizat"] = 2,
+        ["În așteptare"] = 0,
+        ["În procesare"] = 1,
+        ["Finalizat"] = 2,
     };
+
+    private static string? NormalizeStatusForDb(string? status) => status?.Trim() switch
+    {
+        "Pending" or "În așteptare" => "În așteptare",
+        "In Progress" or "În procesare" => "În procesare",
+        "Completed" or "Finalizat" => "Finalizat",
+        _ => null,
+    };
+
+    // DB already stores Romanian values — pass through as-is.
+    private static string NormalizeStatusForClient(string status) => status;
 
     public async Task<List<LabRequestDto>> GetAllPendingAsync()
     {
@@ -58,20 +73,23 @@ public class LabRequestService(AppDbContext db, LabResultService labResultServic
     public async Task<(LabRequestDto? Dto, string? Error)> UpdateStatusAsync(
         Guid requestId, string newStatus, Guid userId)
     {
-        if (!ValidStatuses.Contains(newStatus))
+        var newStatusDb = NormalizeStatusForDb(newStatus);
+        if (newStatusDb is null || !ValidStatusesForDb.Contains(newStatusDb))
             return (null, "invalid_status");
 
         var entity = await db.LabRequests.FindAsync(requestId);
         if (entity is null) return (null, "not_found");
 
-        if (!StatusOrder.TryGetValue(entity.Status, out var currentOrder) ||
-            !StatusOrder.TryGetValue(newStatus, out var newOrder) ||
+        var currentStatusDb = NormalizeStatusForDb(entity.Status);
+        if (currentStatusDb is null ||
+            !StatusOrder.TryGetValue(currentStatusDb, out var currentOrder) ||
+            !StatusOrder.TryGetValue(newStatusDb, out var newOrder) ||
             newOrder <= currentOrder)
             return (null, "invalid_transition");
 
         await SessionContextHelper.SetAndExecuteAsync(db, userId, async () =>
         {
-            entity.Status = newStatus;
+            entity.Status = newStatusDb;
             entity.UpdatedAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync();
         });
@@ -88,7 +106,7 @@ public class LabRequestService(AppDbContext db, LabResultService labResultServic
 
         var entity = await db.LabRequests.FindAsync(requestId);
         if (entity is null) return (null, "not_found");
-        if (entity.Status == "În așteptare") return (null, "must_start_processing_first");
+        if (NormalizeStatusForDb(entity.Status) == "În așteptare") return (null, "must_start_processing_first");
 
         Guid? labResultId = null;
 
@@ -133,8 +151,16 @@ public class LabRequestService(AppDbContext db, LabResultService labResultServic
             from doctor in dj.DefaultIfEmpty()
             select new
             {
-                lr.Id, lr.MedicalRecordId, lr.PatientId, lr.RequestedByDoctorId,
-                lr.SampleTypes, lr.Status, lr.Notes, lr.ViewedByLabAt, lr.CreatedAt, lr.UpdatedAt,
+                lr.Id,
+                lr.MedicalRecordId,
+                lr.PatientId,
+                lr.RequestedByDoctorId,
+                lr.SampleTypes,
+                lr.Status,
+                lr.Notes,
+                lr.ViewedByLabAt,
+                lr.CreatedAt,
+                lr.UpdatedAt,
                 PatientName = patient != null ? patient.FullName : "Unknown",
                 DoctorName = doctor != null ? doctor.Name : "Unknown",
             }
@@ -154,7 +180,12 @@ public class LabRequestService(AppDbContext db, LabResultService labResultServic
             orderby rr.SubmittedAt
             select new
             {
-                rr.Id, rr.LabRequestId, rr.SubmittedByUserId, rr.Observations, rr.LabResultId, rr.SubmittedAt,
+                rr.Id,
+                rr.LabRequestId,
+                rr.SubmittedByUserId,
+                rr.Observations,
+                rr.LabResultId,
+                rr.SubmittedAt,
                 SubmitterName = submitter != null ? submitter.Name : "Unknown",
                 LabResultFileName = labRes != null ? labRes.OriginalFileName : null,
             }
@@ -186,7 +217,7 @@ public class LabRequestService(AppDbContext db, LabResultService labResultServic
             RequestedByDoctorId = r.RequestedByDoctorId.ToString(),
             RequestedByDoctorName = r.DoctorName,
             SampleTypes = r.SampleTypes.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
-            Status = r.Status,
+            Status = NormalizeStatusForClient(r.Status),
             Notes = r.Notes,
             ViewedByLabAt = r.ViewedByLabAt?.ToString("o"),
             CreatedAt = r.CreatedAt.ToString("o"),

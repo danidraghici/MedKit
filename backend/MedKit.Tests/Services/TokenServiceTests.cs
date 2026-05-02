@@ -2,6 +2,7 @@ using MedKit.Api.Models;
 using MedKit.Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Xunit;
 
 namespace MedKit.Tests.Services;
 
