@@ -153,7 +153,9 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
   const patients = useAppStore((s) => s.patients);
   const fetchPatients = useAppStore((s) => s.fetchPatients);
   const getLabAIInsight = useAppStore((s) => s.getLabAIInsight);
-  const generateLabAIInsight = useAppStore((s) => s.generateLabAIInsight);
+  const fetchLabAIInsight = useAppStore((s) => s.fetchLabAIInsight);
+  const labAIInsightLoading = useAppStore((s) => s.labAIInsightLoading);
+  const pollLabResultStatus = useAppStore((s) => s.pollLabResultStatus);
   const notifications = useAppStore((s) => s.notifications);
   const fetchNotifications = useAppStore((s) => s.fetchNotifications);
   const markNotificationRead = useAppStore((s) => s.markNotificationRead);
@@ -240,11 +242,45 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
   const [insightModalInsight, setInsightModalInsight] = useState<LabAIInsight | null>(null);
   const [apptSuccess, setApptSuccess] = useState(false);
 
-  const handleOpenInsight = (labResultId: string) => {
-    let insight = getLabAIInsight(labResultId);
-    if (!insight) insight = generateLabAIInsight(labResultId, patientId);
-    setInsightModalInsight(insight);
+  const handleOpenInsight = async (labResultId: string) => {
+    const cached = getLabAIInsight(labResultId);
+    if (cached) { setInsightModalInsight(cached); return; }
+    const insight = await fetchLabAIInsight(labResultId);
+    if (insight) setInsightModalInsight(insight);
   };
+
+  const handlePollStatus = (labResultId: string) => {
+    void pollLabResultStatus(labResultId);
+  };
+
+  useEffect(() => {
+    const activeIds = patientLabResults
+      .filter(r => r.aiProcessingStatus === "pending" || r.aiProcessingStatus === "processing")
+      .map(r => r.id);
+
+    if (activeIds.length === 0) return;
+
+    const interval = setInterval(async () => {
+      for (const id of activeIds) {
+        try {
+          const data = await api.get<{ status: string; error?: string }>(
+            `/api/lab-results/${id}/processing-status`
+          );
+          setPatientLabResults(prev =>
+            prev.map(r =>
+              r.id === id
+                ? { ...r, aiProcessingStatus: data.status as LabResult["aiProcessingStatus"], aiProcessingError: data.error }
+                : r
+            )
+          );
+        } catch {
+          // ignore transient polling errors
+        }
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [patientLabResults]);
 
   const handleAppointmentCreated = async () => {
     try {
@@ -557,14 +593,20 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
                       {formatDate(myLabs[0].uploadedAt)} · {myLabs[0].uploaderName}
                     </p>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs gap-1.5 shrink-0"
-                    onClick={() => handleOpenInsight(myLabs[0].id)}
-                  >
-                    <Sparkles className="w-3 h-3 text-amber-500" /> Analiză AI
-                  </Button>
+                  {myLabs[0].aiProcessingStatus === "completed" || !myLabs[0].aiProcessingStatus ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs gap-1.5 shrink-0"
+                      disabled={!!labAIInsightLoading[myLabs[0].id]}
+                      onClick={() => void handleOpenInsight(myLabs[0].id)}
+                    >
+                      <Sparkles className="w-3 h-3 text-amber-500" />
+                      {labAIInsightLoading[myLabs[0].id] ? "Se încarcă..." : "Analiză AI"}
+                    </Button>
+                  ) : myLabs[0].aiProcessingStatus === "processing" || myLabs[0].aiProcessingStatus === "pending" ? (
+                    <span className="text-xs text-muted-foreground">AI în curs...</span>
+                  ) : null}
                 </div>
               </CardContent>
             </Card>
@@ -690,6 +732,9 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
             ) : (
               myLabs.map((lab) => {
                 const insight = getLabAIInsight(lab.id);
+                const isLoading = !!labAIInsightLoading[lab.id];
+                const status = lab.aiProcessingStatus;
+                const insightSummary = insight?.summaryPatient ?? insight?.summary;
                 return (
                   <Card key={lab.id}>
                     <CardContent className="p-5">
@@ -705,24 +750,36 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
                             </span>
                           </div>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="shrink-0 gap-1.5 border-amber-300 hover:bg-amber-50 dark:border-amber-700 dark:hover:bg-amber-950/30"
-                          onClick={() => handleOpenInsight(lab.id)}
-                        >
-                          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                          {insight ? "Vezi analiza AI" : "Generează analiză AI"}
-                        </Button>
+                        {status === "processing" || status === "pending" ? (
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-xs text-muted-foreground">Analiză AI în curs...</span>
+                            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => handlePollStatus(lab.id)}>
+                              Reîncarcă
+                            </Button>
+                          </div>
+                        ) : status === "failed" ? (
+                          <span className="text-xs text-destructive shrink-0">Analiză AI eșuată</span>
+                        ) : status === "skipped" ? null : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="shrink-0 gap-1.5 border-amber-300 hover:bg-amber-50 dark:border-amber-700 dark:hover:bg-amber-950/30"
+                            disabled={isLoading}
+                            onClick={() => void handleOpenInsight(lab.id)}
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                            {isLoading ? "Se încarcă..." : insight ? "Vezi analiza AI" : "Analiză AI"}
+                          </Button>
+                        )}
                       </div>
                       {/* Preview insight if available */}
-                      {insight && (
+                      {insight && insightSummary && (
                         <div className={`mt-3 p-3 rounded-xl border text-sm ${URGENCY_CONFIG[insight.urgency].color}`}>
                           <div className="flex items-center gap-1.5 font-semibold text-xs uppercase tracking-wide mb-1">
                             {URGENCY_CONFIG[insight.urgency].icon}
                             {URGENCY_CONFIG[insight.urgency].label}
                           </div>
-                          <p className="line-clamp-2">{insight.summary}</p>
+                          <p className="line-clamp-2">{insightSummary}</p>
                           <button
                             className="text-xs font-medium mt-1 underline underline-offset-2 opacity-75 hover:opacity-100"
                             onClick={() => setInsightModalInsight(insight)}
@@ -730,6 +787,9 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
                             Citește analiza completă →
                           </button>
                         </div>
+                      )}
+                      {status === "failed" && lab.aiProcessingError && (
+                        <p className="mt-2 text-xs text-destructive">{lab.aiProcessingError}</p>
                       )}
                     </CardContent>
                   </Card>
@@ -871,55 +931,60 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
               <Sparkles className="w-5 h-5 text-amber-500" /> Interpretare AI rezultate laborator
             </DialogTitle>
           </DialogHeader>
-          {insightModalInsight && (
-            <div className="space-y-4">
-              {/* Urgency banner */}
-              <div
-                className={`flex items-center gap-2 p-3 rounded-xl border font-semibold text-sm ${URGENCY_CONFIG[insightModalInsight.urgency].color}`}
-              >
-                {URGENCY_CONFIG[insightModalInsight.urgency].icon}
-                {URGENCY_CONFIG[insightModalInsight.urgency].label}
-              </div>
+          {insightModalInsight && (() => {
+            const summary = insightModalInsight.summaryPatient ?? insightModalInsight.summary ?? "";
+            const findings = insightModalInsight.findingsPatient ?? insightModalInsight.findings ?? [];
+            const recommendations = insightModalInsight.recommendationsPatient ?? insightModalInsight.recommendations ?? [];
+            return (
+              <div className="space-y-4">
+                {/* Urgency banner */}
+                <div
+                  className={`flex items-center gap-2 p-3 rounded-xl border font-semibold text-sm ${URGENCY_CONFIG[insightModalInsight.urgency].color}`}
+                >
+                  {URGENCY_CONFIG[insightModalInsight.urgency].icon}
+                  {URGENCY_CONFIG[insightModalInsight.urgency].label}
+                </div>
 
-              {/* Summary */}
-              <p className="text-sm leading-relaxed">{insightModalInsight.summary}</p>
+                {/* Summary */}
+                <p className="text-sm leading-relaxed">{summary}</p>
 
-              {/* Findings */}
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Constatări</p>
-                <ul className="space-y-1">
-                  {insightModalInsight.findings.map((f, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm">
-                      <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 shrink-0" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                {/* Findings */}
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Constatări</p>
+                  <ul className="space-y-1">
+                    {findings.map((f, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 shrink-0" />
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
 
-              {/* Recommendations */}
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Recomandări</p>
-                <ul className="space-y-1">
-                  {insightModalInsight.recommendations.map((r, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
-                      {r}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                {/* Recommendations */}
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Recomandări</p>
+                  <ul className="space-y-1">
+                    {recommendations.map((r, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                        {r}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
 
-              {/* Disclaimer */}
-              <div className="p-3 rounded-xl bg-muted/50 border text-xs text-muted-foreground flex items-start gap-2">
-                <ShieldCheck className="w-3.5 h-3.5 mt-0.5 shrink-0 text-blue-500" />
-                {insightModalInsight.disclaimer}
+                {/* Disclaimer */}
+                <div className="p-3 rounded-xl bg-muted/50 border text-xs text-muted-foreground flex items-start gap-2">
+                  <ShieldCheck className="w-3.5 h-3.5 mt-0.5 shrink-0 text-blue-500" />
+                  {insightModalInsight.disclaimer}
+                </div>
+                <p className="text-xs text-muted-foreground text-right">
+                  Generat la {formatDateTime(insightModalInsight.generatedAt)}
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground text-right">
-                Generat la {formatDateTime(insightModalInsight.generatedAt)}
-              </p>
-            </div>
-          )}
+            );
+          })()}
         </DialogContent>
       </Dialog>
 

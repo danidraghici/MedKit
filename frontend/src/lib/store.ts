@@ -11,7 +11,6 @@ import {
   MOCK_PATIENTS,
   MOCK_APPOINTMENTS,
   MOCK_APPOINTMENT_REQUESTS,
-  MOCK_LAB_AI_INSIGHTS,
   MOCK_CONSULTATION_REMINDERS,
 } from "./mockData";
 
@@ -117,8 +116,10 @@ interface AppState {
   consultationReminders: ConsultationReminder[];
   addAppointmentRequest: (req: Omit<AppointmentRequest, "id" | "createdAt" | "status">) => AppointmentRequest;
   getPatientAppointmentRequests: (patientId: string) => AppointmentRequest[];
+  labAIInsightLoading: Record<string, boolean>;
   getLabAIInsight: (labResultId: string) => LabAIInsight | undefined;
-  generateLabAIInsight: (labResultId: string, patientId: string) => LabAIInsight;
+  fetchLabAIInsight: (labResultId: string) => Promise<LabAIInsight | null>;
+  pollLabResultStatus: (labResultId: string) => Promise<void>;
   getPatientReminders: (patientId: string) => ConsultationReminder[];
   dismissReminder: (reminderId: string) => void;
 
@@ -703,7 +704,8 @@ export const useAppStore = create<AppState>()(
 
       // ── Patient Portal ──────────────────────────────────────────────────
       appointmentRequests: MOCK_APPOINTMENT_REQUESTS,
-      labAIInsights: MOCK_LAB_AI_INSIGHTS,
+      labAIInsights: [],
+      labAIInsightLoading: {},
       consultationReminders: MOCK_CONSULTATION_REMINDERS,
 
       addAppointmentRequest: (reqData) => {
@@ -727,31 +729,37 @@ export const useAppStore = create<AppState>()(
         return get().labAIInsights.find((i) => i.labResultId === labResultId);
       },
 
-      generateLabAIInsight: (labResultId, patientId) => {
+      fetchLabAIInsight: async (labResultId) => {
         const existing = get().labAIInsights.find((i) => i.labResultId === labResultId);
         if (existing) return existing;
-        const labResult = get().labResults.find((r) => r.id === labResultId);
-        const insight: LabAIInsight = {
-          id: generateId("ins"),
-          labResultId,
-          patientId,
-          generatedAt: new Date().toISOString(),
-          urgency: "Consult Doctor",
-          summary: `Lab report "${labResult?.originalFileName ?? "uploaded file"}" has been received. Please consult your doctor for a detailed interpretation of your results.`,
-          findings: [
-            `File: ${labResult?.originalFileName ?? "Lab report"}`,
-            `Uploaded: ${labResult?.uploadedAt ? new Date(labResult.uploadedAt).toLocaleDateString() : "Recently"}`,
-            `Uploaded by: ${labResult?.uploaderName ?? "Lab specialist"}`,
-          ],
-          recommendations: [
-            "Review the lab report with your doctor at your next appointment",
-            "Do not self-diagnose based on lab reports",
-            "Contact your care team if you have questions about your results",
-          ],
-          disclaimer: "This AI-generated insight is for informational purposes only and does not constitute medical advice. Always consult your doctor before making any health decisions.",
-        };
-        set((state) => ({ labAIInsights: [...state.labAIInsights, insight] }));
-        return insight;
+
+        set((state) => ({ labAIInsightLoading: { ...state.labAIInsightLoading, [labResultId]: true } }));
+        try {
+          const insight = await api.get<LabAIInsight>(`/api/lab-results/${labResultId}/insight`);
+          set((state) => ({
+            labAIInsights: [...state.labAIInsights.filter((i) => i.labResultId !== labResultId), insight],
+          }));
+          return insight;
+        } catch {
+          return null;
+        } finally {
+          set((state) => ({ labAIInsightLoading: { ...state.labAIInsightLoading, [labResultId]: false } }));
+        }
+      },
+
+      pollLabResultStatus: async (labResultId) => {
+        try {
+          const data = await api.get<{ status: string; error?: string }>(`/api/lab-results/${labResultId}/processing-status`);
+          set((state) => ({
+            labResults: state.labResults.map((r) =>
+              r.id === labResultId
+                ? { ...r, aiProcessingStatus: data.status as LabResult["aiProcessingStatus"], aiProcessingError: data.error }
+                : r
+            ),
+          }));
+        } catch {
+          // silently ignore polling errors
+        }
       },
 
       getPatientReminders: (patientId) => {
@@ -874,7 +882,7 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: "medkit-storage",
-      version: 8,
+      version: 9,
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as Record<string, unknown>;
         if (version < 2) {
@@ -913,6 +921,10 @@ export const useAppStore = create<AppState>()(
           // notifications are always fetched fresh — initialize to empty
           state.notifications = [];
           state.unreadNotificationCount = 0;
+        }
+        if (version < 9) {
+          // Clear old mock AI insights — real ones will be fetched from the backend
+          state.labAIInsights = [];
         }
         return state;
       },

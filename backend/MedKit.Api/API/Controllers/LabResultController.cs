@@ -59,4 +59,26 @@ public class LabResultController(LabResultService labResultService) : Controller
         var (stream, contentType, originalFileName) = result.Value;
         return File(stream, contentType, originalFileName);
     }
+
+    [HttpGet("lab-results/{id:guid}/processing-status")]
+    [Authorize]
+    public async Task<IActionResult> GetProcessingStatus(Guid id)
+    {
+        var status = await labResultService.GetProcessingStatusAsync(id);
+        if (status is null)
+            return NotFound(new { error = "Lab result not found." });
+        return Ok(status);
+    }
+
+    [HttpGet("lab-results/{id:guid}/insight")]
+    [Authorize]
+    public async Task<IActionResult> GetInsight(Guid id)
+    {
+        var role = User.FindFirstValue(ClaimTypes.Role);
+        var isPatient = role == "patient";
+        var insight = await labResultService.GetInsightAsync(id, isPatient);
+        if (insight is null)
+            return NotFound(new { error = "Insight not available." });
+        return Ok(insight);
+    }
 }

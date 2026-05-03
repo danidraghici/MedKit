@@ -1,3 +1,4 @@
+using System.Text.Json;
 using MedKit.Api.API.DTOs;
 using MedKit.Api.Models;
 using MedKit.Api.Models.Entities;
@@ -31,10 +32,12 @@ public class LabResultService(AppDbContext db, IConfiguration config)
                 PatientId        = lr.PatientId.ToString(),
                 UploadedByUserId = lr.UploadedByUserId.ToString(),
                 UploaderName     = uploader != null ? uploader.Name : "Unknown",
-                OriginalFileName = lr.OriginalFileName,
-                ContentType      = lr.ContentType,
-                FileSizeBytes    = lr.FileSizeBytes,
-                UploadedAt       = lr.UploadedAt.ToString("o"),
+                OriginalFileName    = lr.OriginalFileName,
+                ContentType        = lr.ContentType,
+                FileSizeBytes      = lr.FileSizeBytes,
+                UploadedAt         = lr.UploadedAt.ToString("o"),
+                AiProcessingStatus = lr.AiProcessingStatus,
+                AiProcessingError  = lr.AiProcessingError,
             }
         ).ToListAsync();
     }
@@ -53,10 +56,12 @@ public class LabResultService(AppDbContext db, IConfiguration config)
                 PatientId        = lr.PatientId.ToString(),
                 UploadedByUserId = lr.UploadedByUserId.ToString(),
                 UploaderName     = uploader != null ? uploader.Name : "Unknown",
-                OriginalFileName = lr.OriginalFileName,
-                ContentType      = lr.ContentType,
-                FileSizeBytes    = lr.FileSizeBytes,
-                UploadedAt       = lr.UploadedAt.ToString("o"),
+                OriginalFileName    = lr.OriginalFileName,
+                ContentType        = lr.ContentType,
+                FileSizeBytes      = lr.FileSizeBytes,
+                UploadedAt         = lr.UploadedAt.ToString("o"),
+                AiProcessingStatus = lr.AiProcessingStatus,
+                AiProcessingError  = lr.AiProcessingError,
             }
         ).ToListAsync();
     }
@@ -102,14 +107,16 @@ public class LabResultService(AppDbContext db, IConfiguration config)
         var uploader = await db.Users.FindAsync(userId);
         return (new LabResultDto
         {
-            Id               = entity.Id.ToString(),
-            PatientId        = entity.PatientId.ToString(),
-            UploadedByUserId = entity.UploadedByUserId.ToString(),
-            UploaderName     = uploader?.Name ?? "Unknown",
-            OriginalFileName = entity.OriginalFileName,
-            ContentType      = entity.ContentType,
-            FileSizeBytes    = entity.FileSizeBytes,
-            UploadedAt       = entity.UploadedAt.ToString("o"),
+            Id                 = entity.Id.ToString(),
+            PatientId          = entity.PatientId.ToString(),
+            UploadedByUserId   = entity.UploadedByUserId.ToString(),
+            UploaderName       = uploader?.Name ?? "Unknown",
+            OriginalFileName   = entity.OriginalFileName,
+            ContentType        = entity.ContentType,
+            FileSizeBytes      = entity.FileSizeBytes,
+            UploadedAt         = entity.UploadedAt.ToString("o"),
+            AiProcessingStatus = entity.AiProcessingStatus,
+            AiProcessingError  = entity.AiProcessingError,
         }, null);
     }
 
@@ -120,5 +127,61 @@ public class LabResultService(AppDbContext db, IConfiguration config)
 
         var stream = System.IO.File.OpenRead(entity.BlobName);
         return (stream, entity.ContentType, entity.OriginalFileName);
+    }
+
+    public async Task<LabProcessingStatusDto?> GetProcessingStatusAsync(Guid labResultId)
+    {
+        var entity = await db.LabResults
+            .AsNoTracking()
+            .Where(r => r.Id == labResultId)
+            .Select(r => new { r.AiProcessingStatus, r.AiProcessingError })
+            .FirstOrDefaultAsync();
+
+        if (entity is null) return null;
+        return new LabProcessingStatusDto { Status = entity.AiProcessingStatus, Error = entity.AiProcessingError };
+    }
+
+    public async Task<LabAiInsightResponseDto?> GetInsightAsync(Guid labResultId, bool isPatient)
+    {
+        var entity = await db.LabAiInsights
+            .AsNoTracking()
+            .FirstOrDefaultAsync(i => i.LabResultId == labResultId);
+
+        if (entity is null) return null;
+
+        var dto = new LabAiInsightResponseDto
+        {
+            Id          = entity.Id.ToString(),
+            LabResultId = entity.LabResultId.ToString(),
+            PatientId   = entity.PatientId.ToString(),
+            GeneratedAt = entity.GeneratedAt.ToString("o"),
+            Urgency     = entity.Urgency,
+            Disclaimer  = entity.Disclaimer,
+        };
+
+        if (isPatient)
+        {
+            dto.SummaryPatient         = entity.SummaryPatient ?? entity.Summary;
+            dto.FindingsPatient        = ParseJsonArray(entity.FindingsPatient ?? entity.Findings);
+            dto.RecommendationsPatient = ParseJsonArray(entity.RecommendationsPatient ?? entity.Recommendations);
+        }
+        else
+        {
+            dto.Summary                = entity.Summary;
+            dto.Findings               = ParseJsonArray(entity.Findings);
+            dto.Recommendations        = ParseJsonArray(entity.Recommendations);
+            dto.SummaryPatient         = entity.SummaryPatient;
+            dto.FindingsPatient        = ParseJsonArray(entity.FindingsPatient);
+            dto.RecommendationsPatient = ParseJsonArray(entity.RecommendationsPatient);
+        }
+
+        return dto;
+    }
+
+    private static string[]? ParseJsonArray(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try { return JsonSerializer.Deserialize<string[]>(json); }
+        catch { return null; }
     }
 }

@@ -154,6 +154,8 @@ export interface LabResult {
   contentType: string;
   fileSizeBytes: number;
   uploadedAt: string;
+  aiProcessingStatus?: "pending" | "processing" | "completed" | "failed" | "skipped";
+  aiProcessingError?: string;
 }
 
 export interface Note {
@@ -263,11 +265,16 @@ export interface LabAIInsight {
   labResultId: string;
   patientId: string;
   generatedAt: string;
-  summary: string;
-  findings: string[];
-  recommendations: string[];
   urgency: "Normal" | "Monitor" | "Consult Doctor" | "Urgent";
   disclaimer: string;
+  // Doctor variant (clinical language)
+  summary?: string;
+  findings?: string[];
+  recommendations?: string[];
+  // Patient variant (plain language)
+  summaryPatient?: string;
+  findingsPatient?: string[];
+  recommendationsPatient?: string[];
 }
 
 export interface ConsultationReminder {
