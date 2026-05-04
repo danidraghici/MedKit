@@ -4,9 +4,14 @@ namespace MedKit.AiInsights.Safety;
 
 public static class ForbiddenPatterns
 {
-    // Explicit diagnosis — "aveți diabet", "suferiți de hipertensiune", etc.
+    // Explicit diagnosis stated as patient fact — "ești diagnosticat cu X", "ai fost diagnosticat cu Y".
+    // NOTE: removed broad patterns that produce false positives on legitimate clinical hedges:
+    //   - "aveți/aveti" → caught possessives like "valorile pe care le aveți crescute"
+    //   - "suferiți de" → caught "dacă suferiți de simptome, consultați medicul"
+    //   - "diagnosticul este" → caught "diagnosticul este de stabilit de medicul curant"
+    // Prompt rules already forbid all diagnosis framing; regex guards only the clearest cases.
     private static readonly Regex DiagnosisPattern = new(
-        @"\b(aveți|aveti|suferiți de|suferiti de|diagnosticul este|ești diagnosticat|esti diagnosticat|ai fost diagnosticat)\s+\w+",
+        @"\b(ești diagnosticat|esti diagnosticat|ai fost diagnosticat)\s+\w+",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     // Dosing recommendation — "luați 500 mg", "administrați 2 comprimate", etc.

@@ -51,9 +51,13 @@ public class OutputValidator(ILogger<OutputValidator> logger)
         {
             foreach (var text in allTexts)
             {
-                if (pattern.IsMatch(text))
+                var match = pattern.Match(text);
+                if (match.Success)
                 {
-                    logger.LogWarning("Safety: forbidden pattern '{Pattern}' matched in AI output", name);
+                    var snippet = text.Length > 150 ? text[..150] + "…" : text;
+                    logger.LogWarning(
+                        "Safety: forbidden pattern '{Pattern}' matched — value='{Match}' | context: '{Snippet}'",
+                        name, match.Value, snippet);
                     return (false, $"forbidden_pattern: {name}");
                 }
             }

@@ -8,7 +8,8 @@ import {
   Plus, FileText, FlaskConical, StickyNote, ClipboardList, Clock, Stethoscope,
   Upload, X, Download, Paperclip, Edit, Trash2, Activity, Heart, Thermometer,
   Wind, Eye, Weight, ChevronDown, ChevronUp, BookOpen, UserCheck, AlertCircle,
-  CalendarDays, CheckCircle2, XCircle, MoreVertical, Pencil, Loader2,
+  CalendarDays, CheckCircle2, XCircle, MoreVertical, Pencil, Loader2, Sparkles,
+  ShieldCheck, TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +34,7 @@ import { IcdMultiSearchField } from "@/components/IcdMultiSearchField";
 import { useAppStore } from "@/lib/store";
 import { api } from "@/lib/api";
 import { formatDate, formatDateTime, calculateAge, getInitials, formatFileSize } from "@/lib/utils";
-import type { Attachment, MedicalRecord, PrescribedDrug, RouteOfAdministration, DrugFrequency, UrgencyLevel, FollowUpType, Appointment, SampleType, LabRequestStatus } from "@/lib/types";
+import type { Attachment, MedicalRecord, PrescribedDrug, RouteOfAdministration, DrugFrequency, UrgencyLevel, FollowUpType, Appointment, SampleType, LabRequestStatus, LabAIInsight } from "@/lib/types";
 
 // ─── Zod schemas ──────────────────────────────────────────────────────────────
 
@@ -424,6 +425,9 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
   const fetchLabRequestsByPatient = useAppStore((s) => s.fetchLabRequestsByPatient);
   const updateLabRequestStatus = useAppStore((s) => s.updateLabRequestStatus);
   const submitLabResult = useAppStore((s) => s.submitLabResult);
+  const fetchLabAIInsight = useAppStore((s) => s.fetchLabAIInsight);
+  const getLabAIInsight = useAppStore((s) => s.getLabAIInsight);
+  const labAIInsightLoading = useAppStore((s) => s.labAIInsightLoading);
   const user = useAppStore((s) => s.user);
 
   // Role-based permissions
@@ -442,6 +446,16 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
   const [labFileError, setLabFileError] = useState<string | null>(null);
   const [isLabUploading, setIsLabUploading] = useState(false);
   const [isLabResultsLoading, setIsLabResultsLoading] = useState(true);
+
+  // AI Insight modal state
+  const [insightModal, setInsightModal] = useState<LabAIInsight | null>(null);
+
+  const handleOpenInsight = async (labResultId: string) => {
+    const cached = getLabAIInsight(labResultId);
+    if (cached) { setInsightModal(cached); return; }
+    const insight = await fetchLabAIInsight(labResultId);
+    if (insight) setInsightModal(insight);
+  };
 
   // Inline lab request action state (lab doctor)
   const [processingReqId, setProcessingReqId] = useState<string | null>(null);
@@ -1482,36 +1496,169 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
             </Empty>
           ) : (
             <div className="space-y-3">
-              {labResults.map((result) => (
-                <div key={result.id} className="bg-card rounded-xl border border-border p-4 flex items-center gap-4">
-                  <div className="shrink-0 w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 flex items-center justify-center">
-                    <Paperclip className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              {labResults.map((result) => {
+                const insight = getLabAIInsight(result.id);
+                const isLoading = !!labAIInsightLoading[result.id];
+                const status = result.aiProcessingStatus;
+                return (
+                  <div key={result.id} className="bg-card rounded-xl border border-border p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="shrink-0 w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 flex items-center justify-center">
+                        <Paperclip className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm truncate">{result.originalFileName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDate(result.uploadedAt)} · {formatFileSize(result.fileSizeBytes)} · Încărcat de {result.uploaderName}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {status === "pending" || status === "processing" ? (
+                          <span className="text-xs text-muted-foreground">AI în curs...</span>
+                        ) : status === "completed" ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1.5 border-amber-300 hover:bg-amber-50 dark:border-amber-700 dark:hover:bg-amber-950/30"
+                            disabled={isLoading}
+                            onClick={() => void handleOpenInsight(result.id)}
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                            {isLoading ? "Se încarcă..." : insight ? "Insight AI" : "Analiză AI"}
+                          </Button>
+                        ) : null}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5"
+                          onClick={async () => {
+                            try {
+                              const url = await getLabResultDownloadUrl(result.id);
+                              window.open(url, "_blank", "noopener,noreferrer");
+                            } catch {
+                              toast.error("Nu s-a putut descărca fișierul. Vă rugăm să încercați din nou.");
+                            }
+                          }}
+                        >
+                          <Eye className="w-3.5 h-3.5" />Vezi
+                        </Button>
+                      </div>
+                    </div>
+                    {insight && (
+                      <div className="mt-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 text-sm">
+                        <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wide mb-1 flex items-center gap-1">
+                          <Sparkles className="w-3 h-3" /> AI · {insight.urgency}
+                        </p>
+                        <p className="text-xs text-muted-foreground line-clamp-2">{insight.summary}</p>
+                        <button
+                          className="text-xs font-medium mt-1 underline underline-offset-2 text-amber-700 dark:text-amber-400 hover:opacity-80"
+                          onClick={() => setInsightModal(insight)}
+                        >
+                          Detalii complete →
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm truncate">{result.originalFileName}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDate(result.uploadedAt)} · {formatFileSize(result.fileSizeBytes)} · Încărcat de {result.uploaderName}
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="shrink-0 gap-1.5"
-                    onClick={async () => {
-                      try {
-                        const url = await getLabResultDownloadUrl(result.id);
-                        window.open(url, "_blank", "noopener,noreferrer");
-                      } catch {
-                        toast.error("Nu s-a putut descărca fișierul. Vă rugăm să încercați din nou.");
-                      }
-                    }}
-                  >
-                    <Eye className="w-3.5 h-3.5" />Vezi
-                  </Button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
+
+          {/* AI Insight Modal */}
+          <Dialog open={!!insightModal} onOpenChange={(o) => { if (!o) setInsightModal(null); }}>
+              <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-amber-500" /> Analiză AI rezultate laborator
+                  </DialogTitle>
+                </DialogHeader>
+                {insightModal && (() => {
+                  const urgencyConfig: Record<string, { color: string; icon: React.ReactNode }> = {
+                    Normal: { color: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800", icon: <CheckCircle2 className="w-4 h-4" /> },
+                    Monitor: { color: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800", icon: <TrendingUp className="w-4 h-4" /> },
+                    "Consult Doctor": { color: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800", icon: <AlertTriangle className="w-4 h-4" /> },
+                    Urgent: { color: "bg-red-100 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-800", icon: <AlertTriangle className="w-4 h-4" /> },
+                  };
+                  const cfg = urgencyConfig[insightModal.urgency] ?? urgencyConfig["Normal"];
+                  return (
+                    <div className="space-y-5">
+                      <div className={`flex items-center gap-2 p-3 rounded-xl border font-semibold text-sm ${cfg.color}`}>
+                        {cfg.icon} {insightModal.urgency}
+                      </div>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        {/* Doctor variant */}
+                        <div className="space-y-3">
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Varianta clinică (doctor)</p>
+                          {insightModal.summary && <p className="text-sm leading-relaxed">{insightModal.summary}</p>}
+                          {(insightModal.findings?.length ?? 0) > 0 && (
+                            <div>
+                              <p className="text-xs font-semibold text-muted-foreground mb-1">Constatări</p>
+                              <ul className="space-y-1">
+                                {insightModal.findings!.map((f, i) => (
+                                  <li key={i} className="flex items-start gap-2 text-sm">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 shrink-0" />{f}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {(insightModal.recommendations?.length ?? 0) > 0 && (
+                            <div>
+                              <p className="text-xs font-semibold text-muted-foreground mb-1">Recomandări</p>
+                              <ul className="space-y-1">
+                                {insightModal.recommendations!.map((r, i) => (
+                                  <li key={i} className="flex items-start gap-2 text-sm">
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />{r}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                        {/* Patient variant */}
+                        {insightModal.summaryPatient && (
+                          <div className="space-y-3 bg-muted/40 rounded-xl p-3 border">
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Varianta pacient (limbaj simplu)</p>
+                            <p className="text-sm leading-relaxed">{insightModal.summaryPatient}</p>
+                            {(insightModal.findingsPatient?.length ?? 0) > 0 && (
+                              <div>
+                                <p className="text-xs font-semibold text-muted-foreground mb-1">Constatări</p>
+                                <ul className="space-y-1">
+                                  {insightModal.findingsPatient!.map((f, i) => (
+                                    <li key={i} className="flex items-start gap-2 text-sm">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 shrink-0" />{f}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {(insightModal.recommendationsPatient?.length ?? 0) > 0 && (
+                              <div>
+                                <p className="text-xs font-semibold text-muted-foreground mb-1">Recomandări</p>
+                                <ul className="space-y-1">
+                                  {insightModal.recommendationsPatient!.map((r, i) => (
+                                    <li key={i} className="flex items-start gap-2 text-sm">
+                                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />{r}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-3 rounded-xl bg-muted/50 border text-xs text-muted-foreground flex items-start gap-2">
+                        <ShieldCheck className="w-3.5 h-3.5 mt-0.5 shrink-0 text-blue-500" />
+                        {insightModal.disclaimer}
+                      </div>
+                      <p className="text-xs text-muted-foreground text-right">
+                        Generat la {formatDateTime(insightModal.generatedAt)}
+                      </p>
+                    </div>
+                  );
+                })()}
+              </DialogContent>
+            </Dialog>
           </div>{/* end Uploaded Lab Results */}
         </TabsContent>
 

@@ -47,12 +47,23 @@ public class LabAnalysisJob(
             var result = await generator.GenerateAsync(pdfText, context, ct);
 
             var (isValid, error) = validator.Validate(result.Raw);
+            if (!isValid && error!.StartsWith("forbidden_pattern:"))
+            {
+                logger.LogWarning("LabAnalysisJob: {Id} safety check failed on attempt 1, retrying once", labResultId);
+                result = await generator.GenerateAsync(pdfText, context, ct);
+                (isValid, error) = validator.Validate(result.Raw);
+            }
+
             if (!isValid)
             {
                 logger.LogWarning("LabAnalysisJob: {Id} failed validation — {Error}", labResultId, error);
                 await MarkFailedAsync(labResult, $"validation_failed: {error}", ct);
                 return;
             }
+
+            logger.LogInformation(
+                "LabAnalysisJob: {Id} persisting | urgency='{Urgency}' urgency_len={UrgencyLen}",
+                labResultId, result.Raw.Urgency, result.Raw.Urgency.Length);
 
             await PersistInsightAsync(labResult, result, ct);
             await CreateRemindersIfNeededAsync(labResult, result.Raw.Urgency, ct);
@@ -65,7 +76,11 @@ public class LabAnalysisJob(
         catch (Exception ex)
         {
             logger.LogError(ex, "LabAnalysisJob: {Id} failed with exception", labResultId);
-            await MarkFailedAsync(labResult, ex.Message[..Math.Min(ex.Message.Length, 500)], ct);
+            // Clear stale tracked entities so MarkFailedAsync doesn't try to re-insert the failed insight.
+            db.ChangeTracker.Clear();
+            var entityToFail = await db.LabResults.FindAsync([labResultId], ct);
+            if (entityToFail is not null)
+                await MarkFailedAsync(entityToFail, ex.Message[..Math.Min(ex.Message.Length, 500)], ct);
         }
     }
 
