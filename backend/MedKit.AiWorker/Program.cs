@@ -55,6 +55,7 @@ if (aiOpts.EnableAiFeatures)
 }
 
 builder.Services.AddScoped<PendingLabScanner>();
+builder.Services.AddScoped<FollowUpReminderJob>();
 
 // ── Hangfire ──────────────────────────────────────────────────────────────────
 builder.Services.AddHangfire(config => config
@@ -86,6 +87,11 @@ using (var scope = host.Services.CreateScope())
         "scan-pending-lab-results",
         s => s.ScanAsync(),
         Cron.Minutely);
+
+    recurringJobs.AddOrUpdate<FollowUpReminderJob>(
+        "follow-up-reminders",
+        job => job.ExecuteAsync(CancellationToken.None),
+        "0 6 * * *");   // daily at 06:00 UTC
 }
 
 host.Run();

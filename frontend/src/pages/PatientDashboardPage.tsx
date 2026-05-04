@@ -31,6 +31,7 @@ import { useAppStore } from "@/lib/store";
 import type {
   Appointment,
   AppointmentRequest,
+  ConsultationReminder,
   LabAIInsight,
   LabResult,
   MedicalRecord,
@@ -76,6 +77,7 @@ type ReminderViewModel = {
   priority: "low" | "medium" | "high";
   type: string;
   countdownLabel?: string;
+  source: "notification" | "consultation-reminder";
 };
 
 const URGENCY_CONFIG = {
@@ -159,6 +161,9 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
   const notifications = useAppStore((s) => s.notifications);
   const fetchNotifications = useAppStore((s) => s.fetchNotifications);
   const markNotificationRead = useAppStore((s) => s.markNotificationRead);
+  const consultationReminders = useAppStore((s) => s.consultationReminders);
+  const fetchConsultationReminders = useAppStore((s) => s.fetchConsultationReminders);
+  const dismissReminder = useAppStore((s) => s.dismissReminder);
   const departments = useAppStore((s) => s.departments);
   const fetchDepartments = useAppStore((s) => s.fetchDepartments);
   const doctors = useAppStore((s) => s.doctors);
@@ -186,9 +191,14 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
     ...myAppointments.filter((a) => isScheduledAppointmentStatus(a.status) && getDaysUntil(a.date) >= 0),
     ...myRequests.filter((r) => r.status !== "Rejected" && getDaysUntil(r.requestedDate) >= 0),
   ];
-  const reminders = notifications
-    .filter((notification) => !notification.isRead)
-    .map((notification) => mapNotificationToReminder(notification, patientAppointments));
+  const reminders: ReminderViewModel[] = [
+    ...notifications
+      .filter((n) => !n.isRead)
+      .map((n) => mapNotificationToReminder(n, patientAppointments)),
+    ...consultationReminders
+      .filter((r) => !r.dismissed && (!patientId || r.patientId.toLowerCase() === patientId.toLowerCase()))
+      .map((r) => consultationReminderToViewModel(r)),
+  ];
 
   const [internalTab, setInternalTab] = useState(activeTabProp ?? "overview");
   const activeTab = activeTabProp ?? internalTab;
@@ -209,6 +219,10 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
   useEffect(() => {
     if (user?.role === "patient") void fetchNotifications();
   }, [user?.role, fetchNotifications]);
+
+  useEffect(() => {
+    if (user?.role === "patient") void fetchConsultationReminders();
+  }, [user?.role, fetchConsultationReminders]);
 
   useEffect(() => {
     if (user?.role !== "patient") return;
@@ -449,7 +463,11 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm font-semibold text-foreground">{r.title}</p>
                     <button
-                      onClick={() => void markNotificationRead(r.id)}
+                      onClick={() =>
+                        r.source === "consultation-reminder"
+                          ? void dismissReminder(r.id)
+                          : void markNotificationRead(r.id)
+                      }
                       className="text-muted-foreground hover:text-foreground shrink-0 mt-0.5"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -1000,6 +1018,27 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
   );
 }
 
+function consultationReminderToViewModel(r: ConsultationReminder): ReminderViewModel {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(r.dueDate);
+  const daysUntil = Math.round((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  let countdownLabel: string | undefined;
+  if (daysUntil === 0) countdownLabel = "Astăzi";
+  else if (daysUntil === 1) countdownLabel = "Mâine";
+  else if (daysUntil > 1) countdownLabel = `În ${daysUntil} zile`;
+  return {
+    id: r.id,
+    title: r.title,
+    message: r.message,
+    dueDate: r.dueDate,
+    priority: r.priority,
+    type: r.type,
+    countdownLabel,
+    source: "consultation-reminder",
+  };
+}
+
 function mapNotificationToReminder(notification: UserNotification, appointments: Appointment[]): ReminderViewModel {
   let type = "general";
   if (notification.relatedEntityType === "lab_request") type = "lab-result-ready";
@@ -1042,6 +1081,7 @@ function mapNotificationToReminder(notification: UserNotification, appointments:
     priority,
     type,
     countdownLabel,
+    source: "notification",
   };
 }
 

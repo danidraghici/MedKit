@@ -11,7 +11,7 @@ import {
   MOCK_PATIENTS,
   MOCK_APPOINTMENTS,
   MOCK_APPOINTMENT_REQUESTS,
-  MOCK_CONSULTATION_REMINDERS,
+
 } from "./mockData";
 
 function generateId(prefix: string): string {
@@ -120,8 +120,9 @@ interface AppState {
   getLabAIInsight: (labResultId: string) => LabAIInsight | undefined;
   fetchLabAIInsight: (labResultId: string) => Promise<LabAIInsight | null>;
   pollLabResultStatus: (labResultId: string) => Promise<void>;
+  fetchConsultationReminders: () => Promise<void>;
   getPatientReminders: (patientId: string) => ConsultationReminder[];
-  dismissReminder: (reminderId: string) => void;
+  dismissReminder: (reminderId: string) => Promise<void>;
 
   // Doctor Schedule
   schedulePendingCount: number;
@@ -706,7 +707,7 @@ export const useAppStore = create<AppState>()(
       appointmentRequests: MOCK_APPOINTMENT_REQUESTS,
       labAIInsights: [],
       labAIInsightLoading: {},
-      consultationReminders: MOCK_CONSULTATION_REMINDERS,
+      consultationReminders: [],
 
       addAppointmentRequest: (reqData) => {
         const newReq: AppointmentRequest = {
@@ -762,6 +763,15 @@ export const useAppStore = create<AppState>()(
         }
       },
 
+      fetchConsultationReminders: async () => {
+        try {
+          const reminders = await api.get<ConsultationReminder[]>("/api/consultation-reminders");
+          set({ consultationReminders: reminders });
+        } catch {
+          // silent — keep whatever is in state
+        }
+      },
+
       getPatientReminders: (patientId) => {
         return get()
           .consultationReminders.filter((r) => r.patientId === patientId && !r.dismissed)
@@ -771,12 +781,22 @@ export const useAppStore = create<AppState>()(
           });
       },
 
-      dismissReminder: (reminderId) => {
+      dismissReminder: async (reminderId) => {
         set((state) => ({
           consultationReminders: state.consultationReminders.map((r) =>
             r.id === reminderId ? { ...r, dismissed: true } : r
           ),
         }));
+        try {
+          await api.patch(`/api/consultation-reminders/${reminderId}/dismiss`);
+        } catch {
+          // revert optimistic update on failure
+          set((state) => ({
+            consultationReminders: state.consultationReminders.map((r) =>
+              r.id === reminderId ? { ...r, dismissed: false } : r
+            ),
+          }));
+        }
       },
 
       // Doctor Schedule

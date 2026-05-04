@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MedKit.Api.Services;
 
-public class MedicalRecordService(AppDbContext db, LabRequestService labRequestService)
+public class MedicalRecordService(AppDbContext db, LabRequestService labRequestService, ConsultationReminderService reminderService)
 {
     // DB uses Romanian values matching frontend labels after migration 008.
     // visit_type constraint: ('În persoană', 'Telemedicină', 'Urgență', 'Consult', 'Procedură')
@@ -332,6 +332,8 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
             await db.SaveChangesAsync();
         });
 
+        await reminderService.CreateForRecordAsync(record);
+
         LabRequestDto? labRequestDto = null;
         if (labRequestEntity is not null)
         {
@@ -430,6 +432,8 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
         var followUpTypeDb = NormalizeFollowUpTypeForDb(request.FollowUpType);
         if (!string.IsNullOrWhiteSpace(request.FollowUpType) && followUpTypeDb is null)
             return (null, "invalid_follow_up_type");
+
+        var previousFollowUpIn = record.FollowUpIn;
 
         record.VisitType = visitTypeDb;
         record.ChiefComplaint = request.ChiefComplaint;
@@ -565,6 +569,8 @@ public class MedicalRecordService(AppDbContext db, LabRequestService labRequestS
 
             await db.SaveChangesAsync();
         });
+
+        await reminderService.UpsertForRecordAsync(record, previousFollowUpIn);
 
         var labRequestsById = await labRequestService.GetByMedicalRecordIdsAsync([recordId]);
         labRequestsById.TryGetValue(recordId, out var labRequestDto);
