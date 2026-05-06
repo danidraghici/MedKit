@@ -433,8 +433,8 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
   const isLabDoctor = user?.role === "lab_doctor";
   const isSpecialist = user?.role === "specialist_doctor";
   const isAdmin = user?.role === "admin";
-  // Only lab_doctor can upload lab result files
-  const canAddLabResults = isLabDoctor;
+  // Lab doctors upload results only through lab requests, not directly to patients
+  const canAddLabResults = false;
   const canAddRecords = isSpecialist || isAdmin;
   const canAddNotes = isSpecialist || isAdmin;
   const canScheduleAppointments = isSpecialist || isAdmin;
@@ -1512,9 +1512,9 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                         </p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        {status === "pending" || status === "processing" ? (
+                        {!isLabDoctor && (status === "pending" || status === "processing") ? (
                           <span className="text-xs text-muted-foreground">AI în curs...</span>
-                        ) : status === "completed" ? (
+                        ) : !isLabDoctor && status === "completed" ? (
                           <Button
                             size="sm"
                             variant="outline"
@@ -1543,7 +1543,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                         </Button>
                       </div>
                     </div>
-                    {insight && (
+                    {insight && !isLabDoctor && (
                       <div className="mt-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 text-sm">
                         <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wide mb-1 flex items-center gap-1">
                           <Sparkles className="w-3 h-3" /> AI · {insight.urgency}

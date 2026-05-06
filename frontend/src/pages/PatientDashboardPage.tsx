@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Calendar,
   FlaskConical,
@@ -209,14 +209,18 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
 
   const [internalTab, setInternalTab] = useState(activeTabProp ?? "overview");
   const activeTab = activeTabProp ?? internalTab;
+  const tabsSectionRef = useRef<HTMLDivElement>(null);
   const setActiveTab = (tab: string) => {
     setInternalTab(tab);
     onTabChange?.(tab);
   };
 
-  // Keep internal tab in sync when sidebar nav changes activeTabProp
+  // Keep internal tab in sync and scroll tabs into view when sidebar nav changes activeTabProp
   useEffect(() => {
-    if (activeTabProp) setInternalTab(activeTabProp);
+    if (activeTabProp) {
+      setInternalTab(activeTabProp);
+      tabsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   }, [activeTabProp]);
 
   useEffect(() => {
@@ -578,6 +582,7 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
       )}
 
       {/* Main tabs */}
+      <div ref={tabsSectionRef}>
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-4">
           <TabsTrigger value="overview">Prezentare generală</TabsTrigger>
@@ -1018,6 +1023,7 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
           </div>
         </TabsContent>
       </Tabs>
+      </div>
 
       {/* ── AI Insight Modal ── */}
       <Dialog
