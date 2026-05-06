@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -28,7 +27,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyContent } from "@/components/ui/empty";
 import { KPI } from "@/components/ui/kpi";
-import { useAppStore } from "@/lib/store";
 import { api } from "@/lib/api";
 import { formatDate, getInitials } from "@/lib/utils";
 import type { Appointment } from "@/lib/types";
@@ -64,7 +62,6 @@ const statusConfig: Record<string, { label: string; icon: React.ReactNode; class
 };
 
 export default function AppointmentsPage({ onNavigate }: AppointmentsPageProps) {
-  const user = useAppStore((s) => s.user);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [stats, setStats] = useState<AppointmentStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);

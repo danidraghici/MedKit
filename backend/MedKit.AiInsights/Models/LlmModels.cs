@@ -4,7 +4,10 @@ namespace MedKit.AiInsights.Models;
 
 public record LlmMessage(
     [property: JsonPropertyName("role")] string Role,
-    [property: JsonPropertyName("content")] string Content
+    [property: JsonPropertyName("content")] string? Content,
+    [property: JsonPropertyName("tool_calls")] IList<LlmToolCall>? ToolCalls = null,
+    [property: JsonPropertyName("tool_call_id")] string? ToolCallId = null,
+    [property: JsonPropertyName("name")] string? Name = null
 );
 
 public class LlmRequest
@@ -47,6 +50,7 @@ public class LlmResponse
     public LlmUsage? Usage { get; init; }
 
     public string? FirstContent => Choices.FirstOrDefault()?.Message?.Content;
+    public LlmChoice? FirstChoice => Choices.FirstOrDefault();
 }
 
 public class LlmChoice

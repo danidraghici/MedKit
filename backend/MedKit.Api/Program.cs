@@ -1,5 +1,6 @@
 using System.Text;
 using MedKit.AiInsights.Abstractions;
+using MedKit.AiInsights.Generators;
 using MedKit.AiInsights.Llm;
 using MedKit.AiInsights.Models;
 using MedKit.AiInsights.PdfProcessing;
@@ -106,6 +107,11 @@ if (aiOpts.EnableAiFeatures)
 
     builder.Services.AddScoped<TesseractOcrFallback>();
     builder.Services.AddScoped<IPdfTextExtractor, PdfPigTextExtractor>();
+    builder.Services.AddScoped<IPatientDataProvider, SqlPatientDataProvider>();
+    builder.Services.AddScoped<HistorySummaryGenerator>();
+    builder.Services.AddScoped<ChatAgent>();
+    builder.Services.AddScoped<ChatService>();
+    builder.Services.AddMemoryCache();
 }
 
 // ── Application Services ──────────────────────────────────────────────────────

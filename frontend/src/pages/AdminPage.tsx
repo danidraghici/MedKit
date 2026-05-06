@@ -16,12 +16,10 @@ import {
   Building2,
   Award,
   BookOpen,
-  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -444,7 +442,7 @@ export default function AdminPage() {
             <div className="rounded-lg bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-800 p-3">
               <p className="text-xs text-amber-700 dark:text-amber-400">
                 <strong>Notă:</strong> După adăugarea unui medic, datele de autentificare vor folosi emailul de mai sus cu parola de sistem{" "}
-                <span className="font-mono font-bold">MedKit2025!</span>. Contactați IT pentru a seta o parolă personalizată.
+                <span className="font-mono font-bold">MedKit2026!</span>. Contactați IT pentru a seta o parolă personalizată.
               </p>
             </div>
 

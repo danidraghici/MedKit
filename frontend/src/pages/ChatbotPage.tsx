@@ -1,23 +1,18 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   Send,
   Bot,
-  User,
   Download,
-  Trash2,
   Plus,
-  MessageSquare,
   AlertCircle,
   Loader2,
   Copy,
   Check,
-  UserCircle,
-  ChevronDown,
   Paperclip,
+  UserRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -29,13 +24,9 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useAppStore } from "@/lib/store";
-import { analyzeKidneyStoneSymptoms, generateWelcomeMessage } from "@/lib/aiService";
 import { formatDateTime, getInitials } from "@/lib/utils";
 import jsPDF from "jspdf";
 
-interface ChatbotPageProps {
-  onNavigate?: (page: string) => void;
-}
 
 // Simple markdown renderer for chat messages
 function MarkdownContent({ content }: { content: string }) {
@@ -103,13 +94,14 @@ function MarkdownContent({ content }: { content: string }) {
   return <div className="space-y-0">{lines.map((line, idx) => renderLine(line, idx))}</div>;
 }
 
-export default function ChatbotPage({ onNavigate }: ChatbotPageProps) {
-  const chatSessions = useAppStore((s) => s.chatSessions);
+export default function ChatbotPage() {
   const currentSessionId = useAppStore((s) => s.currentSessionId);
-  const startChatSession = useAppStore((s) => s.startChatSession);
+  const createChatSessionAsync = useAppStore((s) => s.createChatSessionAsync);
+  const sendChatMessageAsync = useAppStore((s) => s.sendChatMessageAsync);
   const addChatMessage = useAppStore((s) => s.addChatMessage);
   const getChatSession = useAppStore((s) => s.getChatSession);
   const patients = useAppStore((s) => s.patients);
+  const fetchPatients = useAppStore((s) => s.fetchPatients);
   const addMedicalRecord = useAppStore((s) => s.addMedicalRecord);
   const user = useAppStore((s) => s.user);
 
@@ -117,13 +109,14 @@ export default function ChatbotPage({ onNavigate }: ChatbotPageProps) {
   const [isTyping, setIsTyping] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [attachToPatientDialog, setAttachToPatientDialog] = useState(false);
-  const [selectedPatientId, setSelectedPatientId] = useState<string>("");
+  const [attachSelectedPatientId, setAttachSelectedPatientId] = useState<string>("");
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(currentSessionId);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const session = sessionId ? getChatSession(sessionId) : null;
-  const messages = session?.messages ?? [];
+  const messages = useMemo(() => session?.messages ?? [], [session]);
 
   // Auto scroll to bottom
   const scrollToBottom = useCallback(() => {
@@ -134,40 +127,57 @@ export default function ChatbotPage({ onNavigate }: ChatbotPageProps) {
     scrollToBottom();
   }, [messages, isTyping, scrollToBottom]);
 
-  // Start session with welcome message on mount
+  // Fetch patients list for doctor roles
   useEffect(() => {
-    if (!sessionId) {
-      const newSessionId = startChatSession();
-      setSessionId(newSessionId);
-      setTimeout(() => {
+    if (user?.role && user.role !== "patient") {
+      void fetchPatients();
+    }
+  }, [user?.role, fetchPatients]);
+
+  // Auto-start session on mount for patients only; doctors wait for patient selection
+  useEffect(() => {
+    if (!sessionId && user?.role === "patient") {
+      createChatSessionAsync(user.patientId).then((newSessionId) => {
+        setSessionId(newSessionId);
         addChatMessage(newSessionId, {
           role: "assistant",
-          content: generateWelcomeMessage(),
+          content: "Bună ziua! Sunt asistentul medical AI al platformei MedKit. Vă pot ajuta să înțelegeți datele dvs. medicale, consultațiile și rezultatele de laborator. Cu ce vă pot ajuta?",
         });
-      }, 100);
+      });
     }
-  }, []);
+  }, [sessionId, user?.role, user?.patientId, createChatSessionAsync, addChatMessage]);
+
+  const startSession = useCallback((patientId: string | undefined, welcomeMsg: string) => {
+    createChatSessionAsync(patientId).then((newSessionId) => {
+      setSessionId(newSessionId);
+      addChatMessage(newSessionId, { role: "assistant", content: welcomeMsg });
+    });
+  }, [createChatSessionAsync, addChatMessage]);
+
+  const handlePatientChange = useCallback((value: string) => {
+    const pid = value === "__none__" ? null : value;
+    setSelectedPatientId(pid);
+    const patientName = patients.find((p) => p.id === pid)?.fullName;
+    const welcomeMsg = pid
+      ? `Bună ziua! Sunt asistentul medical AI al platformei MedKit. Am acces la datele medicale ale pacientului **${patientName}**. Cu ce vă pot ajuta?`
+      : "Bună ziua! Sunt asistentul medical AI al platformei MedKit. Niciun pacient nu este selectat — vă pot răspunde la întrebări medicale generale. Cu ce vă pot ajuta?";
+    startSession(pid ?? undefined, welcomeMsg);
+  }, [patients, startSession]);
 
   const handleNewSession = () => {
-    const newSessionId = startChatSession();
-    setSessionId(newSessionId);
-    addChatMessage(newSessionId, {
-      role: "assistant",
-      content: generateWelcomeMessage(),
-    });
+    const patientId = user?.role === "patient" ? user.patientId : selectedPatientId ?? undefined;
+    const welcomeMsg = "Bună ziua! Sunt asistentul medical AI al platformei MedKit. Vă pot ajuta să înțelegeți datele dvs. medicale, consultațiile și rezultatele de laborator. Cu ce vă pot ajuta?";
+    startSession(patientId, welcomeMsg);
   };
 
   const handleSend = async () => {
     if (!inputValue.trim() || isTyping || !sessionId) return;
     const userMsg = inputValue.trim();
     setInputValue("");
-
-    addChatMessage(sessionId, { role: "user", content: userMsg });
     setIsTyping(true);
 
     try {
-      const response = await analyzeKidneyStoneSymptoms(userMsg);
-      addChatMessage(sessionId, { role: "assistant", content: response });
+      await sendChatMessageAsync(sessionId, userMsg);
     } catch {
       addChatMessage(sessionId, {
         role: "assistant",
@@ -261,14 +271,14 @@ export default function ChatbotPage({ onNavigate }: ChatbotPageProps) {
   };
 
   const attachToPatient = () => {
-    if (!selectedPatientId || !session) return;
+    if (!attachSelectedPatientId || !session) return;
 
     const conversationText = messages
       .map((m) => `[${m.role === "user" ? "Clinician" : "AI"}]: ${m.content}`)
       .join("\n\n---\n\n");
 
     addMedicalRecord({
-      patientId: selectedPatientId,
+      patientId: attachSelectedPatientId,
       date: new Date().toISOString().split("T")[0],
       doctor: user?.name ?? "Unknown",
       visitType: "Telemedicină",
@@ -282,7 +292,7 @@ export default function ChatbotPage({ onNavigate }: ChatbotPageProps) {
     });
 
     setAttachToPatientDialog(false);
-    setSelectedPatientId("");
+    setAttachSelectedPatientId("");
   };
 
   return (
@@ -294,10 +304,10 @@ export default function ChatbotPage({ onNavigate }: ChatbotPageProps) {
             <Bot className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h2 className="font-semibold text-sm">Asistent AI - Calculi renali</h2>
+            <h2 className="font-semibold text-sm">Asistent Medical AI</h2>
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-xs text-muted-foreground">Suport decizional clinic activ</span>
+              <span className="text-xs text-muted-foreground">Asistent informațional activ</span>
             </div>
           </div>
         </div>
@@ -329,6 +339,27 @@ export default function ChatbotPage({ onNavigate }: ChatbotPageProps) {
         </div>
       </div>
 
+      {/* Patient selector bar - doctors only */}
+      {user?.role !== "patient" && (
+        <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-muted/20 shrink-0">
+          <UserRound className="w-4 h-4 text-muted-foreground shrink-0" />
+          <span className="text-xs text-muted-foreground font-medium shrink-0">Pacient:</span>
+          <Select value={selectedPatientId ?? "__none__"} onValueChange={handlePatientChange}>
+            <SelectTrigger className="h-7 text-xs flex-1 max-w-xs">
+              <SelectValue placeholder="Selectați un pacient..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">
+                <span className="text-muted-foreground italic">Fără pacient (interogare generală)</span>
+              </SelectItem>
+              {patients.map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.fullName}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {/* Mobile actions bar */}
       <div className="flex sm:hidden items-center gap-2 px-4 py-2 border-b border-border bg-muted/20 shrink-0">
         <Button variant="outline" size="sm" onClick={exportAsPDF} disabled={messages.length === 0} className="gap-1.5 text-xs flex-1">
@@ -341,6 +372,20 @@ export default function ChatbotPage({ onNavigate }: ChatbotPageProps) {
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        {/* Empty state for doctors who haven't selected a patient */}
+        {!sessionId && user?.role !== "patient" && (
+          <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <UserRound className="w-8 h-8 text-primary/50" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-foreground mb-1">Selectați un pacient pentru a începe</p>
+              <p className="text-xs text-muted-foreground max-w-xs">
+                Alegeți un pacient din lista de mai sus pentru a accesa datele medicale, sau selectați „Fără pacient" pentru întrebări generale.
+              </p>
+            </div>
+          </div>
+        )}
         {messages.map((message) => (
           <div
             key={message.id}
@@ -405,7 +450,7 @@ export default function ChatbotPage({ onNavigate }: ChatbotPageProps) {
             <div className="bg-muted/50 border border-border rounded-2xl rounded-tl-sm px-4 py-3">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Se analizează simptomele...</span>
+                <span>Se procesează întrebarea...</span>
               </div>
             </div>
           </div>
@@ -419,7 +464,7 @@ export default function ChatbotPage({ onNavigate }: ChatbotPageProps) {
         <div className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-400">
           <AlertCircle className="w-3.5 h-3.5 shrink-0" />
           <span>
-            <strong>Instrument de suport decizional clinic.</strong> Evaluările AI trebuie validate de un clinician calificat. Nu se utilizează ca diagnostic.
+            <strong>Asistent informațional.</strong> Răspunsurile AI sunt orientative și nu înlocuiesc consultul medical. Nu constituie diagnostic sau prescripție.
           </span>
         </div>
       </div>
@@ -427,18 +472,26 @@ export default function ChatbotPage({ onNavigate }: ChatbotPageProps) {
       {/* Input Area */}
       <div className="px-4 py-3 border-t border-border bg-background shrink-0">
         {/* Suggestion chips */}
-        {messages.length <= 1 && (
-          <div className="flex flex-wrap gap-1.5 mb-2.5">
-            {[
-              "54yo male, severe right flank pain radiating to groin, hematuria, nausea",
-              "Patient has fever + flank pain + cloudy urine, possible infected stone",
-              "CT shows 6mm stone in left ureter with hydronephrosis, patient in pain",
-              "Recurrent kidney stones, gout history, low urine pH",
-            ].map((suggestion) => (
+        {messages.length <= 1 && sessionId && (
+          <div className="grid grid-cols-2 gap-1.5 mb-2.5">
+            {(user?.role === "patient"
+              ? [
+                  "Care sunt ultimele mele analize de laborator?",
+                  "Ce medicamente am prescrise în prezent?",
+                  "Rezumă ultimele mele consultații medicale",
+                  "Ce urmărire medicală am recomandată?",
+                ]
+              : [
+                  "Care sunt ultimele analize ale pacientului?",
+                  "Ce medicamente are prescrise în prezent?",
+                  "Rezumă ultimele consultații ale pacientului",
+                  "Ce urmărire medicală este recomandată?",
+                ]
+            ).map((suggestion) => (
               <button
                 key={suggestion}
                 onClick={() => setInputValue(suggestion)}
-                className="text-xs px-2.5 py-1 bg-muted hover:bg-muted/80 rounded-full border border-border transition-colors text-left line-clamp-1 max-w-[200px] text-muted-foreground hover:text-foreground"
+                className="text-xs px-3 py-1.5 bg-muted hover:bg-muted/80 rounded-lg border border-border transition-colors text-left text-muted-foreground hover:text-foreground whitespace-normal leading-snug"
               >
                 {suggestion}
               </button>
@@ -452,13 +505,13 @@ export default function ChatbotPage({ onNavigate }: ChatbotPageProps) {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Descrieți simptomele pacientului (localizarea durerii, culoarea urinei, rezultate imagistice, analize...)&#10;Apăsați Enter pentru a trimite, Shift+Enter pentru linie nouă"
+            placeholder="Scrieți întrebarea dvs. despre datele medicale...&#10;Apăsați Enter pentru a trimite, Shift+Enter pentru linie nouă"
             className="resize-none text-sm min-h-[80px] max-h-[160px] flex-1"
             rows={3}
           />
           <Button
             onClick={handleSend}
-            disabled={!inputValue.trim() || isTyping}
+            disabled={!inputValue.trim() || isTyping || !sessionId}
             className="h-10 w-10 p-0 shrink-0"
             title="Trimite mesajul"
           >
@@ -482,7 +535,7 @@ export default function ChatbotPage({ onNavigate }: ChatbotPageProps) {
             </p>
             <div className="space-y-1.5">
               <Label>Selectați pacientul</Label>
-              <Select value={selectedPatientId} onValueChange={setSelectedPatientId}>
+              <Select value={attachSelectedPatientId} onValueChange={setAttachSelectedPatientId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Alegeți un pacient..." />
                 </SelectTrigger>
@@ -496,7 +549,7 @@ export default function ChatbotPage({ onNavigate }: ChatbotPageProps) {
           </div>
           <DialogFooter>
             <Button variant="secondary" onClick={() => setAttachToPatientDialog(false)}>Anulează</Button>
-            <Button onClick={attachToPatient} disabled={!selectedPatientId}>
+            <Button onClick={attachToPatient} disabled={!attachSelectedPatientId}>
               Atașează la fișă
             </Button>
           </DialogFooter>

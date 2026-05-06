@@ -1,7 +1,6 @@
-import { ReactNode, useState, useEffect, Fragment, useRef, createContext, useContext } from "react";
+import { ReactNode, useState, useEffect, useRef, createContext, useContext } from "react";
 import {
   Sidebar,
-  SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
@@ -87,6 +86,7 @@ export function PrimaryTemplate({
       return false;
     };
     findAndOpenParents(navigation);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activePageId, navigation]);
 
   const toggleSection = (sectionId: string) => {
@@ -149,20 +149,6 @@ export function PrimaryTemplate({
   const isDescendantActive = (item: NavigationItem, pageId: string): boolean => {
     if (!item.children) return false;
     return item.children.some((child) => child.id === pageId || isDescendantActive(child, pageId));
-  };
-
-  const findPageInfo = (
-    items: NavigationItem[],
-    pageId: string,
-  ): { label: string; icon?: React.ComponentType<{ className?: string }> } | null => {
-    for (const item of items) {
-      if (item.id === pageId && item.label) return { label: item.label, icon: item.icon };
-      if (item.children) {
-        const found = findPageInfo(item.children, pageId);
-        if (found) return found;
-      }
-    }
-    return null;
   };
 
   // Flatten all leaf pages for search

@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   Users,
-  MessageSquare,
   ShieldCheck,
   LogOut,
   User,
@@ -12,11 +11,11 @@ import {
   FlaskConical,
   FileText,
   Bell,
-  Stethoscope,
   UserCog,
   Building2,
   ClipboardList,
   CalendarDays,
+  MessageSquare,
 } from "lucide-react";
 import { PrimaryTemplate } from "@/components/blocks/primary-template";
 import { Button } from "@/components/ui/button";
@@ -59,7 +58,7 @@ const specialistNavigation = [
   { id: "dashboard", label: "Tablou de bord", icon: LayoutDashboard },
   { id: "patients", label: "Pacienți", icon: Users },
   { id: "appointments", label: "Programări", icon: Calendar },
-  // { id: "chatbot", label: "AI Calculi Renali", icon: MessageSquare },
+  { id: "chatbot", label: "Asistent AI", icon: MessageSquare },
   { id: "profile", label: "Profilul meu", icon: UserCircle },
 ];
 
@@ -109,7 +108,6 @@ export default function App() {
   const [loginMode, setLoginMode] = useState<LoginMode>("doctor");
   const [authChecked, setAuthChecked] = useState(false);
   // For patient portal: which tab is active (passed down via activePage prefix)
-  const [patientTab, setPatientTab] = useState("overview");
 
   const isPatient = user?.role === "patient";
   const isAdmin = user?.role === "admin";
@@ -255,9 +253,6 @@ export default function App() {
 
   const handleNavigate = (pageId: PageId) => {
     setActivePage(pageId);
-    if (pageId.startsWith("patient-")) {
-      setPatientTab(pageId.replace("patient-", ""));
-    }
   };
 
   // ── FORCE PASSWORD CHANGE ─────────────────────────────────────────────────
@@ -389,7 +384,7 @@ export default function App() {
     if (activePage.startsWith("edit-patient-")) return [{ label: "Pacienți" }, { label: "Editează pacient" }];
     if (activePage === "appointments") return [{ label: "Programări" }];
     if (activePage === "create-appointment") return [{ label: "Programări" }, { label: "Programează consultație" }];
-    // if (activePage === "chatbot") return [{ label: "Chatbot AI Calculi Renali" }];
+    if (activePage === "chatbot") return [{ label: "Asistent AI" }];
     if (activePage === "doctors") return [{ label: "Medici" }];
     if (activePage === "add-doctor") return [{ label: "Medici" }, { label: "Adaugă medic nou" }];
     if (activePage.startsWith("edit-doctor-")) return [{ label: "Medici" }, { label: "Editează medic" }];
@@ -476,7 +471,7 @@ export default function App() {
       const patientId = activePage.replace("create-appointment-patient-", "");
       return <CreateAppointmentPage onNavigate={handleNavigate} preselectedPatientId={patientId} />;
     }
-    if (activePage === "chatbot") return <ChatbotPage onNavigate={handleNavigate} />;
+    if (activePage === "chatbot") return <ChatbotPage />;
     if (activePage === "lab-requests" && isLabDoctor) return <LabRequestsPage />;
     if (activePage === "audit-logs" && isAdmin) return <AuditLogsPage />;
     if (activePage === "profile") return <DoctorProfilePage onNavigate={handleNavigate} />;

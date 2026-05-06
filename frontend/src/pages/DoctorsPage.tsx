@@ -62,6 +62,7 @@ export default function DoctorsPage({ onNavigate }: DoctorsPageProps) {
   const deleteDoctor = useAppStore((s) => s.deleteDoctor);
   const fetchDoctors = useAppStore((s) => s.fetchDoctors);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchDoctors(); }, []);
 
   const [searchQuery, setSearchQuery] = useState("");

@@ -194,6 +194,18 @@ export interface ChatSession {
   createdAt: string;
 }
 
+export interface HistorySummaryVariant {
+  summary: string;
+  findings: string[];
+  recommendations: string[];
+}
+
+export interface HistorySummaryResponse {
+  generatedAt: string;
+  doctor?: HistorySummaryVariant;
+  patient?: HistorySummaryVariant;
+}
+
 export type DoctorRole = "specialist_doctor" | "lab_doctor";
 export type UserRole = "specialist_doctor" | "lab_doctor" | "admin" | "patient";
 

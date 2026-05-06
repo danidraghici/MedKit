@@ -240,6 +240,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<ChatSessionEntity>(e =>
         {
+            e.ToTable(t => t.UseSqlOutputClause(false));
+
             e.HasMany(s => s.Messages)
              .WithOne(m => m.Session)
              .HasForeignKey(m => m.SessionId)

@@ -3,8 +3,8 @@ import { persist } from "zustand/middleware";
 import type {
   Patient, MedicalRecord, LabResult, LabRequest, LabRequestStatus, Note, Appointment,
   ChatSession, ChatMessage, User, AppointmentRequest, LabAIInsight, ConsultationReminder,
-  Doctor, DoctorRole, Department, DoctorScheduleEntry, CreateScheduleEntryPayload,
-  UserNotification, DoctorProfileStats,
+  Doctor, Department, DoctorScheduleEntry, CreateScheduleEntryPayload,
+  UserNotification, DoctorProfileStats, HistorySummaryResponse,
 } from "./types";
 import { api, configureApiClient } from "./api";
 import {
@@ -109,6 +109,14 @@ interface AppState {
   addChatMessage: (sessionId: string, message: Omit<ChatMessage, "id" | "timestamp">) => void;
   getChatSession: (sessionId: string) => ChatSession | undefined;
   attachChatToPatient: (sessionId: string, patientId: string) => void;
+  createChatSessionAsync: (patientId?: string) => Promise<string>;
+  sendChatMessageAsync: (sessionId: string, content: string) => Promise<string>;
+
+  // History Summary
+  historySummary: HistorySummaryResponse | null;
+  historySummaryLoading: boolean;
+  fetchHistorySummary: (patientId: string) => Promise<void>;
+  regenerateHistorySummary: (patientId: string) => Promise<void>;
 
   // Patient Portal
   appointmentRequests: AppointmentRequest[];
@@ -703,6 +711,95 @@ export const useAppStore = create<AppState>()(
         }));
       },
 
+      createChatSessionAsync: async (patientId) => {
+        try {
+          const data = await api.post<{ id: string; patientId?: string; createdAt: string }>(
+            "/api/chat/sessions",
+            { patientId: patientId ?? null }
+          );
+          const newSession: ChatSession = {
+            id: data.id,
+            patientId: data.patientId,
+            messages: [],
+            createdAt: data.createdAt,
+          };
+          set((state) => ({
+            chatSessions: [...state.chatSessions, newSession],
+            currentSessionId: data.id,
+          }));
+          return data.id;
+        } catch {
+          // Fallback to local session on API failure
+          return get().startChatSession(patientId);
+        }
+      },
+
+      sendChatMessageAsync: async (sessionId, content) => {
+        // Optimistically add user message to local state
+        const userMsg: ChatMessage = {
+          id: generateId("msg"),
+          role: "user",
+          content,
+          timestamp: new Date().toISOString(),
+        };
+        set((state) => ({
+          chatSessions: state.chatSessions.map((s) =>
+            s.id === sessionId ? { ...s, messages: [...s.messages, userMsg] } : s
+          ),
+        }));
+
+        const data = await api.post<{ id: string; role: string; content: string; timestamp: string }>(
+          `/api/chat/sessions/${sessionId}/messages`,
+          { content }
+        );
+
+        const assistantMsg: ChatMessage = {
+          id: data.id,
+          role: "assistant",
+          content: data.content,
+          timestamp: data.timestamp,
+        };
+        set((state) => ({
+          chatSessions: state.chatSessions.map((s) =>
+            s.id === sessionId ? { ...s, messages: [...s.messages, assistantMsg] } : s
+          ),
+        }));
+
+        return data.content;
+      },
+
+      // History Summary
+      historySummary: null,
+      historySummaryLoading: false,
+
+      fetchHistorySummary: async (patientId) => {
+        set({ historySummaryLoading: true });
+        try {
+          const data = await api.get<HistorySummaryResponse>(
+            `/api/ai-insights/patient/${patientId}/history-summary`
+          );
+          set({ historySummary: data });
+        } catch {
+          // silently ignore — UI shows nothing
+        } finally {
+          set({ historySummaryLoading: false });
+        }
+      },
+
+      regenerateHistorySummary: async (patientId) => {
+        set({ historySummaryLoading: true });
+        try {
+          const data = await api.post<HistorySummaryResponse>(
+            `/api/ai-insights/patient/${patientId}/regenerate-summary`
+          );
+          set({ historySummary: data });
+        } catch {
+          // silently ignore
+        } finally {
+          set({ historySummaryLoading: false });
+        }
+      },
+
       // ── Patient Portal ──────────────────────────────────────────────────
       appointmentRequests: MOCK_APPOINTMENT_REQUESTS,
       labAIInsights: [],
@@ -902,7 +999,7 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: "medkit-storage",
-      version: 9,
+      version: 10,
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as Record<string, unknown>;
         if (version < 2) {
@@ -945,6 +1042,10 @@ export const useAppStore = create<AppState>()(
         if (version < 9) {
           // Clear old mock AI insights — real ones will be fetched from the backend
           state.labAIInsights = [];
+        }
+        if (version < 10) {
+          // Clear local chat sessions — sessions are now persisted on the server
+          state.chatSessions = [];
         }
         return state;
       },

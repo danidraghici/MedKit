@@ -6,7 +6,7 @@ import { z } from "zod";
 import {
   ArrowLeft, Phone, Mail, Droplets, Calendar, User, Pill, AlertTriangle, CreditCard,
   Plus, FileText, FlaskConical, StickyNote, ClipboardList, Clock, Stethoscope,
-  Upload, X, Download, Paperclip, Edit, Trash2, Activity, Heart, Thermometer,
+  Upload, X, Download, Paperclip, Trash2, Activity, Heart, Thermometer,
   Wind, Eye, Weight, ChevronDown, ChevronUp, BookOpen, UserCheck, AlertCircle,
   CalendarDays, CheckCircle2, XCircle, MoreVertical, Pencil, Loader2, Sparkles,
   ShieldCheck, TrendingUp,
@@ -26,7 +26,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { IcdSearchField } from "@/components/IcdSearchField";
@@ -34,7 +33,7 @@ import { IcdMultiSearchField } from "@/components/IcdMultiSearchField";
 import { useAppStore } from "@/lib/store";
 import { api } from "@/lib/api";
 import { formatDate, formatDateTime, calculateAge, getInitials, formatFileSize } from "@/lib/utils";
-import type { Attachment, MedicalRecord, PrescribedDrug, RouteOfAdministration, DrugFrequency, UrgencyLevel, FollowUpType, Appointment, SampleType, LabRequestStatus, LabAIInsight } from "@/lib/types";
+import type { Attachment, MedicalRecord, PrescribedDrug, RouteOfAdministration, DrugFrequency, UrgencyLevel, FollowUpType, Appointment, SampleType, LabAIInsight } from "@/lib/types";
 
 // ─── Zod schemas ──────────────────────────────────────────────────────────────
 
@@ -495,22 +494,22 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
     fetchMedicalRecords(patientId)
       .catch((err: Error) => toast.error(err.message ?? "Failed to load medical records."))
       .finally(() => setIsMedicalRecordsLoading(false));
-  }, [patientId, isLabDoctor]);
+  }, [patientId, isLabDoctor, fetchMedicalRecords]);
 
   useEffect(() => {
     if (isLabDoctor) { setIsNotesLoading(false); return; }
     setIsNotesLoading(true);
     void fetchNotes(patientId).finally(() => setIsNotesLoading(false));
-  }, [patientId, isLabDoctor]);
+  }, [patientId, isLabDoctor, fetchNotes]);
 
   useEffect(() => {
     setIsLabResultsLoading(true);
     void fetchLabResults(patientId).finally(() => setIsLabResultsLoading(false));
-  }, [patientId]);
+  }, [patientId, fetchLabResults]);
 
   useEffect(() => {
     void fetchLabRequestsByPatient(patientId);
-  }, [patientId]);
+  }, [patientId, fetchLabRequestsByPatient]);
 
   const handleStartLabProcessing = async (reqId: string) => {
     setProcessingReqId(reqId);
@@ -1585,7 +1584,7 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                       <div className={`flex items-center gap-2 p-3 rounded-xl border font-semibold text-sm ${cfg.color}`}>
                         {cfg.icon} {insightModal.urgency}
                       </div>
-                      <div className="grid md:grid-cols-2 gap-4">
+                      <div className={`grid gap-4 ${!isSpecialist && !isLabDoctor && !isAdmin ? "md:grid-cols-2" : "grid-cols-1"}`}>
                         {/* Doctor variant */}
                         <div className="space-y-3">
                           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Varianta clinică (doctor)</p>
@@ -1615,8 +1614,8 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
                             </div>
                           )}
                         </div>
-                        {/* Patient variant */}
-                        {insightModal.summaryPatient && (
+                        {/* Patient variant — hidden for doctor roles */}
+                        {!isSpecialist && !isLabDoctor && !isAdmin && insightModal.summaryPatient && (
                           <div className="space-y-3 bg-muted/40 rounded-xl p-3 border">
                             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Varianta pacient (limbaj simplu)</p>
                             <p className="text-sm leading-relaxed">{insightModal.summaryPatient}</p>

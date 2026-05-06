@@ -158,30 +158,6 @@ export default function LoginPage({ onLoginSuccess, onSwitchToPatient }: LoginPa
               )}
             </Button>
           </form>
-
-          {/* Demo credentials */}
-          <div className="mt-6 p-3 bg-muted/50 rounded-lg border border-border">
-            <p className="text-xs font-medium text-muted-foreground mb-2">Date de acces demo:</p>
-            <div className="space-y-1.5 text-xs text-muted-foreground font-mono">
-              <div className="flex items-center justify-between gap-3">
-                <span>admin@medkit.com</span>
-                <span className="text-amber-600 font-semibold not-italic font-sans">Administrator</span>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <span>doctor@medkit.com</span>
-                <span className="text-blue-600 font-semibold not-italic font-sans">Specialist</span>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <span>dr.torres@medkit.com</span>
-                <span className="text-blue-600 font-semibold not-italic font-sans">Specialist</span>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <span>lab@medkit.com</span>
-                <span className="text-purple-600 font-semibold not-italic font-sans">Medic laborator</span>
-              </div>
-              <p className="mt-1 text-foreground font-semibold not-italic font-sans">Parolă: MedKit2025!</p>
-            </div>
-          </div>
         </div>
 
         {/* Footer */}

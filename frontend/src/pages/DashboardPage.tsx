@@ -32,7 +32,6 @@ import {
   User,
   Filter,
   CalendarCheck,
-  AlertTriangle,
   Activity,
   ClipboardList,
   Loader2,
@@ -64,7 +63,6 @@ import type {
   Patient,
   BloodType,
   Sex,
-  Doctor,
   DoctorRole,
   Appointment,
   DashboardStats,
@@ -134,17 +132,6 @@ const normalizeAppointmentStatus = (status: string | undefined | null): Dashboar
       return "Anulată";
     default:
       return "Planificată";
-  }
-};
-
-const toApiAppointmentStatus = (status: DashboardAppointmentStatus): "Scheduled" | "Completed" | "Cancelled" => {
-  switch (status) {
-    case "Planificată":
-      return "Scheduled";
-    case "Finalizată":
-      return "Completed";
-    case "Anulată":
-      return "Cancelled";
   }
 };
 
@@ -251,8 +238,6 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
   const isAdmin = user?.role === "admin";
   const isLabDoctor = user?.role === "lab_doctor";
   const canManagePatients = user?.role === "admin" || user?.role === "specialist_doctor";
-  const canManageDoctors = isAdmin;
-
   // ── Active tab ─────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState(initialTab ?? "overview");
 
@@ -356,17 +341,6 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
     patientPage * PATIENT_PAGE_SIZE,
   );
 
-  const openAddPatient = () => {
-    setEditingPatient(null);
-    patientForm.reset({
-      sex: "Male",
-      bloodType: "Unknown",
-      allergies: "",
-      currentMedications: "",
-    });
-    setIsPatientModalOpen(true);
-  };
-
   const openEditPatient = (p: Patient) => {
     setEditingPatient(p);
     patientForm.reset({
@@ -423,12 +397,6 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
     if (filterDoctorRole !== "all") list = list.filter((d) => d.doctorRole === filterDoctorRole);
     return list;
   }, [staffList, doctors, doctorSearch, filterDoctorRole]);
-
-  const openAddDoctor = () => {
-    setEditingDoctor(null);
-    doctorForm.reset({ doctorRole: "specialist_doctor" });
-    setIsDoctorModalOpen(true);
-  };
 
   const openEditDoctor = (d: DoctorSummary) => {
     setEditingDoctor(d);
@@ -2000,7 +1968,7 @@ export default function DashboardPage({ onNavigate, initialTab }: DashboardPageP
             <div className="rounded-lg bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-800 p-3">
               <p className="text-xs text-amber-700 dark:text-amber-400">
                 <strong>Notă:</strong> După adăugarea unui medic, datele de autentificare vor folosi emailul de mai sus
-                cu parola de sistem <span className="font-mono font-bold">MedKit2025!</span>. Contactați IT pentru a
+                cu parola de sistem <span className="font-mono font-bold">MedKit2026!</span>. Contactați IT pentru a
                 seta o parolă personalizată.
               </p>
             </div>

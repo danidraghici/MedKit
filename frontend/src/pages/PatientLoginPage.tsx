@@ -46,11 +46,6 @@ export default function PatientLoginPage({ onLoginSuccess, onSwitchToDoctor }: P
     }
   };
 
-  const fillDemo = (email: string) => {
-    setValue("email", email);
-    setValue("password", "MedKit2026!");
-  };
-
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-emerald-50 via-background to-teal-50 dark:from-emerald-950/20 dark:via-background dark:to-teal-950/20">
       {/* Left panel */}

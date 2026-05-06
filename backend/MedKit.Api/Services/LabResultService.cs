@@ -101,6 +101,7 @@ public class LabResultService(AppDbContext db, IConfiguration config)
             UploadedAt       = now,
         };
 
+        entity.AiProcessingStatus = "pending";
         db.LabResults.Add(entity);
         await db.SaveChangesAsync();
 

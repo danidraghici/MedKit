@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect } from "react";
 import {
   Search,
   UserPlus,
-  Users,
   ChevronLeft,
   ChevronRight,
   Phone,
@@ -135,9 +134,10 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
     setDeleteConfirm(null);
   };
 
-  const bloodTypeColors: Record<string, string> = {
+  type BadgeAccent = "info" | "cerulean" | "teal" | "eagle" | "purple" | "violet" | "orange" | "brick" | "destructive" | "success" | "warning" | "nile" | "lagoon" | "sap" | "red" | "blue-violet";
+  const bloodTypeColors: Record<string, BadgeAccent> = {
     "A+": "info", "A-": "cerulean", "B+": "teal", "B-": "eagle",
-    "AB+": "purple", "AB-": "violet", "O+": "orange", "O-": "brick", "Nespecificat": "default",
+    "AB+": "purple", "AB-": "violet", "O+": "orange", "O-": "brick",
   };
 
   return (
@@ -323,7 +323,7 @@ export default function PatientsPage({ onNavigate }: PatientsPageProps) {
                       <Droplets className="w-3.5 h-3.5 text-muted-foreground" />
                       <Badge
                         variant="solid"
-                        accent={(bloodTypeColors[patient.bloodType] as any) || "default"}
+                        accent={bloodTypeColors[patient.bloodType]}
                         className="text-xs px-1.5 py-0"
                       >
                         {patient.bloodType}

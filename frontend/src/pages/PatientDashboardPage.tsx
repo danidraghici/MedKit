@@ -18,6 +18,9 @@ import {
   ShieldCheck,
   X,
   ClipboardList,
+  RefreshCw,
+  Loader2,
+  BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +35,7 @@ import type {
   Appointment,
   AppointmentRequest,
   ConsultationReminder,
+  HistorySummaryResponse,
   LabAIInsight,
   LabResult,
   MedicalRecord,
@@ -164,6 +168,9 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
   const consultationReminders = useAppStore((s) => s.consultationReminders);
   const fetchConsultationReminders = useAppStore((s) => s.fetchConsultationReminders);
   const dismissReminder = useAppStore((s) => s.dismissReminder);
+  const historySummary = useAppStore((s) => s.historySummary);
+  const historySummaryLoading = useAppStore((s) => s.historySummaryLoading);
+  const fetchHistorySummary = useAppStore((s) => s.fetchHistorySummary);
   const departments = useAppStore((s) => s.departments);
   const fetchDepartments = useAppStore((s) => s.fetchDepartments);
   const doctors = useAppStore((s) => s.doctors);
@@ -255,6 +262,14 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
   const [apptModalOpen, setApptModalOpen] = useState(false);
   const [insightModalInsight, setInsightModalInsight] = useState<LabAIInsight | null>(null);
   const [apptSuccess, setApptSuccess] = useState(false);
+  const [showHistorySummary, setShowHistorySummary] = useState(false);
+
+  // Fetch history summary when patient ID is known
+  useEffect(() => {
+    if (patientId) void fetchHistorySummary(patientId);
+  }, [patientId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const summarySectionData: HistorySummaryResponse | null = historySummary;
 
   const handleOpenInsight = async (labResultId: string) => {
     const cached = getLabAIInsight(labResultId);
@@ -439,6 +454,74 @@ export default function PatientDashboardPage({ activeTab: activeTabProp, onTabCh
               </div>
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* History Summary AI */}
+      <Card className="border-blue-200 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-950/10">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold flex items-center justify-between gap-2">
+            <span className="flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-blue-600" /> Sumar Medical AI
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 text-xs gap-1"
+              disabled={historySummaryLoading}
+              onClick={() => { void fetchHistorySummary(patientId); }}
+            >
+              {historySummaryLoading
+                ? <Loader2 className="w-3 h-3 animate-spin" />
+                : <RefreshCw className="w-3 h-3" />}
+              {historySummaryLoading ? "Se generează..." : "Actualizează"}
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {historySummaryLoading && !summarySectionData && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Se generează sumarul medical...</span>
+            </div>
+          )}
+          {!historySummaryLoading && !summarySectionData && (
+            <p className="text-sm text-muted-foreground py-2">
+              Niciun sumar generat. Apăsați "Actualizează" pentru a genera.
+            </p>
+          )}
+          {summarySectionData && (
+            <div className="space-y-3">
+              {summarySectionData.patient?.summary && (
+                <p className="text-sm">{summarySectionData.patient.summary}</p>
+              )}
+              {showHistorySummary && summarySectionData.patient?.findings && summarySectionData.patient.findings.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground mb-1">Observații</p>
+                  <ul className="space-y-1">
+                    {summarySectionData.patient.findings.map((f, i) => (
+                      <li key={i} className="text-xs flex gap-1.5">
+                        <span className="text-blue-500 mt-0.5">•</span> {f}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {summarySectionData.patient?.findings && summarySectionData.patient.findings.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-xs p-0 text-blue-600"
+                  onClick={() => setShowHistorySummary((v) => !v)}
+                >
+                  {showHistorySummary ? "Ascunde detalii" : "Vezi detalii"}
+                </Button>
+              )}
+              <p className="text-[10px] text-muted-foreground">
+                Generat: {summarySectionData.generatedAt ? new Date(summarySectionData.generatedAt).toLocaleString("ro-RO") : "—"}
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

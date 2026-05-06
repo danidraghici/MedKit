@@ -332,7 +332,6 @@ export function DoctorScheduleTab({ doctorId, readOnly = false, adminMode = fals
     deleteScheduleEntry,
     approveScheduleEntry,
     rejectScheduleEntry,
-    schedulePendingCount,
     fetchSchedulePendingCount,
   } = useAppStore();
 
@@ -362,7 +361,7 @@ export function DoctorScheduleTab({ doctorId, readOnly = false, adminMode = fals
     } finally {
       setLoading(false);
     }
-  }, [doctorId, fetchDoctorSchedule, fetchPendingScheduleEntries, readOnly]);
+  }, [doctorId, fetchDoctorSchedule, fetchPendingScheduleEntries, readOnly, adminMode]);
 
   useEffect(() => {
     void load();
