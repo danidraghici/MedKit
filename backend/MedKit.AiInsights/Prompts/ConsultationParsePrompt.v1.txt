@@ -11,7 +11,10 @@ REGULI:
 6. followUpType trebuie să fie exact unul din: "Consultație la cabinet", "Apel telefonic", "Analize de laborator", "Imagistică", "Trimitere la specialist", "Urgențe dacă simptomele se agravează", "Niciunul".
 7. Pentru medicamente, route trebuie să fie exact unul din: "Oral", "IV", "IM", "Subcutanat", "Topic", "Inhalator", "Sublingual", "Rectal", "Nazal", "Oftalmic", "Transdermal", "Altul".
 8. Pentru semne vitale: bloodPressure în format "120/80 mmHg", heartRate în format "72 bpm", temperature în format "37.0 °C", respiratoryRate în format "16 /min", oxygenSaturation în format "98 %", weight în format "70 kg", height în format "175 cm".
-9. icdCode: dacă medicul menționează un cod ICD-10 (ex: "J06.9"), extrage-l. Altfel null.
+9. diagnosis ȘI icdCode: ÎNTOTDEAUNA deduce codul ICD-10 cel mai potrivit pe baza diagnosticului/simptomelor menționate, chiar dacă medicul nu l-a spus explicit.
+   - icdCode: codul ICD-10 în format standard (ex: "J02.9", "J06.9", "I10").
+   - diagnosis: descrierea oficială ICD-10 în română corespunzătoare codului ales (ex: "Faringita acuta, nespecificata"), NU textul liber dictat de medic.
+   - Dacă medicul a spus explicit un cod ICD-10, folosește-l. Altfel, inferează cel mai specific cod posibil.
 10. secondaryDiagnoses: dacă sunt mai multe diagnostice secundare, separă-le cu virgulă.
 
 SCHEMA OUTPUT (returnează EXACT acest JSON):
