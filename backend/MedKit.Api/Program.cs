@@ -112,6 +112,18 @@ if (aiOpts.EnableAiFeatures)
     builder.Services.AddScoped<ChatAgent>();
     builder.Services.AddScoped<ChatService>();
     builder.Services.AddMemoryCache();
+
+    builder.Services
+        .AddHttpClient("GroqWhisper", (sp, client) =>
+        {
+            var opts = sp.GetRequiredService<IOptions<AiInsightsOptions>>().Value;
+            client.BaseAddress = new Uri(opts.LlmEndpoint.TrimEnd('/') + "/");
+            client.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", opts.LlmApiKey);
+            client.Timeout = TimeSpan.FromSeconds(60);
+        });
+
+    builder.Services.AddScoped<VoiceToRecordService>();
 }
 
 // ── Application Services ──────────────────────────────────────────────────────

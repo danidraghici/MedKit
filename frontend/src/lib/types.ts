@@ -382,3 +382,46 @@ export interface UserNotification {
   relatedEntityId: string | null;
   createdAt: string;
 }
+
+// ─── Voice-to-Record ───────────────────────────────────────────────────────
+
+export interface VoiceVitalSigns {
+  bloodPressure?: string;
+  heartRate?: string;
+  temperature?: string;
+  respiratoryRate?: string;
+  oxygenSaturation?: string;
+  weight?: string;
+  height?: string;
+}
+
+export interface VoicePrescribedDrug {
+  name?: string;
+  genericName?: string;
+  dose?: string;
+  route?: string;
+  frequency?: string;
+  duration?: string;
+  quantity?: string;
+  instructions?: string;
+  indication?: string;
+}
+
+export interface VoiceToMedicalRecordResponse {
+  transcript?: string;
+  chiefComplaint?: string;
+  diagnosis?: string;
+  icdCode?: string;
+  secondaryDiagnoses?: string;
+  symptoms?: string;
+  physicalExam?: string;
+  treatment?: string;
+  procedures?: string;
+  urgency?: string;
+  followUpIn?: string;
+  followUpType?: string;
+  referral?: string;
+  patientEducation?: string;
+  vitalSigns?: VoiceVitalSigns;
+  prescribedDrugs?: VoicePrescribedDrug[];
+}

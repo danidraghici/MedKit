@@ -30,10 +30,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { IcdSearchField } from "@/components/IcdSearchField";
 import { IcdMultiSearchField } from "@/components/IcdMultiSearchField";
+import { ICD10_RO } from "@/lib/icd10-ro";
+import { VoiceRecorderButton } from "@/components/VoiceRecorderButton";
 import { useAppStore } from "@/lib/store";
 import { api } from "@/lib/api";
 import { formatDate, formatDateTime, calculateAge, getInitials, formatFileSize } from "@/lib/utils";
-import type { Attachment, MedicalRecord, PrescribedDrug, RouteOfAdministration, DrugFrequency, UrgencyLevel, FollowUpType, Appointment, SampleType, LabAIInsight } from "@/lib/types";
+import type { Attachment, MedicalRecord, PrescribedDrug, RouteOfAdministration, DrugFrequency, UrgencyLevel, FollowUpType, Appointment, SampleType, LabAIInsight, VoiceToMedicalRecordResponse } from "@/lib/types";
 
 // ─── Zod schemas ──────────────────────────────────────────────────────────────
 
@@ -871,6 +873,69 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
       duration: "", quantity: "", refills: "", instructions: "", indication: "",
       startDate: new Date().toISOString().split("T")[0], endDate: "",
     });
+  };
+
+  const handleVoiceResult = (result: VoiceToMedicalRecordResponse) => {
+    if (result.chiefComplaint) setValue("chiefComplaint", result.chiefComplaint, { shouldValidate: true });
+    if (result.diagnosis || result.icdCode) {
+      const normalize = (s: string) =>
+        s.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
+      let matched = result.icdCode
+        ? ICD10_RO.find(e => e.code.toLowerCase() === result.icdCode!.toLowerCase())
+        : undefined;
+      if (!matched && result.diagnosis) {
+        const q = normalize(result.diagnosis);
+        matched = ICD10_RO.find(e => normalize(e.description).includes(q))
+          ?? ICD10_RO.find(e => q.includes(normalize(e.description)));
+      }
+      if (matched) {
+        setValue("icdCode", matched.code, { shouldValidate: true });
+        setValue("diagnosis", matched.description, { shouldValidate: true });
+      } else {
+        if (result.icdCode)    setValue("icdCode", result.icdCode, { shouldValidate: true });
+        if (result.diagnosis)  setValue("diagnosis", result.diagnosis, { shouldValidate: true });
+      }
+    }
+    if (result.secondaryDiagnoses) setValue("secondaryDiagnoses", result.secondaryDiagnoses, { shouldValidate: true });
+    if (result.symptoms)       setValue("symptoms", result.symptoms, { shouldValidate: true });
+    if (result.physicalExam)   setValue("physicalExam", result.physicalExam, { shouldValidate: true });
+    if (result.treatment)      setValue("treatment", result.treatment, { shouldValidate: true });
+    if (result.procedures)     setValue("procedures", result.procedures, { shouldValidate: true });
+    if (result.urgency)        setValue("urgency", result.urgency as UrgencyLevel, { shouldValidate: true });
+    if (result.followUpIn)     setValue("followUpIn", result.followUpIn, { shouldValidate: true });
+    if (result.followUpType)   setValue("followUpType", result.followUpType, { shouldValidate: true });
+    if (result.referral)       setValue("referral", result.referral, { shouldValidate: true });
+    if (result.patientEducation) setValue("patientEducation", result.patientEducation, { shouldValidate: true });
+
+    if (result.vitalSigns) {
+      const vs = result.vitalSigns;
+      if (vs.bloodPressure)    setValue("bp", vs.bloodPressure, { shouldValidate: true });
+      if (vs.heartRate)        setValue("hr", vs.heartRate, { shouldValidate: true });
+      if (vs.temperature)      setValue("temp", vs.temperature, { shouldValidate: true });
+      if (vs.respiratoryRate)  setValue("rr", vs.respiratoryRate, { shouldValidate: true });
+      if (vs.oxygenSaturation) setValue("spo2", vs.oxygenSaturation, { shouldValidate: true });
+      if (vs.weight)           setValue("weight", vs.weight, { shouldValidate: true });
+      if (vs.height)           setValue("height", vs.height, { shouldValidate: true });
+    }
+
+    if (result.prescribedDrugs && result.prescribedDrugs.length > 0) {
+      result.prescribedDrugs.forEach((drug) => {
+        append({
+          name:         drug.name ?? "",
+          genericName:  drug.genericName ?? "",
+          dose:         drug.dose ?? "",
+          route:        (drug.route as RouteOfAdministration) ?? "Oral",
+          frequency:    (drug.frequency as DrugFrequency) ?? "",
+          duration:     drug.duration ?? "",
+          quantity:     drug.quantity ?? "",
+          refills:      "",
+          instructions: drug.instructions ?? "",
+          indication:   drug.indication ?? "",
+          startDate:    new Date().toISOString().split("T")[0],
+          endDate:      "",
+        });
+      });
+    }
   };
 
   return (
@@ -1883,10 +1948,15 @@ export default function PatientDetailPage({ patientId, onNavigate }: PatientDeta
       <Dialog open={isRecordModalOpen} onOpenChange={(open) => { if (!open) closeModal(); }}>
         <DialogContent className="!fixed !inset-0 !top-0 !left-0 !translate-x-0 !translate-y-0 !w-screen !h-screen !max-w-none !max-h-none !rounded-none overflow-hidden p-0 flex flex-col">
           <DialogHeader className="px-8 pt-6 pb-4 border-b border-border shrink-0">
-            <DialogTitle className="flex items-center gap-2 text-lg">
-              <FileText className="w-5 h-5 text-primary" />
-              {editingRecord ? "Editează" : "Adaugă Record Medical"}
-            </DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="flex items-center gap-2 text-lg">
+                <FileText className="w-5 h-5 text-primary" />
+                {editingRecord ? "Editează" : "Adaugă Record Medical"}
+              </DialogTitle>
+              {canAddRecords && (
+                <VoiceRecorderButton onResult={handleVoiceResult} />
+              )}
+            </div>
           </DialogHeader>
 
           <form id="record-form" onSubmit={handleSubmit(onSaveRecord)} className="flex-1 overflow-y-auto">
